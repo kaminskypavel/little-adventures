@@ -196,6 +196,19 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/validation": {
+      "name": "@little-adventures/validation",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@little-adventures/config": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "catalog:",
+        "typescript": "^6.0.3",
+      },
+    },
   },
   "overrides": {
     "@next/env": "npm:@varlock/nextjs-integration@1.2.2",
@@ -655,6 +668,8 @@
     "@little-adventures/storage": ["@little-adventures/storage@workspace:packages/storage"],
 
     "@little-adventures/ui": ["@little-adventures/ui@workspace:packages/ui"],
+
+    "@little-adventures/validation": ["@little-adventures/validation@workspace:packages/validation"],
 
     "@marsidev/react-turnstile": ["@marsidev/react-turnstile@1.6.3", "", { "peerDependencies": { "react": "^17.0.2 || ^18.0.0 || ^19.0", "react-dom": "^17.0.2 || ^18.0.0 || ^19.0" } }, "sha512-JdMMArjEVDMs5jnGMBeXl3y6dkMuIXPG4Tu88Uo2Rkf8ujEw/iJ2Yp/3n4kDF3BjJ+bJB9WC19LPWc5a7/4srA=="],
 
