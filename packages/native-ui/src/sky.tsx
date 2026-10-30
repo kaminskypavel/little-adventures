@@ -205,6 +205,70 @@ function Band({
 	);
 }
 
+// The band sprite is still opaque along its bottom row, so the back layer would end in a hard line
+// 42 pt above the screen bottom. Instead of clipping the sprite, paint the sky's own colour back
+// over its lower BAND_FADE pt, solid at the edge, so the layer dissolves into the sky.
+const BAND_FADE = pt(36);
+const BAND_FADE_OVERLAP = 2; // also cover the pt under the edge so no antialiased row survives
+
+function skyRgb(
+	stops: readonly string[],
+	locations: readonly number[],
+	at: number
+): string {
+	const i = Math.max(
+		1,
+		locations.findIndex((l) => l >= at)
+	);
+	const start = locations[i - 1] ?? 0;
+	const t = Math.min(
+		1,
+		Math.max(0, (at - start) / ((locations[i] ?? 1) - start))
+	);
+	const from = stops[i - 1] ?? "#000000";
+	const to = stops[i] ?? from;
+	return [1, 3, 5]
+		.map((k) => {
+			const a = Number.parseInt(from.slice(k, k + 2), 16);
+			const b = Number.parseInt(to.slice(k, k + 2), 16);
+			return Math.round(a + (b - a) * t);
+		})
+		.join(",");
+}
+
+function BandFade({
+	height,
+	palette,
+}: {
+	height: number;
+	palette: SkyPalette;
+}) {
+	const { colors: stops, locations } = skyPalettes[palette];
+	const edge = skyRgb(stops, locations, 1 - bandBack.bottom / height);
+	const top = skyRgb(
+		stops,
+		locations,
+		1 - (bandBack.bottom + BAND_FADE) / height
+	);
+	const total = BAND_FADE + BAND_FADE_OVERLAP;
+	return (
+		<LinearGradient
+			colors={[`rgba(${top},0)`, `rgba(${edge},1)`, `rgba(${edge},1)`]}
+			locations={[0, BAND_FADE / total, 1]}
+			pointerEvents="none"
+			style={[
+				styles.abs,
+				{
+					bottom: bandBack.bottom - BAND_FADE_OVERLAP,
+					height: total,
+					left: 0,
+					right: 0,
+				},
+			]}
+		/>
+	);
+}
+
 function bandDrift(layer: BandLayer): Drift {
 	return {
 		alternate: false,
@@ -347,28 +411,29 @@ function Wisps({
 	);
 }
 
-// ---- Stars: generated once, so nothing reshuffles ----
+// ---- Stars (round 7 `.sk .s` and its `tw` twinkle): generated once, so nothing reshuffles ----
 
-const STAR_COUNT = 34; // DESIGN: 25 to 40
+const STAR_COUNT = 34;
 const STAR_SEED = 13; // round 7 uses rng(n * 97 + 13) for its first sky
 
 const stars = (() => {
 	const random = mulberry32(STAR_SEED);
 	return Array.from({ length: STAR_COUNT }, (_, id) => {
-		const size = 2 + random() * 2;
-		const rest = 0.25 + random() * 0.25;
-		return {
-			color: random() < 1 / 6 ? colors.sun : colors.cream,
-			delay: random() * 6,
-			duration: 2.4 + random() * 2.6,
-			id,
-			left: `${(random() * 98).toFixed(1)}%` as `${number}%`,
-			rest,
-			size,
-			top: `${(random() * 70).toFixed(1)}%` as `${number}%`, // top 70% only
-		};
+		const big = random() < 0.12;
+		const size = pt(big ? 2.6 + random() * 0.9 : 1.2 + random() * 1.4);
+		const left = `${(random() * 98).toFixed(1)}%` as `${number}%`;
+		const top = `${(random() * 94).toFixed(1)}%` as `${number}%`; // the whole sky
+		const duration = 2.4 + random() * 3.8;
+		const delay = -(random() * 8); // negative: stars start mid-cycle
+		return { delay, duration, id, left, size, top };
 	});
 })();
+
+const twinkle = {
+	"0%": { opacity: 0.1, transform: [{ scale: 0.6 }] },
+	"50%": { opacity: 1, transform: [{ scale: 1.15 }] },
+	"100%": { opacity: 0.1, transform: [{ scale: 0.6 }] },
+};
 
 function Stars({ calm }: { calm: boolean }) {
 	return (
@@ -380,11 +445,12 @@ function Stars({ calm }: { calm: boolean }) {
 					style={[
 						styles.abs,
 						{
-							backgroundColor: s.color,
+							backgroundColor: colors.star,
 							borderRadius: s.size / 2,
+							boxShadow: `0px 0px ${s.size * 2.5}px rgba(255,255,255,0.75)`,
 							height: s.size,
 							left: s.left,
-							opacity: s.rest,
+							opacity: 0.75,
 							top: s.top,
 							width: s.size,
 						},
@@ -394,11 +460,7 @@ function Stars({ calm }: { calm: boolean }) {
 									animationDelay: `${s.delay}s`,
 									animationDuration: `${s.duration}s`,
 									animationIterationCount: "infinite",
-									animationName: {
-										"0%": { opacity: s.rest },
-										"50%": { opacity: 0.9 },
-										"100%": { opacity: s.rest },
-									},
+									animationName: twinkle,
 									animationTimingFunction: "ease-in-out",
 								},
 					]}
@@ -412,11 +474,13 @@ function Stars({ calm }: { calm: boolean }) {
 
 export function Sky({ palette = "puffy" }: { palette?: SkyPalette }) {
 	const calm = useCalm();
-	const [width, setWidth] = useState(0);
+	const [size, setSize] = useState({ height: 0, width: 0 });
+	const { height, width } = size;
 	const { colors: stops, locations } = skyPalettes[palette];
 
 	const onLayout = (e: LayoutChangeEvent) => {
-		setWidth(e.nativeEvent.layout.width);
+		const { height: h, width: w } = e.nativeEvent.layout;
+		setSize({ height: h, width: w });
 	};
 
 	return (
@@ -439,6 +503,7 @@ export function Sky({ palette = "puffy" }: { palette?: SkyPalette }) {
 					<PuffCloud calm={calm} puff={puffRight} width={width} />
 					<PuffCloud calm={calm} puff={puffLeft} width={width} />
 					<Band calm={calm} layer={bandBack} pose={bandDrift(bandBack)} />
+					<BandFade height={height} palette={palette} />
 					<Band calm={calm} layer={bandFront} pose={bandDrift(bandFront)} />
 				</>
 			) : null}
