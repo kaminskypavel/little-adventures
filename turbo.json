@@ -22,10 +22,27 @@
       "cache": false,
       "persistent": true,
       "passThroughEnv": ["*"]
+    },
+    "db:push": {
+      "cache": false,
+      "interactive": true
+    },
+    "db:generate": {
+      "cache": false,
+      "interactive": true
+    },
+    "db:migrate": {
+      "cache": false,
+      "interactive": true
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
     }
   },
   "globalEnv": [
     "CI",
+    "DATABASE_URL",
     "EXPO_PUBLIC_SERVER_URL",
     "NODE_ENV",
     "VERCEL",

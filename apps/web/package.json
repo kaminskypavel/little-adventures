@@ -10,10 +10,18 @@
     "start": "next start"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@libsql/client": "catalog:",
+    "@little-adventures/api": "workspace:*",
+    "@little-adventures/db": "workspace:*",
     "@little-adventures/ui": "workspace:*",
     "@swc/helpers": "^0.5.23",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
     "@varlock/nextjs-integration": "1.2.5",
     "babel-plugin-react-compiler": "^1.0.0",
+    "gsap": "^3.15.0",
+    "libsql": "catalog:",
     "lucide-react": "catalog:",
     "next": "^16.3.4",
     "next-themes": "catalog:",
