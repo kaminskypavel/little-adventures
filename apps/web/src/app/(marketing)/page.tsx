@@ -3,6 +3,7 @@ import { GrownUps } from "@/components/sections/grown-ups";
 import { HowItWorks } from "@/components/sections/how-it-works";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { Sky } from "@/components/sky";
+import { StoryStage } from "@/components/story/story-stage";
 import { StoreBadges } from "@/components/waitlist/store-badges";
 import { Wordmark } from "@/components/wordmark";
 
@@ -22,6 +23,7 @@ export default function LandingPage() {
 					</p>
 					<StoreBadges className="mt-4" />
 				</section>
+				<StoryStage />
 				<HowItWorks />
 				<GrownUps />
 				<Closing />
