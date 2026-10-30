@@ -36,6 +36,7 @@ export const colors = {
 	sageLo: "#B0C6AA",
 	sand: "#F1E2B8",
 	scrim: "rgba(10,22,44,0.5)",
+	star: "#FFFFFF",
 	statusPill: "rgba(14,28,56,0.78)",
 	sun: "#FFC83D",
 	sunHi: "#FFD65E",
@@ -332,7 +333,7 @@ export const listCards = {
 			// round 7: top 50%, translated up by 62% of its own height
 			up: 0.62,
 		},
-		lockedGrayVeil: "rgba(140,140,140,0.4)",
+		lockedGrayVeil: "rgba(140,140,140,0.25)",
 		pad: 7,
 		radius: 42,
 		ringOffset: 5,
