@@ -1,3 +1,7 @@
+# Project docs
+
+Product docs, wireframes and design decisions live in `docs/`. The folder is local only (excluded from git), so it may be missing in a fresh clone. Read it before UI or product work when it exists. Never commit it, and never copy its contents into committed files or commit messages.
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
