@@ -1,32 +1,15 @@
-import { Link, Stack } from "expo-router";
-import { Button, Surface } from "heroui-native";
-import { Text, View } from "react-native";
-
-import { Container } from "@/components/container";
+import { colors, type } from "@little-adventures/native-ui/tokens";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function NotFoundScreen() {
 	return (
-		<>
-			<Stack.Screen options={{ title: "Not Found" }} />
-			<Container>
-				<View className="flex-1 items-center justify-center p-4">
-					<Surface
-						className="max-w-sm items-center rounded-lg p-6"
-						variant="secondary"
-					>
-						<Text className="mb-3 text-4xl">🤔</Text>
-						<Text className="text-foreground mb-1 text-lg font-medium">
-							Page Not Found
-						</Text>
-						<Text className="text-muted mb-4 text-center text-sm">
-							The page you're looking for doesn't exist.
-						</Text>
-						<Link asChild href="/">
-							<Button size="sm">Go Home</Button>
-						</Link>
-					</Surface>
-				</View>
-			</Container>
-		</>
+		<View style={styles.root}>
+			<Text style={styles.text}>Page not found</Text>
+		</View>
 	);
 }
+
+const styles = StyleSheet.create({
+	root: { alignItems: "center", flex: 1, justifyContent: "center" },
+	text: { ...type.title, color: colors.cream },
+});
