@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import { ClayText } from "./clay-text";
+import { FieldError } from "./field-error";
 import { useCalm } from "./motion-provider";
 import { colors, motion, radii, select, shadows, type } from "./tokens";
 
@@ -101,16 +102,7 @@ export function TextField({
 					/>
 				</Animated.View>
 			</View>
-			{error ? (
-				<ClayText
-					accessibilityLiveRegion="polite"
-					color={colors.cream}
-					style={{ marginTop: select.fieldLabelGap }}
-					variant="fieldError"
-				>
-					{error}
-				</ClayText>
-			) : null}
+			<FieldError message={error} />
 		</View>
 	);
 }
