@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/src/auth/use-session";
 import { isSetUp } from "@/src/data/adventure-client";
 
-/** Start page: signed out goes to Welcome, signed in goes to Home (or to the child setup first). */
+/** Start page: signed out goes to Welcome, signed in goes to Home (or to the grown-up welcome first). */
 export default function Index() {
 	const { status } = useSession();
 	const [setUp, setSetUp] = useState<boolean | null>(null);
@@ -21,5 +21,5 @@ export default function Index() {
 	if (setUp === null) {
 		return null;
 	}
-	return <Redirect href={setUp ? "/home" : "/child"} />;
+	return <Redirect href={setUp ? "/home" : "/hello"} />;
 }
