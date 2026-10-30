@@ -71,5 +71,3 @@ little-adventures/
 │   └── ui/       # Shared shadcn/ui components and styles
 └── PRODUCT.md    # Who it is for and what it must do
 ```
-
-Scaffolded with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack).
