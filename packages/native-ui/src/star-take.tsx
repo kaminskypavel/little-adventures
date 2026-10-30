@@ -1,6 +1,6 @@
 import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Character, characterFilter } from "./character";
 import { useCalm } from "./motion-provider";
@@ -8,6 +8,9 @@ import { starSource } from "./star-source";
 import type { StarTakeName } from "./star-source-files";
 
 export type { StarTakeName } from "./star-source-files";
+
+/** The slot the chain starts on (see `startChain`). */
+const FIRST_SLOT_ID = 0;
 
 // The takes are 768 px squares with padding. The star is 420 px wide and sits a little low, so this
 // box puts it where a still star of the same width would be (see the chainable takes learning).
@@ -228,10 +231,14 @@ export function StarTake({ onTakeEnd, size, take = "idle" }: StarTakeProps) {
 		}
 	}, [chain.finished, onTakeEnd]);
 
-	const handleReady = useCallback(
-		(id: number) => dispatch({ id, type: "ready" }),
-		[]
-	);
+	// The still star covers the box until the first take has a frame, so there is no empty box.
+	const [loaded, setLoaded] = useState(false);
+	const handleReady = useCallback((id: number) => {
+		dispatch({ id, type: "ready" });
+		if (id === FIRST_SLOT_ID) {
+			setLoaded(true);
+		}
+	}, []);
 
 	if (calm) {
 		return <Character kind="star" size={size} />;
@@ -247,6 +254,11 @@ export function StarTake({ onTakeEnd, size, take = "idle" }: StarTakeProps) {
 				{ filter: characterFilter, height: size, width: size },
 			]}
 		>
+			{loaded ? null : (
+				<View style={styles.still}>
+					<Character kind="star" size={size} />
+				</View>
+			)}
 			{slotIndexes.map((index) => (
 				<StarSlot
 					active={chain.front === index}
@@ -263,4 +275,5 @@ export function StarTake({ onTakeEnd, size, take = "idle" }: StarTakeProps) {
 
 const styles = StyleSheet.create({
 	box: { overflow: "visible" },
+	still: { left: 0, position: "absolute", top: 0 },
 });
