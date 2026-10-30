@@ -13,6 +13,7 @@ import { getProfile } from "@/src/data/adventure-client";
 import { isGoodnightOpen, neighbours } from "@/src/data/map-rules";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
+import { dev } from "@/src/dev-param";
 
 const NODE_IDS: readonly string[] = [
 	"intro",
@@ -49,7 +50,7 @@ export default function StoryMapScreen() {
 	}, []);
 
 	// Dev only: ?visited=intro,p1 pretends those places were walked, in that order.
-	const devVisited = params.visited?.split(",").filter(isNode);
+	const devVisited = dev(params.visited)?.split(",").filter(isNode);
 	const progress: Progress | null = devVisited?.length
 		? { here: devVisited.at(-1) as NodeId, visited: devVisited }
 		: stored;

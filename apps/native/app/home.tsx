@@ -11,6 +11,7 @@ import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { devFlags, getHome, getProfile } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
+import { dev } from "@/src/dev-param";
 
 // Round 7 spacing (px / 0.72), measured from the bottom of the top bar.
 const HERO_GAP = 31;
@@ -34,7 +35,9 @@ interface HomeData {
 
 export default function Home() {
 	const router = useRouter();
-	const { first } = useLocalSearchParams<{ first?: string }>();
+	const params = useLocalSearchParams<{ first?: string }>();
+	// Dev only: production builds ignore the query.
+	const first = dev(params.first);
 	const [data, setData] = useState<HomeData | null>(null);
 
 	useFocusEffect(

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { getIdeas } from "@/src/data/adventure-client";
 import type { Idea } from "@/src/data/types";
+import { dev } from "@/src/dev-param";
 
 // Round 7 08 at 0.72 scale (px / 0.72), measured from the bottom of the headline.
 // The two bottom gaps are tightened so the rows clear the dock, which sits 16 above the safe edge.
@@ -26,7 +27,8 @@ const STAR_UP = 31;
 export default function Pick() {
 	const router = useRouter();
 	const { mic } = useLocalSearchParams<{ mic?: string }>();
-	const micOff = mic === "off";
+	// Dev only: production builds ignore the query.
+	const micOff = dev(mic) === "off";
 	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
 	const load = useCallback(() => {

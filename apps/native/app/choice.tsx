@@ -19,6 +19,7 @@ import { getProfile, getProgress } from "@/src/data/adventure-client";
 import { choicesFrom, missingPlaces } from "@/src/data/map-rules";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
+import { dev } from "@/src/dev-param";
 
 const { choice } = listCards;
 
@@ -69,8 +70,10 @@ export default function Choice() {
 	}, [id]);
 
 	// Dev only: ?visited=p1,p2 pretends those places were watched, ?drawing=p1a marks one as not drawn yet.
-	const visited = params.visited
-		? (params.visited.split(",") as NodeId[])
+	const devVisited = dev(params.visited);
+	const devDrawing = dev(params.drawing);
+	const visited = devVisited
+		? (devVisited.split(",") as NodeId[])
 		: progress?.visited;
 	const cards =
 		adventure && visited
@@ -86,7 +89,7 @@ export default function Choice() {
 					let state: "drawing" | "locked" | "open" = "open";
 					if (locked) {
 						state = "locked";
-					} else if (node === params.drawing || place.status === "drawing") {
+					} else if (node === devDrawing || place.status === "drawing") {
 						state = "drawing";
 					}
 					return { goal, name: place.name, node, picture, state };
