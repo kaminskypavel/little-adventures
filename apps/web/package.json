@@ -10,6 +10,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@little-adventures/auth": "workspace:*",
+    "@little-adventures/storage": "workspace:*",
     "@little-adventures/ui": "workspace:*",
     "@swc/helpers": "^0.5.23",
     "@varlock/nextjs-integration": "1.2.5",
