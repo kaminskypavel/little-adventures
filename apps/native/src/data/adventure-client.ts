@@ -113,5 +113,8 @@ export const saveProfile = (patch: Partial<Profile>): Promise<Profile> => {
 	return wait({ ...profile });
 };
 
-/** Dev flag: true sends the app through first run (Welcome) instead of Home. */
-export const isSetUp = (): Promise<boolean> => wait(!devFlags.firstRun);
+/** True when a child exists (name and age set). The dev flag `firstRun` forces false for the mock. */
+export const isSetUp = (): Promise<boolean> =>
+	wait(
+		!devFlags.firstRun && profile.childName !== "" && profile.childAge !== null
+	);

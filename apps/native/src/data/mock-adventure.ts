@@ -142,13 +142,13 @@ export const transcribedQuestion = "Why do whales sing?";
 /** Child name from the cast, never hard-coded in UI strings. */
 export const childName = (a: Adventure): string => a.cast.childName;
 
-/** The child profile the mock starts with. */
+/** No child yet: the grown-up sets one up on first run. */
 export const mockProfile: Profile = {
-	childAge: 5,
-	childKind: "girl",
-	childName: "Noa",
+	childAge: null,
+	childKind: "boy",
+	childName: "",
 	grownUp: false,
-	hasPhoto: true,
+	hasPhoto: false,
 	look: "clay",
-	puppy: true,
+	puppy: false,
 };

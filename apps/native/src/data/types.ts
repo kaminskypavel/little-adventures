@@ -62,7 +62,8 @@ export type MakeStatus =
 
 export type Look = "clay" | "felt" | "wood";
 export interface Profile {
-	childAge: number;
+	/** Null until the grown-up picks an age. */
+	childAge: number | null;
 	childKind: "girl" | "boy";
 	childName: string;
 	grownUp: boolean;
