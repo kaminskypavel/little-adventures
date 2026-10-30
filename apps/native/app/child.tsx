@@ -3,6 +3,7 @@ import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { Chip } from "@little-adventures/native-ui/chip";
 import { ChoiceTile } from "@little-adventures/native-ui/choice-tile";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { FieldError } from "@little-adventures/native-ui/field-error";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { TextField } from "@little-adventures/native-ui/text-field";
 import {
@@ -45,16 +46,7 @@ function Group({
 				{label}
 			</ClayText>
 			<View style={styles.groupBody}>{children}</View>
-			{error ? (
-				<ClayText
-					accessibilityLiveRegion="polite"
-					color={colors.cream}
-					style={styles.error}
-					variant="fieldError"
-				>
-					{error}
-				</ClayText>
-			) : null}
+			<FieldError message={error} />
 		</View>
 	);
 }
@@ -167,7 +159,6 @@ const styles = StyleSheet.create({
 	body: { gap: spacing.lg, paddingTop: 34 },
 	chipRow: { flexDirection: "row", gap: layout.gapTight },
 	chips: { gap: select.lookRowGap },
-	error: { marginTop: select.fieldLabelGap },
 	flex: { flex: 1 },
 	groupBody: { marginTop: select.fieldLabelGap },
 	row: { flexDirection: "row", gap: layout.gap },
