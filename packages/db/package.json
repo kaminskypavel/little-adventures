@@ -14,9 +14,8 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@libsql/client": "catalog:",
+    "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "1.0.0-rc.5",
-    "libsql": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

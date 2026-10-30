@@ -1,11 +1,13 @@
-import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 
-export const waitlist = sqliteTable("waitlist", {
-	createdAt: integer("created_at", { mode: "timestamp" })
+// Own schema: this database is shared, nothing here may touch `public`.
+export const littleAdventures = pgSchema("little_adventures");
+
+export const waitlist = littleAdventures.table("waitlist", {
+	createdAt: timestamp("created_at", { withTimezone: true })
 		.notNull()
-		.default(sql`(unixepoch())`),
+		.defaultNow(),
 	email: text("email").notNull().unique(),
-	id: integer("id").primaryKey({ autoIncrement: true }),
+	id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 	platform: text("platform", { enum: ["ios", "android"] }).notNull(),
 });

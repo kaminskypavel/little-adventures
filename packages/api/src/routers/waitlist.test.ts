@@ -2,25 +2,28 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { createDb } from "@little-adventures/db";
+import { PGlite } from "@electric-sql/pglite";
+import type { Database } from "@little-adventures/db";
+import { relations } from "@little-adventures/db/relations";
 import { waitlist } from "@little-adventures/db/schema/index";
 import { TRPCError } from "@trpc/server";
+import { drizzle } from "drizzle-orm/pglite";
 
 import { appRouter } from "./index";
 
 const migrationsDir = join(import.meta.dirname, "../../../db/src/migrations");
 
-// Applies the generated migration files to a fresh in-memory database.
+// Applies the generated migration files to a fresh in-memory Postgres.
 async function freshDb() {
-	const db = createDb({ DATABASE_URL: ":memory:" });
+	const client = new PGlite();
 	const sql = readdirSync(migrationsDir)
 		.sort()
 		.map((name) =>
 			readFileSync(join(migrationsDir, name, "migration.sql"), "utf8")
 		)
 		.join("\n");
-	await db.$client.executeMultiple(sql);
-	return db;
+	await client.exec(sql);
+	return drizzle({ client, relations });
 }
 
 describe("waitlist.join", () => {
@@ -29,7 +32,8 @@ describe("waitlist.join", () => {
 
 	beforeEach(async () => {
 		db = await freshDb();
-		caller = appRouter.createCaller({ db });
+		// The PGlite db and the Neon db share the query API but not the type.
+		caller = appRouter.createCaller({ db: db as unknown as Database });
 	});
 
 	test("stores one row with the email trimmed, lowercased and the right platform", async () => {

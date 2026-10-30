@@ -17,8 +17,6 @@
       "@tailwindcss/postcss": "^4.3.3",
       "@types/react-dom": "^19.2.7",
       "tailwindcss": "^4.3.3",
-      "@libsql/client": "0.18.0",
-      "libsql": "0.5.29",
       "@trpc/server": "^11.19.0",
       "@trpc/client": "^11.19.0"
     }

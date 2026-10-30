@@ -1,0 +1,122 @@
+{
+  "type": "base",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3988e251-e259-4847-a85b-a39e58fe0bcc",
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "footprints": [
+    {
+      "statementType": "create_schema",
+      "statementTarget": ["schema", "little_adventures"],
+      "writes": [
+        "s|sch|little_adventures",
+        "n|sch|little_adventures",
+        "e|sch|little_adventures"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "little_adventures", "waitlist"],
+      "writes": [
+        "s|tbl|little_adventures.waitlist",
+        "n|tbl|little_adventures.waitlist",
+        "e|tbl|little_adventures.waitlist",
+        "n|rel|little_adventures.waitlist",
+        "n|type|little_adventures.waitlist",
+        "n|rel|little_adventures.waitlist_pkey",
+        "n|rel|little_adventures.waitlist_email_key"
+      ],
+      "reads": ["n|sch|little_adventures"]
+    }
+  ],
+  "ddl": [
+    {
+      "name": "little_adventures",
+      "entityType": "schemas"
+    },
+    {
+      "schema": "little_adventures",
+      "name": "waitlist",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "email",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "id",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": {
+        "type": "always",
+        "name": "waitlist_id_seq",
+        "increment": "1",
+        "startWith": "1",
+        "minValue": "1",
+        "maxValue": "2147483647",
+        "cache": 1,
+        "cycle": false
+      },
+      "entityType": "columns"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "platform",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "waitlist_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "little_adventures",
+      "table": "waitlist",
+      "name": "waitlist_email_key",
+      "nameExplicit": false,
+      "columns": ["email"],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    }
+  ]
+}
