@@ -18,6 +18,8 @@ type TextFieldProps = Omit<TextInputProps, "style"> & {
 	/** Extra style for the input text itself (for example letter spacing on a code field). */
 	inputStyle?: StyleProp<TextStyle>;
 	label: string;
+	/** Long values (an email address) use 800 24 so they fit; short ones keep 900 39. */
+	long?: boolean;
 	style?: StyleProp<ViewStyle>;
 };
 
@@ -31,6 +33,7 @@ export function TextField({
 	error,
 	inputStyle,
 	label,
+	long = false,
 	onBlur,
 	onFocus,
 	style,
@@ -89,7 +92,12 @@ export function TextField({
 							setFocused(true);
 							onFocus?.(event);
 						}}
-						style={[type.headline, styles.input, webCaret, inputStyle]}
+						style={[
+							long ? type.fieldLong : type.headline,
+							styles.input,
+							webCaret,
+							inputStyle,
+						]}
 					/>
 				</Animated.View>
 			</View>

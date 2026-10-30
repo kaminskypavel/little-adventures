@@ -124,6 +124,7 @@ export const type = {
 	buttonSecondary: { fontFamily: fonts.heavy, fontSize: 26, lineHeight: 28 },
 	display: { fontFamily: fonts.heavy, fontSize: 58, lineHeight: 58 },
 	fieldError: { fontFamily: fonts.body, fontSize: 19, lineHeight: 23 },
+	fieldLong: { fontFamily: fonts.label, fontSize: 24, lineHeight: 30 },
 	headline: { fontFamily: fonts.heavy, fontSize: 39, lineHeight: 42 },
 	heroLabel: { fontFamily: fonts.heavy, fontSize: 36, lineHeight: 37 },
 	label: { fontFamily: fonts.label, fontSize: 19, lineHeight: 23 },
