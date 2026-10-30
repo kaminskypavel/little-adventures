@@ -99,7 +99,7 @@ export const spacing = {
 export const layout = {
 	baseHeight: 844,
 	baseWidth: 390,
-	dockBottom: 36,
+	dockBottom: 16,
 	gap: 14,
 	gapTight: 8,
 	minTarget: 64,
@@ -324,7 +324,8 @@ export const listCards = {
 		drawingGrayVeil: "rgba(140,140,140,0.5)",
 		goalHeight: "94%",
 		goalPadRight: "36%",
-		height: 195,
+		height: 250,
+		heightTight: 219,
 		lockBadge: {
 			icon: 39,
 			right: "15%",
