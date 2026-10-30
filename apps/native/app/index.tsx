@@ -1,15 +1,17 @@
-import { colors, type } from "@little-adventures/native-ui/tokens";
-import { StyleSheet, Text, View } from "react-native";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { isSetUp } from "@/src/data/adventure-client";
 
+/** Start page: a set up app goes to Home, a new one to Welcome. */
 export default function Index() {
-	return (
-		<View style={styles.root}>
-			<Text style={styles.title}>Little Adventures</Text>
-		</View>
-	);
-}
+	const [setUp, setSetUp] = useState<boolean | null>(null);
 
-const styles = StyleSheet.create({
-	root: { alignItems: "center", flex: 1, justifyContent: "center" },
-	title: { ...type.display, color: colors.cream, textAlign: "center" },
-});
+	useEffect(() => {
+		isSetUp().then(setSetUp);
+	}, []);
+
+	if (setUp === null) {
+		return null;
+	}
+	return <Redirect href={setUp ? "/home" : "/welcome"} />;
+}
