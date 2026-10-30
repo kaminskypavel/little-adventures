@@ -177,6 +177,7 @@ function AccountSteps({ profile }: { profile: Profile }) {
 					key="email"
 					keyboardType="email-address"
 					label="Email"
+					long
 					onChangeText={(text) => {
 						setEmail(text);
 						setNote(null);
