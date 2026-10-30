@@ -6,6 +6,7 @@ import {
 	ideas,
 	keepGoing,
 	mockAdventure,
+	mockProfile,
 	transcribedQuestion,
 } from "./mock-adventure";
 import type {
@@ -14,11 +15,18 @@ import type {
 	Idea,
 	MakeStatus,
 	NodeId,
+	Profile,
 	Progress,
 } from "./types";
 
-/** Dev flag: true makes getHome return empty lists (first-run state). */
-export const devFlags: { isFirstHome: boolean } = { isFirstHome: false };
+/**
+ * Dev flags for the mock. isFirstHome: getHome returns empty lists (E4).
+ * firstRun: the app starts on Welcome.
+ */
+export const devFlags: { firstRun: boolean; isFirstHome: boolean } = {
+	firstRun: true,
+	isFirstHome: false,
+};
 
 const MAKE_MS = 12_000;
 const TICK_MS = 500;
@@ -94,3 +102,16 @@ export const visit = (id: string, node: NodeId): Promise<Progress> => {
 
 export const getAdventures = (): Promise<AdventureSummary[]> =>
 	wait(grownUpList);
+
+let profile: Profile = { ...mockProfile };
+
+/** The child set up on first run (name, boy or girl, age, look, who comes along). */
+export const getProfile = (): Promise<Profile> => wait({ ...profile });
+
+export const saveProfile = (patch: Partial<Profile>): Promise<Profile> => {
+	profile = { ...profile, ...patch };
+	return wait({ ...profile });
+};
+
+/** Dev flag: true sends the app through first run (Welcome) instead of Home. */
+export const isSetUp = (): Promise<boolean> => wait(!devFlags.firstRun);

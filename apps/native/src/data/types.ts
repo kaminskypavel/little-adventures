@@ -59,3 +59,14 @@ export type MakeStatus =
 	| { state: "making"; progress: number }
 	| { state: "ready" }
 	| { state: "failed" };
+
+export type Look = "clay" | "felt" | "wood";
+export interface Profile {
+	childAge: number;
+	childKind: "girl" | "boy";
+	childName: string;
+	grownUp: boolean;
+	hasPhoto: boolean;
+	look: Look;
+	puppy: boolean;
+}
