@@ -41,7 +41,15 @@
         }
       ],
       "expo-video",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Little Adventures uses your photo only to draw your child as the storybook hero.",
+          "cameraPermission": "Little Adventures uses your photo only to draw your child as the storybook hero.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
