@@ -1,3 +1,4 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { Chip } from "@little-adventures/native-ui/chip";
 import { ChoiceTile } from "@little-adventures/native-ui/choice-tile";
@@ -10,8 +11,13 @@ import {
 	select,
 	spacing,
 } from "@little-adventures/native-ui/tokens";
+import {
+	type Child as ChildValues,
+	childSchema,
+} from "@little-adventures/validation/child";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { getProfile, saveProfile } from "@/src/data/adventure-client";
 import type { Profile } from "@/src/data/types";
@@ -25,9 +31,11 @@ const LABEL = { opacity: 0.85 } as const;
 function Group({
 	style,
 	children,
+	error,
 	label,
 }: {
 	children: React.ReactNode;
+	error?: string;
 	label: string;
 	style?: StyleProp<ViewStyle>;
 }) {
@@ -37,81 +45,109 @@ function Group({
 				{label}
 			</ClayText>
 			<View style={styles.groupBody}>{children}</View>
+			{error ? (
+				<ClayText
+					accessibilityLiveRegion="polite"
+					color={colors.cream}
+					style={styles.error}
+					variant="fieldError"
+				>
+					{error}
+				</ClayText>
+			) : null}
 		</View>
 	);
 }
 
 function ChildForm({ profile }: { profile: Profile }) {
 	const router = useRouter();
-	const [name, setName] = useState(profile.childName);
-	const [kind, setKind] = useState<Profile["childKind"]>(profile.childKind);
-	const [age, setAge] = useState<number>(profile.childAge);
-	const ready = name.trim().length > 0;
+	const { control, handleSubmit } = useForm<ChildValues>({
+		defaultValues: {
+			age: profile.childAge ?? undefined,
+			kind: profile.childKind,
+			name: profile.childName,
+		},
+		mode: "onTouched",
+		resolver: zodResolver(childSchema),
+	});
 
-	const next = async () => {
-		await saveProfile({
-			childAge: age,
-			childKind: kind,
-			childName: name.trim(),
-		});
+	const next = handleSubmit(async ({ age, kind, name }) => {
+		await saveProfile({ childAge: age, childKind: kind, childName: name });
 		router.push("/photo");
-	};
+	});
 
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={
-				<PrimaryButton
-					disabled={!ready}
-					label="Next"
-					onPress={next}
-					tone={ready ? "sun" : "off"}
-				/>
-			}
+			dock={<PrimaryButton label="Next" onPress={next} />}
 			title="Who's the hero?"
 		>
-			<TextField
-				autoCapitalize="words"
-				autoComplete="off"
-				autoCorrect={false}
-				label="Name"
-				onChangeText={setName}
-				returnKeyType="done"
-				value={name}
+			<Controller
+				control={control}
+				name="name"
+				render={({ field, fieldState }) => (
+					<TextField
+						autoCapitalize="words"
+						autoComplete="off"
+						autoCorrect={false}
+						error={fieldState.error?.message}
+						label="Name"
+						onBlur={field.onBlur}
+						onChangeText={field.onChange}
+						returnKeyType="done"
+						value={field.value}
+					/>
+				)}
 			/>
-			<Group label="Boy or girl">
-				<View style={styles.row}>
-					<ChoiceTile
-						label="Girl"
-						onPress={() => setKind("girl")}
-						selected={kind === "girl"}
-						style={styles.flex}
-					/>
-					<ChoiceTile
-						label="Boy"
-						onPress={() => setKind("boy")}
-						selected={kind === "boy"}
-						style={styles.flex}
-					/>
-				</View>
-			</Group>
-			<Group label="Age" style={styles.age}>
-				<View style={styles.chips}>
-					{ageRows.map((row) => (
-						<View key={row[0]} style={styles.chipRow}>
-							{row.map((n) => (
-								<Chip
-									key={n}
-									label={String(n)}
-									onPress={() => setAge(n)}
-									selected={age === n}
-									style={styles.flex}
-								/>
+			<Controller
+				control={control}
+				name="kind"
+				render={({ field, fieldState }) => (
+					<Group error={fieldState.error?.message} label="Boy or girl">
+						<View style={styles.row}>
+							<ChoiceTile
+								label="Girl"
+								onPress={() => field.onChange("girl")}
+								selected={field.value === "girl"}
+								style={styles.flex}
+							/>
+							<ChoiceTile
+								label="Boy"
+								onPress={() => field.onChange("boy")}
+								selected={field.value === "boy"}
+								style={styles.flex}
+							/>
+						</View>
+					</Group>
+				)}
+			/>
+			<Controller
+				control={control}
+				name="age"
+				render={({ field, fieldState }) => (
+					<Group
+						error={fieldState.error?.message}
+						label="Age"
+						style={styles.age}
+					>
+						<View style={styles.chips}>
+							{ageRows.map((row) => (
+								<View key={row[0]} style={styles.chipRow}>
+									{row.map((n) => (
+										<Chip
+											key={n}
+											label={String(n)}
+											onPress={() => field.onChange(n)}
+											selected={field.value === n}
+											style={styles.flex}
+										/>
+									))}
+								</View>
 							))}
 						</View>
-					))}
-				</View>
-			</Group>
+					</Group>
+				)}
+			/>
 		</Screen>
 	);
 }
@@ -131,6 +167,7 @@ const styles = StyleSheet.create({
 	body: { gap: spacing.lg, paddingTop: 34 },
 	chipRow: { flexDirection: "row", gap: layout.gapTight },
 	chips: { gap: select.lookRowGap },
+	error: { marginTop: select.fieldLabelGap },
 	flex: { flex: 1 },
 	groupBody: { marginTop: select.fieldLabelGap },
 	row: { flexDirection: "row", gap: layout.gap },
