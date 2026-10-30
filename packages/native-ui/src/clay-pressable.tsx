@@ -152,7 +152,7 @@ export function ClayPressable({
 					{ borderRadius: radius, cursor: "pointer" },
 					focused
 						? {
-								outlineColor: colors.cream,
+								outlineColor: colors.sun,
 								outlineOffset: focusRing.offset,
 								outlineStyle: "solid",
 								outlineWidth: focusRing.width,
