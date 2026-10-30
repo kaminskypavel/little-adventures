@@ -1,0 +1,134 @@
+import { LinearGradient } from "expo-linear-gradient";
+import type { ReactNode } from "react";
+import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import Animated, {
+	Extrapolation,
+	interpolate,
+	type SharedValue,
+	useAnimatedStyle,
+	useSharedValue,
+} from "react-native-reanimated";
+import { useCalm } from "./motion-provider";
+import {
+	type ClayTone,
+	clayFaces,
+	clayShadow,
+	colors,
+	motion,
+	reducedPressDarken,
+} from "./tokens";
+
+interface ClaySurfaceProps {
+	children?: ReactNode;
+	/** 0 at rest, 1 while the finger is down. May overshoot below 0 on release. */
+	pressed?: SharedValue<number>;
+	radius: number;
+	/** Cross-fades to the sun face. */
+	selected?: boolean;
+	style?: StyleProp<ViewStyle>;
+	tone: ClayTone;
+}
+
+const { down, rest } = clayShadow;
+const clamp = Extrapolation.CLAMP;
+
+/**
+ * The clay piece: gradient face, a lip and top highlight (inset), and a soft ground shadow.
+ * Layers, bottom to top: face, selected face, reduced-press darken, shadow layer, children.
+ * The shadow layer sits above the faces because an inset shadow paints under a child.
+ */
+export function ClaySurface({
+	children,
+	pressed,
+	radius,
+	selected,
+	style,
+	tone,
+}: ClaySurfaceProps) {
+	const calm = useCalm();
+	const resting = useSharedValue(0);
+	const press = pressed ?? resting;
+
+	const shadow = useAnimatedStyle(() => {
+		const t = press.get();
+		const mix = (a: number, b: number) => interpolate(t, [0, 1], [a, b], clamp);
+		return {
+			boxShadow: [
+				{
+					blurRadius: 3,
+					color: `rgba(255,255,255,${mix(rest.highlight, down.highlight)})`,
+					inset: true,
+					offsetX: 0,
+					offsetY: mix(rest.highlightY, down.highlightY),
+					spreadDistance: 0,
+				},
+				{
+					blurRadius: 0,
+					color: `rgba(0,0,0,${mix(rest.lipAlpha, down.lipAlpha)})`,
+					inset: true,
+					offsetX: 0,
+					offsetY: -mix(rest.lip, down.lip),
+					spreadDistance: 0,
+				},
+				{
+					blurRadius: mix(rest.dropBlur, down.dropBlur),
+					color: `rgba(0,0,0,${mix(rest.dropAlpha, down.dropAlpha)})`,
+					offsetX: 0,
+					offsetY: mix(rest.dropY, down.dropY),
+					spreadDistance: mix(rest.dropSpread, down.dropSpread),
+				},
+			],
+		};
+	});
+
+	const darken = useAnimatedStyle(() => ({
+		opacity: calm
+			? interpolate(press.get(), [0, 1], [0, reducedPressDarken], clamp)
+			: 0,
+	}));
+
+	const fill = [StyleSheet.absoluteFill, { borderRadius: radius }];
+	const showSun = tone !== "sun" && tone !== "sunReady";
+
+	return (
+		<View style={[{ borderRadius: radius }, style]}>
+			<View pointerEvents="none" style={[fill, styles.clip]}>
+				<LinearGradient
+					colors={clayFaces[tone]}
+					style={StyleSheet.absoluteFill}
+				/>
+				{showSun ? (
+					<Animated.View
+						style={[
+							StyleSheet.absoluteFill,
+							{
+								opacity: selected ? 1 : 0,
+								transitionDuration: calm ? "0ms" : `${motion.select}ms`,
+								transitionProperty: "opacity",
+								transitionTimingFunction: "ease-in-out",
+							},
+						]}
+					>
+						<LinearGradient
+							colors={clayFaces.sun}
+							style={StyleSheet.absoluteFill}
+						/>
+					</Animated.View>
+				) : null}
+				<Animated.View
+					style={[
+						StyleSheet.absoluteFill,
+						{ backgroundColor: colors.inkNavy },
+						darken,
+					]}
+				/>
+			</View>
+			<Animated.View pointerEvents="none" style={[fill, shadow]} />
+			{children}
+		</View>
+	);
+}
+
+const styles = StyleSheet.create({
+	clip: { overflow: "hidden" },
+});

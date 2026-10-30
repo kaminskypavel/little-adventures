@@ -20,6 +20,7 @@ export const colors = {
 	namePill: "rgba(18,37,74,0.78)",
 	nowWordInk: "#1C1A10",
 	offHi: "#B9C6BC",
+	offIcon: "#E9EFE6",
 	offInk: "#37504A",
 	offLo: "#A5B4A9",
 	offOrb: "#667A72",
@@ -113,8 +114,10 @@ export const fonts = {
 
 export const type = {
 	body: { fontFamily: fonts.body, fontSize: 22, lineHeight: 28 },
+	buttonSecondary: { fontFamily: fonts.heavy, fontSize: 26, lineHeight: 28 },
 	display: { fontFamily: fonts.heavy, fontSize: 58, lineHeight: 58 },
 	headline: { fontFamily: fonts.heavy, fontSize: 39, lineHeight: 42 },
+	heroLabel: { fontFamily: fonts.heavy, fontSize: 36, lineHeight: 37 },
 	label: { fontFamily: fonts.label, fontSize: 19, lineHeight: 23 },
 	narration: { fontFamily: fonts.label, fontSize: 29, lineHeight: 36 },
 	title: { fontFamily: fonts.heavy, fontSize: 29, lineHeight: 30 },
@@ -157,4 +160,44 @@ export const motion = {
 	select: 160,
 	shimmer: 1900,
 	walk: 1600,
+} as const;
+
+/** Clay lift as numbers, so the lip can be tweened. Same values as `shadows.clayLift` and `shadows.clayPressed`. */
+export const clayShadow = {
+	down: {
+		dropAlpha: 0.5,
+		dropBlur: 8,
+		dropSpread: -6,
+		dropY: 4,
+		highlight: 0.4,
+		highlightY: 2,
+		lip: 2,
+		lipAlpha: 0.15,
+	},
+	rest: {
+		dropAlpha: 0.55,
+		dropBlur: 17,
+		dropSpread: -8,
+		dropY: 11,
+		highlight: 0.55,
+		highlightY: 4,
+		lip: 6,
+		lipAlpha: 0.15,
+	},
+} as const;
+
+/** Reduced-motion press: the face darkens by this much instead of moving. */
+export const reducedPressDarken = 0.07;
+
+/** Web focus-visible ring. */
+export const focusRing = { offset: 3, width: 3 } as const;
+
+export const iconSizes = { button: 30, hero: 50 } as const;
+
+/** New adventure / Ask your own card. */
+export const heroCard = {
+	gap: 20,
+	height: 184,
+	orb: 100,
+	padX: 28,
 } as const;
