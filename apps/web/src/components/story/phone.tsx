@@ -1,10 +1,12 @@
 import Image from "next/image";
 import { type Beat, beats } from "./beats";
 
-const SCREENS: readonly Beat[] = beats;
+const ALL: readonly Beat[] = beats;
+const SCREENS = ALL.filter((beat) => beat.screen);
 
 // Placeholder screens, to be replaced by captures of the real app.
-// One stacked layer per beat; the timeline cross-fades them by data-screen.
+// One stacked layer per beat that has a screen; the timeline cross-fades
+// them by data-screen.
 export function Phone({ className }: { className?: string }) {
 	return (
 		<div
@@ -23,15 +25,15 @@ export function Phone({ className }: { className?: string }) {
 						key={beat.id}
 					>
 						<span className="text-cream text-[9.5cqw] leading-tight font-black text-balance">
-							{beat.screen.title}
+							{beat.screen?.title}
 						</span>
-						{beat.screen.line ? (
+						{beat.screen?.line ? (
 							<span className="text-cream/80 text-[5.5cqw] leading-snug">
 								{beat.screen.line}
 							</span>
 						) : null}
-						{index === 0 ? (
-							<span className="absolute inset-0 flex items-center justify-center motion-reduce:hidden">
+						{beat.screen?.still ? (
+							<span className="absolute inset-0 flex items-center justify-center">
 								<Image
 									alt=""
 									className="w-[46cqw]"
