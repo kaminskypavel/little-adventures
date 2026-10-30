@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
@@ -22,19 +23,29 @@ interface IconButtonProps extends ButtonProps {
 	icon?: IconName;
 }
 
+interface PrimaryButtonProps extends IconButtonProps {
+	/** Replaces the icon: a custom mark (for example the Google G) left of the label. */
+	leading?: ReactNode;
+}
+
 function ink(tone: ClayTone) {
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }
 
-/** 88 high, pill, sun clay. One per screen. Full width inside the margins. */
+/**
+ * 88 high, pill, sun clay. One per screen. Full width inside the margins.
+ * With a `leading` mark the label drops to the secondary size and stays on one line, so it
+ * fits beside a 40 pt mark inside the pill.
+ */
 export function PrimaryButton({
 	accessibilityLabel,
 	icon,
 	label,
+	leading,
 	style,
 	tone = "sun",
 	...rest
-}: IconButtonProps) {
+}: PrimaryButtonProps) {
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
@@ -44,7 +55,7 @@ export function PrimaryButton({
 					alignItems: "center",
 					alignSelf: "stretch",
 					flexDirection: "row",
-					gap: spacing.md,
+					gap: leading ? spacing.sm : spacing.md,
 					height: layout.primaryHeight,
 					justifyContent: "center",
 				},
@@ -53,10 +64,15 @@ export function PrimaryButton({
 			tone={tone}
 			{...rest}
 		>
-			{icon ? (
-				<Icon color={ink(tone)} name={icon} size={iconSizes.button} />
-			) : null}
-			<ClayText color={ink(tone)} variant="title">
+			{leading ??
+				(icon ? (
+					<Icon color={ink(tone)} name={icon} size={iconSizes.button} />
+				) : null)}
+			<ClayText
+				color={ink(tone)}
+				numberOfLines={leading ? 1 : undefined}
+				variant={leading ? "buttonSecondary" : "title"}
+			>
 				{label}
 			</ClayText>
 		</ClayPressable>
