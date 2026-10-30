@@ -32,9 +32,13 @@
     "prepare": "husky"
   },
   "overrides": {
-    "@next/env": "npm:@varlock/nextjs-integration@1.2.2"
+    "@next/env": "npm:@varlock/nextjs-integration@1.2.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "dependencies": {
+    "@hookform/resolvers": "^6.0.2",
+    "react-hook-form": "^7.91.0",
     "zod": "catalog:"
   },
   "devDependencies": {
