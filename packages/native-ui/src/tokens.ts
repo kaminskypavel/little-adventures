@@ -1,13 +1,18 @@
 // Design tokens for the Little Adventures app. Sizes are points (1 pt = 1 RN unit).
 
 export const colors = {
+	caret: "#E8A400",
 	cream: "#F4ECD8",
 	deepNavy: "#1B3560",
 	drawingHi: "#A5BCA5",
 	drawingLo: "#88A288",
+	fieldBorder: "rgba(18,37,74,0.14)",
+	fieldFill: "#F1E6C6",
 	fieldHi: "#F8EED1",
 	fieldLo: "#EADDB8",
 	fieldNavy: "#16294F",
+	fieldPlaceholder: "rgba(18,37,74,0.35)",
+	fieldRing: "rgba(255,200,61,0.38)",
 	goalBackdrop: "#3A5D78",
 	hillHi: "#8DBB78",
 	hillLo: "#4C7C49",
@@ -36,6 +41,7 @@ export const colors = {
 	sunHi: "#FFD65E",
 	sunLo: "#FFC12A",
 	sunReadyLo: "#FFB91F",
+	toggleOff: "rgba(18,37,74,0.14)",
 } as const;
 
 /** Clay face gradients, top to bottom. */
@@ -116,11 +122,15 @@ export const type = {
 	body: { fontFamily: fonts.body, fontSize: 22, lineHeight: 28 },
 	buttonSecondary: { fontFamily: fonts.heavy, fontSize: 26, lineHeight: 28 },
 	display: { fontFamily: fonts.heavy, fontSize: 58, lineHeight: 58 },
+	fieldError: { fontFamily: fonts.body, fontSize: 19, lineHeight: 23 },
 	headline: { fontFamily: fonts.heavy, fontSize: 39, lineHeight: 42 },
 	heroLabel: { fontFamily: fonts.heavy, fontSize: 36, lineHeight: 37 },
 	label: { fontFamily: fonts.label, fontSize: 19, lineHeight: 23 },
+	lookLabel: { fontFamily: fonts.heavy, fontSize: 21, lineHeight: 24 },
 	narration: { fontFamily: fonts.label, fontSize: 29, lineHeight: 36 },
 	title: { fontFamily: fonts.heavy, fontSize: 29, lineHeight: 30 },
+	toggleSubtitle: { fontFamily: fonts.body, fontSize: 19, lineHeight: 23 },
+	toggleTitle: { fontFamily: fonts.heavy, fontSize: 30, lineHeight: 31.5 },
 } as const;
 
 export const shadows = {
@@ -131,6 +141,9 @@ export const shadows = {
 		"inset 0px 4px 3px rgba(255,255,255,0.55), inset 0px -6px 0px rgba(0,0,0,0.15), 0px 11px 17px -8px rgba(0,0,0,0.55)",
 	clayPressed:
 		"inset 0px 4px 3px rgba(255,255,255,0.4), inset 0px -2px 0px rgba(0,0,0,0.15), 0px 4px 8px -6px rgba(0,0,0,0.5)",
+	fieldRing: "0px 0px 0px 4px rgba(255,200,61,0.38)",
+	fieldWell:
+		"inset 0px 3px 7px rgba(18,37,74,0.3), inset 0px -2px 0px rgba(255,255,255,0.55)",
 	medallion: "0px 6px 8px -3px rgba(0,0,0,0.5)",
 	stone: "0px 3px 2px 0px rgba(10,25,45,0.5)",
 	walker: "0px 8px 7px 0px rgba(0,0,0,0.4)",
@@ -200,4 +213,215 @@ export const heroCard = {
 	height: 184,
 	orb: 100,
 	padX: 28,
+} as const;
+
+/** Flat pieces (plates, panels, bars). Never clay, never lifted, never tappable. */
+export const flat = {
+	found: {
+		dot: 12,
+		dotLeft: 3,
+		indent: 25,
+		itemLine: 1.2,
+		itemPadY: 4,
+		itemSize: 20,
+		padBottom: 19,
+		padTop: 17,
+		padX: 25,
+		radius: 36,
+		titleGap: 4,
+		titleSize: 24,
+	},
+	holdGate: {
+		box: 233,
+		core: 164,
+		coreIcon: 61,
+		stroke: 14,
+		track: "rgba(244,236,216,0.22)",
+	},
+	namePill: { padBottom: 6, padTop: 4, padX: 19, radius: 28 },
+	narration: {
+		chipPadX: 7,
+		chipRadius: 11,
+		padBottom: 22,
+		padTop: 19,
+		padX: 22,
+		radius: 36,
+		trackGap: 19,
+		trackHeight: 14,
+		trackRadius: 7,
+		trackTint: "rgba(244,236,216,0.2)",
+		upcoming: 0.5,
+		wordGap: 8,
+	},
+	plate: {
+		big: { height: 44, padX: 25, radius: 22, size: 25 },
+		icon: 17,
+		iconGap: 6,
+		place: { height: 33, padX: 15, radius: 17, size: 18 },
+		question: {
+			lineHeight: 1.15,
+			maxWidth: 340,
+			padBottom: 8,
+			padTop: 7,
+			padX: 19,
+			radius: 25,
+			size: 21,
+		},
+	},
+	progress: { height: 17, radius: 8.5, track: "rgba(14,28,56,0.7)" },
+	questionCard: {
+		lineHeight: 1.1,
+		minHeight: 208,
+		padX: 31,
+		padY: 28,
+		radius: 42,
+		size: 44,
+	},
+	statusPill: { fade: 200, padBottom: 6, padTop: 4, padX: 19, radius: 19 },
+} as const;
+
+/** Chips, choice and look tiles, toggle cards and the text field. */
+export const select = {
+	chipHeight: 64,
+	choiceHeight: 88,
+	fieldBorder: 2,
+	fieldHeight: 80,
+	fieldLabelGap: 8,
+	fieldPadX: 28,
+	focus: 160,
+	lookGap: 7,
+	lookHeight: 162,
+	lookRowGap: 10,
+	lookThumb: 84,
+	toggleAvatar: 86,
+	toggleCheck: 28,
+	toggleColor: 250,
+	toggleDisc: 47,
+	toggleFade: 150,
+	toggleGap: 17,
+	toggleHeight: 122,
+	toggleIcon: 50,
+	togglePadLeft: 19,
+	togglePadRight: 22,
+	togglePop: 220,
+	toggleTextGap: 3,
+} as const;
+
+/** List rows, picture rows and choice cards. */
+export const listCards = {
+	choice: {
+		chipBottom: 21,
+		chipFont: 25,
+		chipGap: 6,
+		chipPadBottom: 6,
+		chipPadTop: 4,
+		chipPadX: 22,
+		chipRadius: 22,
+		dim: "rgba(14,28,56,0.55)",
+		drawingBlur: 4,
+		drawingBrightnessVeil: "rgba(0,0,0,0.15)",
+		drawingGrayVeil: "rgba(140,140,140,0.5)",
+		goalHeight: "94%",
+		goalPadRight: "36%",
+		height: 195,
+		lockBadge: {
+			icon: 39,
+			right: "15%",
+			shadow: "0px 8px 11px -6px rgba(0,0,0,0.5)",
+			size: 78,
+			// round 7: top 50%, translated up by 62% of its own height
+			up: 0.62,
+		},
+		lockedGrayVeil: "rgba(140,140,140,0.4)",
+		pad: 7,
+		radius: 42,
+		ringOffset: 5,
+		ringRadius: 47,
+		ringRestScale: 0.94,
+		ringWidth: 4,
+		selectFade: 150,
+		selectPop: 250,
+		// translateX 0, -6, +6, -2, 0 over 300 ms (keys at 25, 55, 80, 100 percent).
+		shakeSegments: [
+			{ ms: 75, x: -6 },
+			{ ms: 90, x: 6 },
+			{ ms: 75, x: -2 },
+			{ ms: 60, x: 0 },
+		],
+		shimmer: "rgba(255,255,255,0.55)",
+		shimmerClear: "rgba(255,255,255,0)",
+		shimmerTilt: "15deg",
+	},
+	list: {
+		captionFont: 17,
+		captionLine: 21,
+		captionOpacity: 0.7,
+		gap: 17,
+		height: 94,
+		padLeft: 13.5,
+		padRight: 22,
+		pictureHeight: 67,
+		pictureRadius: 19,
+		pictureWidth: 83,
+		radius: 42,
+		titleFont: 22,
+		titleLine: 26,
+	},
+	pictureRow: {
+		gap: 17,
+		height: 128,
+		padBottom: 11,
+		padLeft: 11,
+		padRight: 19,
+		padTop: 11,
+		picture: 106,
+		pictureRadius: 28,
+		radius: 39,
+		titleFont: 24,
+		titleLine: 27,
+	},
+	row: {
+		countFont: 22,
+		countLine: 26,
+		countPadBottom: 3,
+		countPadTop: 1,
+		countPadX: 14,
+		countPill: "rgba(18,37,74,0.14)",
+		countRadius: 17,
+		padLeft: 14,
+		picture: 67,
+		subtitleFont: 17,
+	},
+} as const;
+
+/** Map medallion: round, tappable place picture. The ring is the clay padding around the disc. */
+export const mapMedallion = {
+	badge: 31,
+	badgeIcon: 19,
+	badgeOffset: -4,
+	badgeShadow: "0px 3px 4px rgba(0,0,0,0.4)",
+	/** Drawing state: the blur is expo-image `blurRadius`, the gray veil stands in for grayscale. */
+	drawingBlur: 4,
+	drawingVeil: "rgba(120,130,125,0.35)",
+	iconRatio: 0.35,
+	ring: 4,
+	ringActive: 5.5,
+	size: 86,
+	sizeHere: 97,
+} as const;
+
+/** Map stepping stone: a pebble cut-out with a shape-following shadow, and the one glow in the design system. */
+export const mapStone = {
+	glow: "rgb(255,200,60)",
+	glowBlur: 6,
+	glowFade: 250,
+	glowScale: 1.15,
+	/** The tight second halo, as in `shadows.activeStone`. */
+	glowTightAlpha: 0.9,
+	glowTightBlur: 3,
+	/** Opacity of the sun veil over the active stone, standing in for saturate and brightness. */
+	lift: 0.28,
+	shadow: "rgba(10,25,45,0.5)",
+	shadowBlur: 1.5,
+	shadowOffset: 3,
 } as const;
