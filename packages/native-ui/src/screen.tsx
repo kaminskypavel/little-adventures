@@ -1,31 +1,38 @@
 import type { ReactNode } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
-import Animated, {
-	Easing,
-	FadeIn,
-	FadeInDown,
-	ReduceMotion,
-} from "react-native-reanimated";
+import Animated, { cubicBezier } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ClayText } from "./clay-text";
 import { useCalm } from "./motion-provider";
 import { colors, layout, motion, spacing } from "./tokens";
 
 const [x1, y1, x2, y2] = motion.easeOut;
-const enterEase = Easing.bezier(x1, y1, x2, y2);
+const enterEase = cubicBezier(x1, y1, x2, y2);
 
-/** Screen content enter: fade + rise, siblings staggered (title, body, dock). */
+const riseIn = {
+	from: { opacity: 0, transform: [{ translateY: motion.enterRise }] },
+	to: { opacity: 1, transform: [{ translateY: 0 }] },
+};
+const fadeIn = { from: { opacity: 0 }, to: { opacity: 1 } };
+
+/**
+ * Screen content enter: fade + rise, siblings staggered (title, body, dock).
+ * A CSS animation, not a layout animation, so nothing is measured on the way in.
+ */
 function enter(index: number, calm: boolean) {
 	if (calm) {
-		return FadeIn.duration(motion.reducedReveal).reduceMotion(
-			ReduceMotion.Never
-		);
+		return {
+			animationDuration: `${motion.reducedReveal}ms`,
+			animationName: fadeIn,
+		} as const;
 	}
-	return FadeInDown.duration(motion.enter)
-		.delay(index * motion.enterStagger)
-		.easing(enterEase)
-		.withInitialValues({ opacity: 0, translateY: motion.enterRise })
-		.reduceMotion(ReduceMotion.Never);
+	return {
+		animationDelay: `${index * motion.enterStagger}ms`,
+		animationDuration: `${motion.enter}ms`,
+		animationFillMode: "backwards",
+		animationName: riseIn,
+		animationTimingFunction: enterEase,
+	} as const;
 }
 
 /**
@@ -76,8 +83,11 @@ export function Screen({
 			) : null}
 			{title ? (
 				<Animated.View
-					entering={enter(0, calm)}
-					style={[styles.title, { marginTop: topBar ? spacing.lg : titleTop }]}
+					style={[
+						styles.title,
+						{ marginTop: topBar ? spacing.lg : titleTop },
+						enter(0, calm),
+					]}
 				>
 					<ClayText
 						accessibilityRole="header"
@@ -90,15 +100,15 @@ export function Screen({
 					</ClayText>
 				</Animated.View>
 			) : null}
-			<Animated.View entering={enter(1, calm)} style={[styles.body, bodyStyle]}>
+			<Animated.View style={[styles.body, bodyStyle, enter(1, calm)]}>
 				{children}
 			</Animated.View>
 			{dock ? (
 				<Animated.View
-					entering={enter(2, calm)}
 					style={[
 						styles.dock,
 						{ paddingBottom: insets.bottom + layout.dockBottom },
+						enter(2, calm),
 					]}
 				>
 					{dock}
