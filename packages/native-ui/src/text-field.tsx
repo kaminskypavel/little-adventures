@@ -15,6 +15,8 @@ import { colors, motion, radii, select, shadows, type } from "./tokens";
 
 type TextFieldProps = Omit<TextInputProps, "style"> & {
 	error?: string;
+	/** Extra style for the input text itself (for example letter spacing on a code field). */
+	inputStyle?: StyleProp<TextStyle>;
 	label: string;
 	style?: StyleProp<ViewStyle>;
 };
@@ -27,6 +29,7 @@ const ease = cubicBezier(...motion.easeOut);
  */
 export function TextField({
 	error,
+	inputStyle,
 	label,
 	onBlur,
 	onFocus,
@@ -86,7 +89,7 @@ export function TextField({
 							setFocused(true);
 							onFocus?.(event);
 						}}
-						style={[type.headline, styles.input, webCaret]}
+						style={[type.headline, styles.input, webCaret, inputStyle]}
 					/>
 				</Animated.View>
 			</View>
