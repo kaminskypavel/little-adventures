@@ -10,6 +10,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { signOut as endSession } from "@/src/auth/auth-client";
 import {
 	devFlags,
 	getAdventures,
@@ -52,7 +53,8 @@ export default function Grownups() {
 		setProfile(await saveProfile({ hasPhoto: false }));
 	};
 
-	const signOut = () => {
+	const signOut = async () => {
+		await endSession();
 		devFlags.firstRun = true;
 		router.replace("/welcome");
 	};
