@@ -1,23 +1,31 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
 	PrimaryButton,
 	SecondaryButton,
 } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { GoogleMark } from "@little-adventures/native-ui/google-mark";
+import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { TextField } from "@little-adventures/native-ui/text-field";
-import { colors, layout, spacing } from "@little-adventures/native-ui/tokens";
+import { colors, spacing } from "@little-adventures/native-ui/tokens";
+import {
+	type CodeForm,
+	codeSchema,
+	type EmailForm,
+	emailSchema,
+} from "@little-adventures/validation/sign-in";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { Controller, useForm } from "react-hook-form";
+import { Keyboard, StyleSheet, View } from "react-native";
 import {
 	redeemVerifier,
 	sendCode,
 	signInWithGoogle,
 	verifyCode,
 } from "@/src/auth/auth-client";
-import { getProfile, isSetUp } from "@/src/data/adventure-client";
-import type { Profile } from "@/src/data/types";
+import { isSetUp } from "@/src/data/adventure-client";
 
 type Step = "choose" | "email" | "code";
 
@@ -26,7 +34,6 @@ const QUIET = { opacity: 0.7 } as const;
 const CODE_LENGTH = 6;
 const CODE_SPACING = 10;
 const CODE_STYLE = { letterSpacing: CODE_SPACING } as const;
-const LOOKS_LIKE_EMAIL = /^\S+@\S+\.\S+$/u;
 const NON_DIGITS = /\D/gu;
 
 const GOOGLE_FAILED = "Google did not work. Try again.";
@@ -36,45 +43,30 @@ const RESENT = "A new code is on its way.";
 
 type Router = ReturnType<typeof useRouter>;
 
-/** Signed in: a new profile finishes setup first, an existing one goes Home. */
+/** Signed in: no child yet goes to the grown-up welcome, an existing one goes Home. */
 async function goNext(router: Router) {
-	router.replace((await isSetUp()) ? "/home" : "/child");
+	router.replace((await isSetUp()) ? "/home" : "/hello");
 }
 
-/** Small cream text that taps. The kit has no text link yet. */
-function QuietLink({ label, onPress }: { label: string; onPress: () => void }) {
-	return (
-		<Pressable
-			accessibilityLabel={label}
-			accessibilityRole="link"
-			onPress={onPress}
-			style={styles.link}
-		>
-			<ClayText
-				align="center"
-				color={colors.cream}
-				style={QUIET}
-				variant="label"
-			>
-				{label}
-			</ClayText>
-		</Pressable>
-	);
-}
-
-function AccountSteps({ profile }: { profile: Profile }) {
+export default function Account() {
 	const router = useRouter();
 	const params = useLocalSearchParams();
 	const [step, setStep] = useState<Step>("choose");
-	const [email, setEmail] = useState("");
-	const [code, setCode] = useState("");
+	const [address, setAddress] = useState("");
 	const [note, setNote] = useState<string | null>(null);
 	const busy = useRef<boolean>(false);
 	const redeemed = useRef<string | null>(null);
 
-	const address = email.trim();
-	const emailOk = LOOKS_LIKE_EMAIL.test(address);
-	const codeOk = code.length === CODE_LENGTH;
+	const emailForm = useForm<EmailForm>({
+		defaultValues: { email: "" },
+		mode: "onTouched",
+		resolver: zodResolver(emailSchema),
+	});
+	const codeForm = useForm<CodeForm>({
+		defaultValues: { code: "" },
+		mode: "onTouched",
+		resolver: zodResolver(codeSchema),
+	});
 
 	// Web preview: Google sends the page back here with the session verifier in the query.
 	const query = new URLSearchParams(
@@ -118,38 +110,35 @@ function AccountSteps({ profile }: { profile: Profile }) {
 			}
 		});
 
-	const send = () =>
+	const send = emailForm.handleSubmit(({ email }) =>
 		run(async () => {
-			if (!emailOk) {
-				return;
-			}
-			if (await sendCode(address)) {
-				setCode("");
+			if (await sendCode(email)) {
+				setAddress(email);
+				codeForm.reset();
 				setStep("code");
 			} else {
 				setNote(SEND_FAILED);
 			}
-		});
+		})
+	);
 
 	const resend = () =>
 		run(async () => {
 			setNote((await sendCode(address)) ? RESENT : SEND_FAILED);
 		});
 
-	const signIn = () =>
+	const signIn = codeForm.handleSubmit(({ code }) =>
 		run(async () => {
-			if (!codeOk) {
-				return;
-			}
 			if (await verifyCode(address, code)) {
 				await goNext(router);
 			} else {
 				setNote(CODE_FAILED);
 			}
-		});
+		})
+	);
 
 	const changeEmail = () => {
-		setCode("");
+		codeForm.reset();
 		setNote(null);
 		setStep("email");
 	};
@@ -158,34 +147,34 @@ function AccountSteps({ profile }: { profile: Profile }) {
 		return (
 			<Screen
 				bodyStyle={styles.fieldBody}
-				dock={
-					<PrimaryButton
-						disabled={!emailOk}
-						label="Send me a code"
-						onPress={send}
-						tone={emailOk ? "sun" : "off"}
-					/>
-				}
+				dock={<PrimaryButton label="Send me a code" onPress={send} />}
 				title="Hi, grown-up"
 			>
-				<TextField
-					autoCapitalize="none"
-					autoComplete="email"
-					autoCorrect={false}
-					autoFocus
-					error={note ?? undefined}
-					key="email"
-					keyboardType="email-address"
-					label="Email"
-					long
-					onChangeText={(text) => {
-						setEmail(text);
-						setNote(null);
-					}}
-					onSubmitEditing={send}
-					returnKeyType="send"
-					textContentType="emailAddress"
-					value={email}
+				<Controller
+					control={emailForm.control}
+					name="email"
+					render={({ field, fieldState }) => (
+						<TextField
+							autoCapitalize="none"
+							autoComplete="email"
+							autoCorrect={false}
+							autoFocus
+							error={fieldState.error?.message ?? note ?? undefined}
+							key="email"
+							keyboardType="email-address"
+							label="Email"
+							long
+							onBlur={field.onBlur}
+							onChangeText={(text) => {
+								field.onChange(text);
+								setNote(null);
+							}}
+							onSubmitEditing={send}
+							returnKeyType="send"
+							textContentType="emailAddress"
+							value={field.value}
+						/>
+					)}
 				/>
 			</Screen>
 		);
@@ -197,12 +186,7 @@ function AccountSteps({ profile }: { profile: Profile }) {
 				bodyStyle={styles.fieldBody}
 				dock={
 					<>
-						<PrimaryButton
-							disabled={!codeOk}
-							label="Sign in"
-							onPress={signIn}
-							tone={codeOk ? "sun" : "off"}
-						/>
+						<PrimaryButton label="Sign in" onPress={signIn} />
 						<View>
 							<QuietLink label="Send a new code" onPress={resend} />
 							<QuietLink label="Use a different email" onPress={changeEmail} />
@@ -211,25 +195,32 @@ function AccountSteps({ profile }: { profile: Profile }) {
 				}
 				title="Hi, grown-up"
 			>
-				<TextField
-					autoComplete="one-time-code"
-					autoCorrect={false}
-					error={note ?? undefined}
-					inputStyle={CODE_STYLE}
-					key="code"
-					keyboardType="number-pad"
-					label="Code"
-					maxLength={CODE_LENGTH}
-					onChangeText={(text) => {
-						const digits = text.replace(NON_DIGITS, "");
-						setCode(digits);
-						setNote(null);
-						if (digits.length === CODE_LENGTH) {
-							Keyboard.dismiss();
-						}
-					}}
-					textContentType="oneTimeCode"
-					value={code}
+				<Controller
+					control={codeForm.control}
+					name="code"
+					render={({ field, fieldState }) => (
+						<TextField
+							autoComplete="one-time-code"
+							autoCorrect={false}
+							error={fieldState.error?.message ?? note ?? undefined}
+							inputStyle={CODE_STYLE}
+							key="code"
+							keyboardType="number-pad"
+							label="Code"
+							maxLength={CODE_LENGTH}
+							onBlur={field.onBlur}
+							onChangeText={(text) => {
+								const digits = text.replace(NON_DIGITS, "");
+								field.onChange(digits);
+								setNote(null);
+								if (digits.length === CODE_LENGTH) {
+									Keyboard.dismiss();
+								}
+							}}
+							textContentType="oneTimeCode"
+							value={field.value}
+						/>
+					)}
 				/>
 			</Screen>
 		);
@@ -270,7 +261,7 @@ function AccountSteps({ profile }: { profile: Profile }) {
 				style={[styles.lead, LEAD]}
 				variant="body"
 			>
-				{`Your account keeps ${profile.childName}'s adventures safe.`}
+				Your account keeps your child's adventures safe.
 			</ClayText>
 			{note ? (
 				<ClayText
@@ -287,24 +278,9 @@ function AccountSteps({ profile }: { profile: Profile }) {
 	);
 }
 
-export default function Account() {
-	const [profile, setProfile] = useState<Profile | null>(null);
-
-	useEffect(() => {
-		getProfile().then(setProfile);
-	}, []);
-
-	return profile ? <AccountSteps profile={profile} /> : null;
-}
-
 const styles = StyleSheet.create({
 	body: { paddingTop: spacing.lg },
 	fieldBody: { paddingTop: spacing.xl },
 	lead: { paddingHorizontal: spacing.md },
-	link: {
-		alignItems: "center",
-		justifyContent: "center",
-		minHeight: layout.minTarget - spacing.lg,
-	},
 	note: { marginTop: spacing.lg },
 });
