@@ -1,98 +1,75 @@
-# little-adventures
+# Little Adventures
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, and more.
+A story app for children aged 2 to 11 that doubles as a learning platform. The child asks a question out loud ("can we fly to the moon?"), and the story is built around it: narrated, illustrated chapters that star the child's own character. At the end of each chapter the child picks what happens next, so the story follows their curiosity and teaches something real along the way. A parent sits beside them, sets things up, and sees past stories in a dashboard.
 
-## Features
+Website: [littleadventures.app](https://littleadventures.app)
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **React Native** - Build mobile apps using React
-- **Expo** - Tools for React Native development
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Turborepo** - Optimized monorepo build system
-- **Husky** - Git hooks for code quality
+## Built at the Meta Global AI Developer Hackathon
 
-## Getting Started
+Everything in this repo was written during the hackathon (building period Oct 27 to Nov 4, 2026). This repo was started on Oct 30, 2026, and its commit history is the real record of that work.
 
-First, install the dependencies:
+This repo is the client. All AI generation happens in a separate backend service, which this repo reaches only through its player API. This repo calls no AI model itself.
+
+```
+apps/native (child + parent app) ─┐
+                                  ├─► player API (/api/v1) ─► backend service
+apps/web (landing + dashboard) ───┘
+```
+
+## Apps
+
+| Path | What it is | Stack |
+| --- | --- | --- |
+| `apps/native` | The app the child and parent use. Runs in the browser first, then ships to iOS from the same code. | Expo, React Native, Uniwind |
+| `apps/web` | Public landing page and the parent dashboard. | Next.js |
+| `packages/ui` | Shared web UI primitives. | shadcn/ui, Tailwind CSS |
+| `packages/config` | Shared TypeScript config. | |
+
+## Run it
+
+Needs Node 24 (pinned in `.nvmrc`) and bun.
 
 ```bash
+nvm use
 bun install
+bun run dev:web      # landing + dashboard on http://localhost:3001
+bun run dev:native   # Expo dev server, press w to open the app in the browser
 ```
 
+To build for iOS, run `bun run ios` from `apps/native` (needs Xcode).
 
+## Configuration
 
-Then, run the development server:
+Each app declares its environment in `.env.schema`, and Varlock generates a typed `src/env.ts` on install (`bun run env:generate` after a schema change). Real values go in ignored `.env` files.
 
-```bash
-bun run dev
-```
+| Variable | App | Value |
+| --- | --- | --- |
+| `EXPO_PUBLIC_SERVER_URL` | `apps/native` | Base URL of the backend API |
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-From `apps/native`, run the `ios` script for iOS or the `android` script for Android to build and launch the app. See [Expo development builds](https://docs.expo.dev/develop/development-builds/introduction/) for device setup.
+## Scripts
 
-## UI Customization
+| Command | Does |
+| --- | --- |
+| `bun run dev` | Start every app |
+| `bun run dev:web` | Start the Next.js app |
+| `bun run dev:native` | Start the Expo dev server |
+| `bun run build` | Build every app |
+| `bun run check-types` | Type-check the whole repo |
+| `bunx ultracite check` / `bunx ultracite fix` | Lint and format (Biome) |
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+A Husky pre-commit hook runs lint-staged with Ultracite on staged files.
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
-
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
-```
-
-Import shared components like this:
-
-```tsx
-import { Button } from "@little-adventures/ui/components/button"
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `bun run prepare`
-
-
-
-## Project Structure
+## Project structure
 
 ```
 little-adventures/
 ├── apps/
-│   ├── web/         # Frontend application (Next.js)
-│   ├── native/      # Mobile application (React Native, Expo)
+│   ├── native/   # Expo app (web first, then iOS)
+│   └── web/      # Next.js landing page and parent dashboard
 ├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
+│   ├── config/   # Shared TypeScript config
+│   └── ui/       # Shared shadcn/ui components and styles
+└── PRODUCT.md    # Who it is for and what it must do
 ```
 
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run dev:native`: Start the React Native/Expo development server
+Scaffolded with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack).
