@@ -1,3 +1,4 @@
+import { photoUploadRequestSchema } from "@little-adventures/validation/photo";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { authedFetch } from "@/src/auth/auth-client";
 
@@ -25,8 +26,12 @@ export async function uploadChildPhoto(uri: string): Promise<string> {
 	image.release();
 	const bytes = await (await fetch(saved.uri)).blob();
 
+	const request = photoUploadRequestSchema.parse({
+		contentType: CONTENT_TYPE,
+		size: bytes.size,
+	});
 	const res = await authedFetch("/api/photos/upload-url", {
-		body: JSON.stringify({ contentType: CONTENT_TYPE, size: bytes.size }),
+		body: JSON.stringify(request),
 		headers: { "content-type": "application/json" },
 		method: "POST",
 	});
