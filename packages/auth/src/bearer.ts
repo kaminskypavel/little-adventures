@@ -46,7 +46,15 @@ export const createBearerVerifier = ({ authBaseUrl, jwks }: BearerConfig) => {
 	};
 };
 
-const BEARER = /^Bearer (?<token>.+)$/iu;
+const BEARER_PREFIX = "bearer ";
+
+/** The token of a `Bearer <token>` header (scheme case-insensitive), else undefined. */
+function bearerToken(authorization: string | null | undefined) {
+	if (!authorization?.toLowerCase().startsWith(BEARER_PREFIX)) {
+		return;
+	}
+	return authorization.slice(BEARER_PREFIX.length).trim() || undefined;
+}
 
 /**
  * The caller behind a request. A `Bearer` header decides alone: a token that
@@ -65,7 +73,7 @@ export async function resolvePrincipal({
 	onInvalidBearer?: () => void;
 	verify: (token: string) => Promise<Principal | null>;
 }): Promise<Principal | null> {
-	const token = authorization?.match(BEARER)?.groups?.token;
+	const token = bearerToken(authorization);
 	if (!token) {
 		return await cookieSession();
 	}
