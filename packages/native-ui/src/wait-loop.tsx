@@ -16,8 +16,8 @@ const shade = {
 	],
 	locations: [0, 0.28, 0.6, 1],
 } as const;
-const DIM = "rgba(10,22,44,0.55)";
-const DIM_MS = 800;
+const AWAY_MS = 400;
+const AWAY_EASE = `cubic-bezier(${motion.easeOut.join(",")})`;
 // The loop plays 2.5 times faster while the last stretch of the bar fills.
 const FAST_RATE = 2.5;
 const READY_POLL_MS = 50;
@@ -27,15 +27,16 @@ const VIDEO = { height: 928, width: 416 } as const;
 
 /**
  * 10a: the full-bleed loop of the star and the puppy playing, with a soft navy shade for the
- * title and the bar. `fast` speeds the loop up, `dimmed` fades a scrim over everything for the
- * ready screen. Under reduced motion the loop holds its first frame.
+ * title and the bar. `fast` speeds the loop up, `away` fades the loop and its shade out for the
+ * ready screen (the sky behind is left as it is) and pauses it. Under reduced motion the loop
+ * holds its first frame.
  */
 export function WaitLoop({
-	dimmed = false,
+	away = false,
 	fast = false,
 	source,
 }: {
-	dimmed?: boolean;
+	away?: boolean;
 	fast?: boolean;
 	/** A require()'d video module. */
 	source: number;
@@ -80,8 +81,25 @@ export function WaitLoop({
 		return () => clearInterval(timer);
 	}, [calm, player]);
 
+	// Pause once the fade has finished, so nothing keeps decoding behind the sky.
+	const awayMs = calm ? motion.reducedReveal : AWAY_MS;
+	useEffect(() => {
+		if (!away) {
+			return;
+		}
+		const timer = setTimeout(() => player.pause(), awayMs);
+		return () => clearTimeout(timer);
+	}, [away, awayMs, player]);
+
+	const fade = {
+		opacity: away ? 0 : 1,
+		transitionDuration: `${awayMs}ms`,
+		transitionProperty: "opacity",
+		transitionTimingFunction: AWAY_EASE,
+	} as const;
+
 	return (
-		<>
+		<Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, fade]}>
 			<View
 				onLayout={onLayout}
 				pointerEvents="none"
@@ -110,19 +128,7 @@ export function WaitLoop({
 				pointerEvents="none"
 				style={StyleSheet.absoluteFill}
 			/>
-			<Animated.View
-				pointerEvents="none"
-				style={[
-					StyleSheet.absoluteFill,
-					{
-						backgroundColor: DIM,
-						opacity: dimmed ? 1 : 0,
-						transitionDuration: `${calm ? motion.reducedReveal : DIM_MS}ms`,
-						transitionProperty: "opacity",
-					},
-				]}
-			/>
-		</>
+		</Animated.View>
 	);
 }
 

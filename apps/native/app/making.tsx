@@ -27,6 +27,7 @@ import {
 	watchMaking,
 } from "@/src/data/adventure-client";
 import type { Adventure } from "@/src/data/types";
+import { dev } from "@/src/dev-param";
 
 const LOADER = require("../assets/story/loader.mp4");
 
@@ -183,7 +184,7 @@ export default function Making() {
 	const fadeMs = calm ? motion.reducedReveal : REVEAL_MS;
 
 	useEffect(() => {
-		if (fail === "1") {
+		if (dev(fail) === "1") {
 			const timer = setTimeout(() => router.replace("/oops"), FAIL_AFTER_MS);
 			return () => clearTimeout(timer);
 		}
@@ -259,7 +260,7 @@ export default function Making() {
 
 	return (
 		<View style={styles.root}>
-			<WaitLoop dimmed={revealed} fast={serverReady && !full} source={LOADER} />
+			<WaitLoop away={revealed} fast={serverReady && !full} source={LOADER} />
 			<WatchHill away={revealed} />
 			<Screen
 				bodyStyle={styles.body}
