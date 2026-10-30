@@ -13,6 +13,7 @@
     "@little-adventures/auth": "workspace:*",
     "@little-adventures/storage": "workspace:*",
     "@little-adventures/ui": "workspace:*",
+    "@little-adventures/validation": "workspace:*",
     "@swc/helpers": "^0.5.23",
     "@varlock/nextjs-integration": "1.2.5",
     "babel-plugin-react-compiler": "^1.0.0",
