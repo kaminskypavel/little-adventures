@@ -68,5 +68,7 @@ export interface Profile {
 	grownUp: boolean;
 	hasPhoto: boolean;
 	look: Look;
+	/** Storage key of the uploaded photo. */
+	photoKey?: string;
 	puppy: boolean;
 }
