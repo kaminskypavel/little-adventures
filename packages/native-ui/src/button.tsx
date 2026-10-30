@@ -17,7 +17,7 @@ interface ButtonProps {
 	tone?: ClayTone;
 }
 
-interface PrimaryButtonProps extends ButtonProps {
+interface IconButtonProps extends ButtonProps {
 	/** 30 pt icon on the left of the label. */
 	icon?: IconName;
 }
@@ -34,7 +34,7 @@ export function PrimaryButton({
 	style,
 	tone = "sun",
 	...rest
-}: PrimaryButtonProps) {
+}: IconButtonProps) {
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
@@ -66,11 +66,12 @@ export function PrimaryButton({
 /** 80 high, pill, sage clay. Full width inside the margins. */
 export function SecondaryButton({
 	accessibilityLabel,
+	icon,
 	label,
 	style,
 	tone = "sage",
 	...rest
-}: ButtonProps) {
+}: IconButtonProps) {
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
@@ -79,6 +80,8 @@ export function SecondaryButton({
 				{
 					alignItems: "center",
 					alignSelf: "stretch",
+					flexDirection: "row",
+					gap: spacing.md,
 					height: layout.secondaryHeight,
 					justifyContent: "center",
 				},
@@ -87,6 +90,9 @@ export function SecondaryButton({
 			tone={tone}
 			{...rest}
 		>
+			{icon ? (
+				<Icon color={ink(tone)} name={icon} size={iconSizes.button} />
+			) : null}
 			<ClayText color={ink(tone)} variant="buttonSecondary">
 				{label}
 			</ClayText>
