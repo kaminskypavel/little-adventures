@@ -136,7 +136,7 @@ export default function Hello() {
 					style={CAPTION}
 					variant="label"
 				>
-					About a minute: a name, a photo, a look.
+					{"About a minute:\na name, a photo, a look."}
 				</ClayText>
 			</FadeUp>
 		</Screen>
