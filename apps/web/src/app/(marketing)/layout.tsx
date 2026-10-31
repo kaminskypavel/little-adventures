@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { dictionaries } from "@/i18n/dictionaries";
+import { LANGUAGES } from "@/i18n/languages";
 import "./landing.css";
 
 // Search and share text, kept inside what Google and social previews show in full:
 // title up to 60 characters, share description up to 125, meta description up to 160.
-const TITLE = "Little Adventures: bedtime stories sparked by your child";
-const SHARE_DESCRIPTION =
-	"Your child asks a question out loud. A short illustrated story answers it, starring your child, then says goodnight.";
-const DESCRIPTION =
-	"Your child asks a question out loud. A short illustrated story answers it, starring your child, with real facts and a calm goodnight.";
+const { description, ogLocale, shareDescription, title } = dictionaries.en.meta;
 
 // Vercel sets this to the production domain (the custom one once it is connected).
 const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -15,25 +13,25 @@ const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
 	: "https://littleadventures.app";
 
 export const metadata: Metadata = {
-	alternates: { canonical: "/" },
+	alternates: { canonical: "/", languages: LANGUAGES },
 	appleWebApp: { title: "Little Adventures" },
 	applicationName: "Little Adventures",
-	description: DESCRIPTION,
+	description,
 	formatDetection: { telephone: false },
 	metadataBase: new URL(SITE_URL),
 	openGraph: {
-		description: SHARE_DESCRIPTION,
-		locale: "en_US",
+		description: shareDescription,
+		locale: ogLocale,
 		siteName: "Little Adventures",
-		title: TITLE,
+		title,
 		type: "website",
 		url: "/",
 	},
-	title: TITLE,
+	title,
 	twitter: {
 		card: "summary_large_image",
-		description: SHARE_DESCRIPTION,
-		title: TITLE,
+		description: shareDescription,
+		title,
 	},
 };
 

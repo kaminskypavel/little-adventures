@@ -1,10 +1,5 @@
-import { VideoStory } from "@/components/story/video-story";
+import { LandingPage } from "@/components/landing-page";
 
-// The whole page is the story: seven video scenes, the store badges last.
-export default function LandingPage() {
-	return (
-		<main>
-			<VideoStory />
-		</main>
-	);
+export default function EnglishPage() {
+	return <LandingPage locale="en" />;
 }

@@ -9,6 +9,7 @@ import {
 	useRef,
 } from "react";
 
+import type { Dictionary } from "@/i18n/dictionaries";
 import { trpc } from "@/lib/trpc";
 
 import styles from "./waitlist-dialog.module.css";
@@ -23,11 +24,6 @@ interface FormState {
 	email: string;
 	status: "idle" | "invalid" | "error" | "done";
 }
-
-const MESSAGES: Partial<Record<FormState["status"], string>> = {
-	error: "We couldn't reach the list just now. Please try again.",
-	invalid: "That email doesn't look right. Check it and try again.",
-};
 
 async function joinWaitlist(
 	_prev: FormState,
@@ -50,7 +46,13 @@ async function joinWaitlist(
 	}
 }
 
-export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
+export function WaitlistDialog({
+	copy,
+	ref,
+}: {
+	copy: Dictionary["waitlist"];
+	ref: Ref<WaitlistDialogHandle>;
+}) {
 	const id = useId();
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const platformRef = useRef<HTMLInputElement>(null);
@@ -84,7 +86,7 @@ export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
 		>
 			<div className="relative flex flex-col gap-4 p-7">
 				<button
-					aria-label="Close"
+					aria-label={copy.close}
 					className="clay clay-sage absolute top-7 right-7 grid size-14 cursor-pointer place-items-center rounded-full"
 					onClick={close}
 					type="button"
@@ -106,17 +108,17 @@ export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
 					className="text-cream flex min-h-14 items-center pr-16 text-[30px] leading-[1.08] font-black"
 					id={`${id}-title`}
 				>
-					Get it when it's ready
+					{copy.title}
 				</h2>
 				<p className="text-cream/85 text-[19px] leading-snug font-bold">
-					We'll only use your email to tell you when the app is ready.
+					{copy.body}
 				</p>
 				{state.status === "done" ? (
 					<p
 						className="text-cream text-[19px] leading-snug font-extrabold"
 						role="status"
 					>
-						You're on the list. We'll write when it's ready.
+						{copy.done}
 					</p>
 				) : (
 					<form action={formAction} className="flex flex-col gap-3">
@@ -125,7 +127,7 @@ export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
 							className="text-cream text-[19px] font-extrabold"
 							htmlFor={`${id}-email`}
 						>
-							Your email
+							{copy.emailLabel}
 						</label>
 						<input
 							autoComplete="email"
@@ -142,7 +144,9 @@ export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
 							aria-live="polite"
 							className="text-cream min-h-6 text-[17px] leading-snug font-bold"
 						>
-							{MESSAGES[state.status]}
+							{state.status === "invalid" || state.status === "error"
+								? copy[state.status]
+								: null}
 						</p>
 						<button
 							aria-busy={isPending}
@@ -150,7 +154,7 @@ export function WaitlistDialog({ ref }: { ref: Ref<WaitlistDialogHandle> }) {
 							disabled={isPending}
 							type="submit"
 						>
-							Keep me posted
+							{copy.submit}
 						</button>
 					</form>
 				)}
