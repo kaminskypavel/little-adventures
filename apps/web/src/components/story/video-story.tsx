@@ -133,24 +133,28 @@ export function VideoStory() {
 			// After the loading screen, files load one at a time in the order asked for. A file
 			// an element already plays (it was needed before its turn) is never swapped under it.
 			let queue = Promise.resolve();
+			const fill = async (
+				m: HTMLImageElement | HTMLVideoElement,
+				src: string
+			) => {
+				if (!alive || m.getAttribute("src")) {
+					return;
+				}
+				let file = src;
+				try {
+					file = await readWhole(await fetch(src), () => undefined);
+				} catch {
+					// No streaming download: the element fetches the file itself.
+				}
+				if (alive && !m.getAttribute("src")) {
+					m.src = file;
+				}
+			};
 			const queueLoad = (
 				m: HTMLImageElement | HTMLVideoElement,
 				src: string
 			) => {
-				queue = queue.then(async () => {
-					if (!alive || m.getAttribute("src")) {
-						return;
-					}
-					let file = src;
-					try {
-						file = await readWhole(await fetch(src), () => undefined);
-					} catch {
-						// No streaming download: the element fetches the file itself.
-					}
-					if (alive && !m.getAttribute("src")) {
-						m.src = file;
-					}
-				});
+				queue = queue.then(() => fill(m, src));
 			};
 			const loadAll = async (onProgress: (p: number) => void) => {
 				const gate = plan.filter((f) => f.scene < GATE);
@@ -235,10 +239,10 @@ export function VideoStory() {
 						ease: "brandOut",
 						height: k === act ? long : small,
 					});
-					const fill = dotFill(k, i);
+					const filled = dotFill(k, i);
 					gsap.to(d.firstElementChild, {
 						duration: 0.3,
-						height: `${fill * 100}%`,
+						height: `${filled * 100}%`,
 					});
 				});
 			};
@@ -262,17 +266,17 @@ export function VideoStory() {
 					}
 				);
 			};
-			// The way back from a scene loads once the visitor is there, so going back never waits.
+			// The way back from a scene loads while the move into it plays, ahead of the files
+			// still queued for later scenes, so scrolling up right after landing never waits.
 			const warmBack = (scene: number) => {
 				const clip = backs[scene];
 				if (clip && !calm) {
-					queueLoad(clip, url.back(scene));
+					fill(clip, url.back(scene));
 				}
 			};
 			const arrive = (to: number) => {
 				const queued = story.getState().arrive(to, CALM_MS);
 				rest(to);
-				warmBack(to);
 				if (queued) {
 					go(queued, true);
 				}
@@ -317,6 +321,7 @@ export function VideoStory() {
 					return;
 				}
 				state.leave();
+				warmBack(to);
 				if (hint) {
 					hint.style.opacity = "0";
 				}

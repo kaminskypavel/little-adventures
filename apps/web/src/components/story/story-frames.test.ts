@@ -78,3 +78,29 @@ describe.skipIf(!(hasFfmpeg && DIR))("loops start on their scene", () => {
 		}
 	}
 });
+
+// Scrolling up plays a scene's backward move: it starts on that scene and lands on the one before.
+describe.skipIf(!(hasFfmpeg && DIR))(
+	"backward moves line up with the scenes",
+	() => {
+		for (const shape of ["w", "t"]) {
+			for (let scene = 1; scene < SCENE_COUNT; scene += 1) {
+				test(`${shape === "w" ? "computer" : "phone"} move back from scene ${scene}`, () => {
+					const back = `move-${shape}${scene}-back.mp4`;
+					expect(
+						diff(
+							thumb(back, "first"),
+							thumb(`still-${shape}${scene}.webp`, "first")
+						)
+					).toBeLessThan(MAX_DIFF);
+					expect(
+						diff(
+							thumb(back, "last"),
+							thumb(`still-${shape}${scene - 1}.webp`, "first")
+						)
+					).toBeLessThan(MAX_DIFF);
+				});
+			}
+		}
+	}
+);
