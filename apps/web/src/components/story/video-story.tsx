@@ -5,14 +5,7 @@ import { StoreBadges } from "@/components/waitlist/store-badges";
 import { Wordmark } from "@/components/wordmark";
 import type { Dictionary, SceneId } from "@/i18n/dictionaries";
 import { gsap, Observer, useGSAP } from "@/lib/gsap";
-import {
-	dotFill,
-	GATE,
-	litDot,
-	loadPlan,
-	type Screen,
-	storyUrls,
-} from "./story-plan";
+import { GATE, loadPlan, type Screen, storyUrls } from "./story-plan";
 import { createStoryStore } from "./story-store";
 
 // The landing story: seven scenes joined by short video moves. One gesture plays
@@ -31,7 +24,6 @@ const N = SCENE_IDS.length;
 const MOVE_SPEED = 1.2;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
-const DOTS = ["question", "adventure", "goodnight"] as const;
 const CUE_ARROWS = ["first", "second", "third"] as const;
 const LAYER = "absolute inset-0 size-full object-cover opacity-0";
 const TITLE =
@@ -203,8 +195,8 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				});
 				v.play().catch(() => undefined);
 			};
+			// One dot per scene: the scene you are on is a long pill, the ones behind you stay lit.
 			const setDots = (i: number) => {
-				const act = litDot(i);
 				const [small, long] = matchMedia("(max-width: 899px)").matches
 					? [9, 34]
 					: [12, 44];
@@ -212,12 +204,11 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 					gsap.to(d, {
 						duration: 0.28,
 						ease: "brandOut",
-						height: k === act ? long : small,
+						height: k === i ? long : small,
 					});
-					const filled = dotFill(k, i);
 					gsap.to(d.firstElementChild, {
 						duration: 0.3,
-						height: `${filled * 100}%`,
+						height: k <= i ? "100%" : "0%",
 					});
 				});
 			};
@@ -497,7 +488,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				const scene = copy.scenes[id];
 				return (
 					<section
-						className="fixed top-[6vh] left-1/2 z-[2] w-[min(94vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[5svh]"
+						className="fixed top-[6vh] left-1/2 z-[2] w-[min(94vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[max(68px,8svh)]"
 						data-copy={i}
 						key={id}
 					>
@@ -566,7 +557,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				aria-hidden="true"
 				className="fixed top-1/2 right-[max(16px,2.2vw)] z-[5] flex -translate-y-1/2 flex-col items-center gap-3 max-[899px]:right-2.5 max-[899px]:gap-2.5 [@media(min-aspect-ratio:16/9)]:right-[calc((100vw-177.78vh)/2+2vw)]"
 			>
-				{DOTS.map((d) => (
+				{SCENE_IDS.map((d) => (
 					<span
 						className="bg-cream/30 relative size-3 overflow-hidden rounded-full max-[899px]:size-[9px]"
 						data-dot

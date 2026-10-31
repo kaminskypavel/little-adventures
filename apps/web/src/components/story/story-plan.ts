@@ -72,20 +72,3 @@ export const loadPlan = (screen: Screen): PlanItem[] => {
 	}
 	return plan;
 };
-
-/** Which dot is lit: the question (scenes 0 and 1), the adventure, goodnight. */
-export const litDot = (scene: number) => {
-	if (scene < 2) {
-		return 0;
-	}
-	return scene < SCENE_COUNT - 1 ? 1 : 2;
-};
-
-/** How full a dot is; the adventure dot fills as the worlds go by. */
-export const dotFill = (dot: number, scene: number) => {
-	const lit = litDot(scene);
-	if (dot !== lit) {
-		return dot < lit ? 1 : 0;
-	}
-	return dot === 1 ? (scene - 1) / (SCENE_COUNT - 3) : 1;
-};

@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import media from "./story-media.json";
 import {
-	dotFill,
 	GATE,
-	litDot,
 	loadPlan,
 	MEDIA_BASE,
 	SCENE_COUNT,
@@ -85,18 +83,5 @@ describe("resting", () => {
 				.map((f) => f.scene);
 			expect(loops).toEqual(SCENES);
 		}
-	});
-});
-
-describe("dots", () => {
-	test("the question, then the adventure, then goodnight", () => {
-		expect(SCENES.map(litDot)).toEqual([0, 0, 1, 1, 1, 1, 2]);
-	});
-
-	test("the adventure dot fills world by world and is full on the last world", () => {
-		const fills = [2, 3, 4, 5].map((scene) => dotFill(1, scene));
-		expect(fills).toEqual([...fills].sort((a, b) => a - b));
-		expect(fills.at(-1)).toBe(1);
-		expect([0, 1, 2].map((dot) => dotFill(dot, 6))).toEqual([1, 1, 1]);
 	});
 });
