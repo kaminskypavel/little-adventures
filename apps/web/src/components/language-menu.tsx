@@ -17,7 +17,7 @@ export function LanguageMenu({ current }: { current: Locale }) {
 		<>
 			<button
 				aria-label={label}
-				className="text-cream fixed top-[max(16px,2.2vw)] right-[max(16px,2.2vw)] z-[6] flex cursor-pointer items-center gap-2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px] max-[899px]:top-3 max-[899px]:right-2.5 max-[899px]:px-3 max-[899px]:py-1.5 max-[899px]:text-[14px] [@media(min-aspect-ratio:16/9)]:right-[calc((100vw-177.78vh)/2+2vw)]"
+				className="text-cream fixed top-[max(16px,2.2vw)] right-[max(16px,2.2vw)] z-[6] flex cursor-pointer items-center gap-2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px] max-[899px]:top-4 max-[899px]:right-2.5 max-[899px]:px-3 max-[899px]:py-1.5 max-[899px]:text-[14px] [@media(min-aspect-ratio:16/9)]:right-[calc((100vw-177.78vh)/2+2vw)]"
 				popoverTarget="language-menu"
 				type="button"
 			>
@@ -25,7 +25,7 @@ export function LanguageMenu({ current }: { current: Locale }) {
 				<span aria-hidden="true">{current.toUpperCase()}</span>
 			</button>
 			<div
-				className="text-cream fixed inset-auto top-[calc(max(16px,2.2vw)+48px)] right-[max(16px,2.2vw)] m-0 rounded-2xl bg-[rgba(5,11,24,0.92)] p-2 max-[899px]:top-[54px] max-[899px]:right-2.5 [@media(min-aspect-ratio:16/9)]:right-[calc((100vw-177.78vh)/2+2vw)]"
+				className="text-cream fixed inset-auto top-[calc(max(16px,2.2vw)+48px)] right-[max(16px,2.2vw)] m-0 rounded-2xl bg-[rgba(5,11,24,0.92)] p-2 max-[899px]:top-[58px] max-[899px]:right-2.5 [@media(min-aspect-ratio:16/9)]:right-[calc((100vw-177.78vh)/2+2vw)]"
 				id="language-menu"
 				popover="auto"
 			>
