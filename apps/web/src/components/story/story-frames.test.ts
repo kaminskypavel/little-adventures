@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { spawnSync } from "bun";
+import { spawnSync, which } from "bun";
 import { SCENE_COUNT } from "./story-plan";
 
 // The images line up: every move starts on the frame of the scene it leaves and
@@ -9,10 +9,8 @@ import { SCENE_COUNT } from "./story-plan";
 // The clips are not in the repo: point STORY_MEDIA_DIR at a local copy (the upload script does).
 const DIR = process.env.STORY_MEDIA_DIR ?? "";
 const MAX_DIFF = 14;
-const hasFfmpeg = spawnSync(["ffmpeg", "-version"], {
-	stderr: "ignore",
-	stdout: "ignore",
-}).success;
+// Looked up, not run: spawning a missing program throws in Bun (CI has no ffmpeg).
+const hasFfmpeg = which("ffmpeg") !== null;
 
 const thumb = (file: string, where: "first" | "last") => {
 	const seek = where === "last" ? ["-sseof", "-0.05"] : [];
