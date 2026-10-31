@@ -51,12 +51,12 @@ export interface LlmResult<T> {
 }
 
 export interface GenerateInput<T extends z.ZodType> {
+	instructions: string;
 	prompt: string;
 	reasoningEffort?: "high" | "low" | "medium";
 	/** An opaque, stable id of the grown-up (never an email). */
 	safetyId: string;
 	schema: T;
-	system: string;
 }
 
 export function createLlm(config: LlmConfig) {
@@ -65,13 +65,13 @@ export function createLlm(config: LlmConfig) {
 	return {
 		/**
 		 * One request, one validated reply. Throws before any request when
-		 * `system` is empty, on a non-2xx reply, and on a reply that does not
+		 * `instructions` is empty, on a non-2xx reply, and on a reply that does not
 		 * match `schema`.
 		 */
 		async generate<T extends z.ZodType>(
 			input: GenerateInput<T>
 		): Promise<LlmResult<z.infer<T>>> {
-			if (!input.system) {
+			if (!input.instructions) {
 				throw new Error(
 					"The LLM package has no prompts of its own; see README > Prompts"
 				);
@@ -83,7 +83,7 @@ export function createLlm(config: LlmConfig) {
 			const response = await fetch(`${baseUrl}/chat/completions`, {
 				body: JSON.stringify({
 					messages: [
-						{ content: input.system, role: "system" },
+						{ content: input.instructions, role: "system" },
 						{ content: input.prompt, role: "user" },
 					],
 					model,

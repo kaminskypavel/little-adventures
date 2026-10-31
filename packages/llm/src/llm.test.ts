@@ -40,10 +40,10 @@ afterEach(() => {
 
 test("returns validated data with model, ms and usage", async () => {
 	const result = await llm.generate({
+		instructions: "You name things.",
 		prompt: "Name it",
 		safetyId: "user-1",
 		schema,
-		system: "You name things.",
 	});
 	expect(result.data).toEqual({ title: "Moon" });
 	expect(result.model).toBe("muse-spark-test");
@@ -58,10 +58,10 @@ test("returns validated data with model, ms and usage", async () => {
 
 test("a call without instructions throws naming the README and sends nothing", async () => {
 	const call = llm.generate({
+		instructions: "",
 		prompt: "Name it",
 		safetyId: "user-1",
 		schema,
-		system: "",
 	});
 	await expect(call).rejects.toThrow("README > Prompts");
 	expect(requests).toHaveLength(0);
@@ -69,11 +69,11 @@ test("a call without instructions throws naming the README and sends nothing", a
 
 test("the request carries the instructions, strict schema, model and safety id", async () => {
 	await llm.generate({
+		instructions: "You name things.",
 		prompt: "Name it",
 		reasoningEffort: "low",
 		safetyId: "user-1",
 		schema,
-		system: "You name things.",
 	});
 	expect(requests).toHaveLength(1);
 	const { body, url } = requests[0] as (typeof requests)[number];
@@ -97,10 +97,10 @@ test("the request carries the instructions, strict schema, model and safety id",
 test("a non-2xx reply throws with the status", async () => {
 	reply = () => new Response("nope", { status: 429 });
 	const call = llm.generate({
+		instructions: "You name things.",
 		prompt: "Name it",
 		safetyId: "user-1",
 		schema,
-		system: "You name things.",
 	});
 	await expect(call).rejects.toThrow("429");
 	expect(requests).toHaveLength(1);
@@ -109,10 +109,10 @@ test("a non-2xx reply throws with the status", async () => {
 test("a reply that does not match the schema throws", async () => {
 	reply = () => completion(JSON.stringify({ title: 42 }));
 	const call = llm.generate({
+		instructions: "You name things.",
 		prompt: "Name it",
 		safetyId: "user-1",
 		schema,
-		system: "You name things.",
 	});
 	await expect(call).rejects.toThrow();
 });
