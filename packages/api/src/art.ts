@@ -184,11 +184,21 @@ export async function drawArt(
 	}
 }
 
+const photoIdOf = (photoKey: string) =>
+	photoKey.slice(photoKey.lastIndexOf("/") + 1).split(".")[0];
+
 /** The folder of one photo's art: a newer photo never shares a file with an older one. */
-function artFolder(ownerId: string, childId: string, photoKey: string): string {
-	const [photoId] = photoKey.slice(photoKey.lastIndexOf("/") + 1).split(".");
-	return `${userPrefix(ownerId)}children/${childId}/art/${photoId}/`;
+export function artFolder(
+	ownerId: string,
+	childId: string,
+	photoKey: string
+): string {
+	return `${userPrefix(ownerId)}children/${childId}/art/${photoIdOf(photoKey)}/`;
 }
+
+/** The same folder shape for the grown-up's photo. */
+export const grownUpArtFolder = (ownerId: string, photoKey: string): string =>
+	`${userPrefix(ownerId)}grown-up/art/${photoIdOf(photoKey)}/`;
 
 /** Every object key the art of one child holds (face and looks). */
 export const artKeys = (

@@ -122,6 +122,7 @@ describe("photo.delete", () => {
 			deleted.push(key);
 			return Promise.resolve();
 		},
+		deletePrefix: () => Promise.resolve(),
 	} as unknown as Storage;
 	const callerFor = (userId: string) =>
 		appRouter.createCaller({
@@ -184,6 +185,8 @@ describe("child art", () => {
 	let pending: Promise<unknown>[];
 	let put: string[];
 	let deleted: string[];
+	// Every key in the bucket: what was put and not yet deleted.
+	let stored: Set<string>;
 	let segmentCalls: number;
 	let failLook: string | null;
 	let configured: boolean;
@@ -194,10 +197,20 @@ describe("child art", () => {
 	const storage = {
 		deleteObject: (key: string) => {
 			deleted.push(key);
+			stored.delete(key);
+			return Promise.resolve();
+		},
+		deletePrefix: (prefix: string) => {
+			for (const key of stored) {
+				if (key.startsWith(prefix)) {
+					stored.delete(key);
+				}
+			}
 			return Promise.resolve();
 		},
 		putObject: (input: { key: string }) => {
 			put.push(input.key);
+			stored.add(input.key);
 			return Promise.resolve();
 		},
 		readUrl: (key: string) =>
@@ -249,6 +262,7 @@ describe("child art", () => {
 		pending = [];
 		put = [];
 		deleted = [];
+		stored = new Set();
 		segmentCalls = 0;
 		failLook = null;
 		configured = true;
@@ -393,6 +407,36 @@ describe("child art", () => {
 				`${older}looks/wood.png`,
 			].sort()
 		);
+	});
+
+	test("a new photo removes every object in the old photo's art folder, engine drawings too", async () => {
+		const first = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		const older = `${folder}${first.id}/art/a/`;
+		stored.add(`${older}cast/extra.png`);
+		await callerFor("u1").child.save({
+			...noah,
+			id: first.id,
+			photoKey: newer,
+		});
+		await settle();
+		expect([...stored].filter((key) => key.startsWith(older))).toEqual([]);
+		expect(stored.has(`${folder}${first.id}/art/b/face.png`)).toBe(true);
+	});
+
+	test("photo.delete also removes an engine drawing in the photo's art folder", async () => {
+		const saved = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		const extra = `${folder}${saved.id}/art/a/cast/extra.png`;
+		stored.add(extra);
+		await callerFor("u1").photo.delete({ childId: saved.id });
+		expect(stored.has(extra)).toBe(false);
 	});
 
 	test("photo.delete removes the face and looks too and resets the art", async () => {

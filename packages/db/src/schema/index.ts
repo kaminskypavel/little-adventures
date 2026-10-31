@@ -56,6 +56,20 @@ export const children = littleAdventures.table(
 	(table) => [index("children_owner_id_idx").on(table.ownerId)]
 );
 
+// The grown-up's own photo, one per sign-in user. `ownerId` is the primary
+// key and carries no foreign key, like `children.ownerId`.
+export const grownUps = littleAdventures.table("grown_ups", {
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	ownerId: text("owner_id").primaryKey(),
+	photoKey: text("photo_key").notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow()
+		.$onUpdate(() => new Date()),
+});
+
 // One model call, success or failure. `ownerId` and `childId` carry no foreign
 // key, so a deleted child keeps its cost history.
 export const aiCalls = littleAdventures.table(

@@ -196,6 +196,27 @@ export function createStorage(config: StorageConfig) {
 			await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 		},
 
+		/** Deletes every object under `prefix` (list, then delete). End the prefix with `/`. */
+		async deletePrefix(prefix: string): Promise<void> {
+			const { bucket, client } = requireR2();
+			const deletes: Promise<unknown>[] = [];
+			for await (const page of paginateListObjectsV2(
+				{ client },
+				{ Bucket: bucket, Prefix: prefix }
+			)) {
+				for (const object of page.Contents ?? []) {
+					if (object.Key !== undefined) {
+						deletes.push(
+							client.send(
+								new DeleteObjectCommand({ Bucket: bucket, Key: object.Key })
+							)
+						);
+					}
+				}
+			}
+			await Promise.all(deletes);
+		},
+
 		/** Size, type and etag of a key without its bytes. Throws when it does not exist. */
 		async headObject(
 			key: string

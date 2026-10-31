@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { artKeys } from "../art";
+import { artFolder, artKeys } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey, photoKey } from "../photo-key";
 
@@ -31,6 +31,11 @@ export const photoRouter = router({
 					.filter((key) => ownsKey(ownerId, key))
 					.map((key) => ctx.storage.deleteObject(key))
 			);
+			if (row.photoKey && ownsKey(ownerId, row.photoKey)) {
+				await ctx.storage.deletePrefix(
+					artFolder(ownerId, row.id, row.photoKey)
+				);
+			}
 			await ctx.db
 				.update(children)
 				.set({ artStatus: "idle", drawings: {}, faceKey: null, photoKey: null })

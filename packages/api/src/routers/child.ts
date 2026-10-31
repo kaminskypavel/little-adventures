@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { artKeys, drawArt, withArtUrls } from "../art";
+import { artFolder, artKeys, drawArt, withArtUrls } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey } from "../photo-key";
 
@@ -78,6 +78,12 @@ export const childRouter = router({
 		if (oldArt.length > 0) {
 			ctx.waitUntil(
 				Promise.all(oldArt.map((key) => ctx.storage.deleteObject(key)))
+			);
+		}
+		// Everything else in that folder (the private engine's drawings) goes with it.
+		if (newPhoto && before?.photoKey) {
+			ctx.waitUntil(
+				ctx.storage.deletePrefix(artFolder(ownerId, row.id, before.photoKey))
 			);
 		}
 		if (drawsArt && row.photoKey) {
