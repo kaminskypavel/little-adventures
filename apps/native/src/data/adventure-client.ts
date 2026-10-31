@@ -6,13 +6,14 @@ import {
 	ideas,
 	keepGoing,
 	mockAdventure,
-	mockProfile,
 	transcribedQuestion,
 } from "./mock-adventure";
+import { trpc } from "./trpc";
 import type {
 	Adventure,
 	AdventureSummary,
 	Idea,
+	Look,
 	MakeStatus,
 	NodeId,
 	Profile,
@@ -24,7 +25,7 @@ import type {
  * firstRun: the app starts on Welcome.
  */
 export const devFlags: { firstRun: boolean; isFirstHome: boolean } = {
-	firstRun: true,
+	firstRun: false,
 	isFirstHome: false,
 };
 
@@ -103,18 +104,78 @@ export const visit = (id: string, node: NodeId): Promise<Progress> => {
 export const getAdventures = (): Promise<AdventureSummary[]> =>
 	wait(grownUpList);
 
-let profile: Profile = { ...mockProfile };
-
-/** The child set up on first run (name, boy or girl, age, look, who comes along). */
-export const getProfile = (): Promise<Profile> => wait({ ...profile });
-
-export const saveProfile = (patch: Partial<Profile>): Promise<Profile> => {
-	profile = { ...profile, ...patch };
-	return wait({ ...profile });
+const emptyProfile: Profile = {
+	childAge: null,
+	childKind: "boy",
+	childName: "",
+	grownUp: false,
+	hasPhoto: false,
+	look: "clay",
+	puppy: false,
 };
 
-/** True when a child exists (name and age set). The dev flag `firstRun` forces false for the mock. */
-export const isSetUp = (): Promise<boolean> =>
-	wait(
-		!devFlags.firstRun && profile.childName !== "" && profile.childAge !== null
-	);
+// Name, kind and age are saved together by screen 03; until then the answers wait here.
+let draft: Profile = { ...emptyProfile };
+
+/** The caller's first child, or the draft when there is none yet. */
+async function loadChild(): Promise<{ id?: string; profile: Profile }> {
+	const [row] = await trpc.child.mine.query();
+	if (!row) {
+		return { profile: { ...draft } };
+	}
+	draft = { ...emptyProfile };
+	return {
+		id: row.id,
+		profile: {
+			childAge: row.age,
+			childKind: row.kind,
+			childName: row.name,
+			grownUp: row.grownUp,
+			hasPhoto: row.photoKey !== null,
+			look: row.look as Look,
+			photoKey: row.photoKey ?? undefined,
+			puppy: row.puppy,
+		},
+	};
+}
+
+/** The child set up on first run (name, boy or girl, age, look, who comes along). */
+export const getProfile = async (): Promise<Profile> =>
+	(await loadChild()).profile;
+
+export const saveProfile = async (
+	patch: Partial<Profile>
+): Promise<Profile> => {
+	const { id, profile } = await loadChild();
+	const merged = { ...profile, ...patch };
+	if (!id) {
+		draft = merged;
+	}
+	if (merged.childName.trim() === "" || merged.childAge === null) {
+		return merged;
+	}
+	await trpc.child.save.mutate({
+		age: merged.childAge,
+		grownUp: merged.grownUp,
+		id,
+		kind: merged.childKind,
+		look: merged.look,
+		name: merged.childName,
+		photoKey: merged.photoKey,
+		puppy: merged.puppy,
+	});
+	return merged;
+};
+
+/** True when the grown-up has a child. The dev flag `firstRun` forces false. */
+export const isSetUp = async (): Promise<boolean> => {
+	if (devFlags.firstRun) {
+		return false;
+	}
+	try {
+		const { id } = await loadChild();
+		return id !== undefined;
+	} catch {
+		return false;
+	}
+};
