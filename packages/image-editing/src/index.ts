@@ -28,6 +28,14 @@ export const MUSE_IMAGE_COST_MICRO_USD = 10_000;
 
 export const MODELS = { redraw: MUSE_IMAGE_MODEL, segment: SAM_MODEL } as const;
 
+const MAX_REFERENCES = 6;
+
+export interface MuseImageResult {
+	bytes: Uint8Array;
+	model: string;
+	ms: number;
+}
+
 export interface ImageEditingConfig {
 	apiKey?: string;
 }
@@ -45,7 +53,84 @@ export function createImageEditing(config: ImageEditingConfig) {
 		};
 	}
 
+	async function museImage(
+		path: "edits" | "generations",
+		input: {
+			images?: { image_url: string }[];
+			prompt: string;
+			safetyId: string;
+			size: string;
+		}
+	): Promise<MuseImageResult> {
+		const started = Date.now();
+		const response = await fetch(`${BASE_URL}/images/${path}`, {
+			body: JSON.stringify({
+				images: input.images,
+				model: MUSE_IMAGE_MODEL,
+				n: 1,
+				output_format: "png",
+				prompt: input.prompt,
+				reasoning_strength: "low",
+				response_format: "b64_json",
+				size: input.size,
+				user: input.safetyId,
+			}),
+			headers: headers(),
+			method: "POST",
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+		});
+		if (!response.ok) {
+			throw new Error(
+				`Muse Image ${response.status}: ${await response.text()}`
+			);
+		}
+		const json = (await response.json()) as {
+			data?: { b64_json?: string }[];
+		};
+		const b64 = json.data?.[0]?.b64_json;
+		if (!b64) {
+			throw new Error("Muse Image returned no image");
+		}
+		return {
+			bytes: new Uint8Array(Buffer.from(b64, "base64")),
+			model: MUSE_IMAGE_MODEL,
+			ms: Date.now() - started,
+		};
+	}
+
 	return {
+		/**
+		 * Edits up to 6 reference images with a prompt at the given size.
+		 * `safetyId` is an opaque, stable id of the grown-up (never an email).
+		 */
+		edit(input: {
+			images: string[];
+			prompt: string;
+			safetyId: string;
+			size: string;
+		}): Promise<MuseImageResult> {
+			if (input.images.length > MAX_REFERENCES) {
+				return Promise.reject(
+					new Error(`Muse Image takes at most ${MAX_REFERENCES} references`)
+				);
+			}
+			return museImage("edits", {
+				// The JSON body wants objects; a bare url string is rejected.
+				images: input.images.map((image_url) => ({ image_url })),
+				prompt: input.prompt,
+				safetyId: input.safetyId,
+				size: input.size,
+			});
+		},
+
+		/** Plain text-to-image at the given size. */
+		generate(input: {
+			prompt: string;
+			safetyId: string;
+			size: string;
+		}): Promise<MuseImageResult> {
+			return museImage("generations", input);
+		},
 		/** Whether a key is set. Tells a key-less env from a real failure. */
 		isConfigured: Boolean(apiKey),
 
@@ -58,36 +143,13 @@ export function createImageEditing(config: ImageEditingConfig) {
 			prompt: string;
 			safetyId: string;
 		}): Promise<Uint8Array> {
-			const response = await fetch(`${BASE_URL}/images/edits`, {
-				body: JSON.stringify({
-					// The JSON body wants objects; a bare url string is rejected.
-					images: [{ image_url: input.imageUrl }],
-					model: MUSE_IMAGE_MODEL,
-					n: 1,
-					output_format: "png",
-					prompt: input.prompt,
-					reasoning_strength: "low",
-					response_format: "b64_json",
-					size: "1024x1024",
-					user: input.safetyId,
-				}),
-				headers: headers(),
-				method: "POST",
-				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+			const { bytes } = await this.edit({
+				images: [input.imageUrl],
+				prompt: input.prompt,
+				safetyId: input.safetyId,
+				size: "1024x1024",
 			});
-			if (!response.ok) {
-				throw new Error(
-					`Muse Image ${response.status}: ${await response.text()}`
-				);
-			}
-			const json = (await response.json()) as {
-				data?: { b64_json?: string }[];
-			};
-			const b64 = json.data?.[0]?.b64_json;
-			if (!b64) {
-				throw new Error("Muse Image returned no image");
-			}
-			return new Uint8Array(Buffer.from(b64, "base64"));
+			return bytes;
 		},
 
 		/** The largest `prompt` match in the image, or null when SAM finds none. */

@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
 import { faceCutout, faceSquare } from "./cutout";
+import { createImageEditing } from "./index";
 import { eventData, splitEvents } from "./sse";
 
 describe("sse", () => {
@@ -75,5 +76,112 @@ describe("faceCutout", () => {
 			data[(y * info.width + x) * info.channels + 3];
 		expect(alphaAt(100, 256)).toBe(255);
 		expect(alphaAt(400, 256)).toBe(0);
+	});
+});
+
+describe("muse image calls", () => {
+	const realFetch = globalThis.fetch;
+	const calls: { body: Record<string, unknown>; url: string }[] = [];
+
+	function mockFetch() {
+		calls.length = 0;
+		globalThis.fetch = ((url: string, init: { body: string }) => {
+			calls.push({ body: JSON.parse(init.body), url });
+			return Promise.resolve(
+				Response.json({
+					data: [{ b64_json: Buffer.from("png").toString("base64") }],
+				})
+			);
+		}) as unknown as typeof fetch;
+	}
+
+	afterEach(() => {
+		globalThis.fetch = realFetch;
+	});
+
+	const images = createImageEditing({ apiKey: "key" });
+
+	test("edit sends three references as three image_url objects with the size", async () => {
+		mockFetch();
+		const result = await images.edit({
+			images: ["https://a/1.png", "https://a/2.png", "https://a/3.png"],
+			prompt: "draw it",
+			safetyId: "grownup-1",
+			size: "1280x720",
+		});
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.url).toEndWith("/images/edits");
+		expect(calls[0]?.body).toMatchObject({
+			images: [
+				{ image_url: "https://a/1.png" },
+				{ image_url: "https://a/2.png" },
+				{ image_url: "https://a/3.png" },
+			],
+			model: "muse-image-1.0",
+			prompt: "draw it",
+			size: "1280x720",
+			user: "grownup-1",
+		});
+		expect(Buffer.from(result.bytes).toString()).toBe("png");
+		expect(result.model).toBe("muse-image-1.0");
+		expect(result.ms).toBeGreaterThanOrEqual(0);
+	});
+
+	test("edit rejects more than 6 references before any request", async () => {
+		mockFetch();
+		const seven = Array.from({ length: 7 }, (_, i) => `https://a/${i}.png`);
+		await expect(
+			images.edit({
+				images: seven,
+				prompt: "draw it",
+				safetyId: "grownup-1",
+				size: "1024x1024",
+			})
+		).rejects.toThrow();
+		expect(calls).toHaveLength(0);
+	});
+
+	test("generate posts the prompt and size to the generations endpoint", async () => {
+		mockFetch();
+		const result = await images.generate({
+			prompt: "a quiet harbour",
+			safetyId: "grownup-1",
+			size: "1280x720",
+		});
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.url).toEndWith("/images/generations");
+		expect(calls[0]?.body).toEqual({
+			model: "muse-image-1.0",
+			n: 1,
+			output_format: "png",
+			prompt: "a quiet harbour",
+			reasoning_strength: "low",
+			response_format: "b64_json",
+			size: "1280x720",
+			user: "grownup-1",
+		});
+		expect(result.model).toBe("muse-image-1.0");
+	});
+
+	test("redraw sends the same body as before", async () => {
+		mockFetch();
+		const bytes = await images.redraw({
+			imageUrl: "https://a/photo.png",
+			prompt: "paint it",
+			safetyId: "grownup-1",
+		});
+		expect(calls[0]?.url).toEndWith("/images/edits");
+		expect(calls[0]?.body).toEqual({
+			images: [{ image_url: "https://a/photo.png" }],
+			model: "muse-image-1.0",
+			n: 1,
+			output_format: "png",
+			prompt: "paint it",
+			reasoning_strength: "low",
+			response_format: "b64_json",
+			size: "1024x1024",
+			user: "grownup-1",
+		});
+		expect(Buffer.from(bytes).toString()).toBe("png");
 	});
 });
