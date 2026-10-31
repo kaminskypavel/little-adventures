@@ -1,5 +1,0 @@
-{
-  "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css,scss,less,vue,svelte,astro,html,md,mdx,yaml,yml,graphql,gql}": [
-    "bunx ultracite fix"
-  ]
-}

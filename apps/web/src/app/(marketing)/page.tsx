@@ -1,14 +1,10 @@
-import { Sky } from "@/components/sky";
-import { StorySlides } from "@/components/story/story-slides";
+import { VideoStory } from "@/components/story/video-story";
 
-// The whole page is the slides: hero first, closing badges last.
+// The whole page is the story: seven video scenes, the store badges last.
 export default function LandingPage() {
 	return (
-		<>
-			<Sky />
-			<main>
-				<StorySlides />
-			</main>
-		</>
+		<main>
+			<VideoStory />
+		</main>
 	);
 }
