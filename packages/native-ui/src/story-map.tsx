@@ -197,6 +197,37 @@ function stopsBetween(from: MapNode, to: MapNode): Stop[] {
 const stoneOf = (stop: Stop) => ("stone" in stop ? stop.stone : null);
 
 // ---------------------------------------------------------------------------------------------
+// Stepping leaves: a clay leaf on every stone position, faint unless it lies on a road ahead
+// ---------------------------------------------------------------------------------------------
+
+/** Width of a leaf in pt; it keeps the center of the round 7 stone it replaces. */
+const LEAF_WIDTH = 22;
+/** Leaves on roads the child cannot take next. */
+const FAINT = 0.15;
+
+interface Leaf {
+	/** Width / height of the cut-out. */
+	ratio: number;
+	source: number;
+}
+
+/** One leaf per stone variant 1 to 3: a lily pad, an oval leaf, a heart leaf. */
+const LEAVES: readonly [Leaf, Leaf, Leaf] = [
+	{ ratio: 184 / 176, source: require("../assets/map/leaf-1.png") },
+	{ ratio: 135 / 184, source: require("../assets/map/leaf-2.png") },
+	{ ratio: 184 / 175, source: require("../assets/map/leaf-3.png") },
+];
+
+/** The stones on roads from `here` to a place the child can go to next. */
+function nextStones(here: MapNode, next: readonly MapNode[]): Set<number> {
+	const roads = ROADS.filter((road) => {
+		const other = otherEnd(road, here);
+		return other !== null && next.includes(other);
+	});
+	return new Set(roads.flatMap((road) => road.stones));
+}
+
+// ---------------------------------------------------------------------------------------------
 // Frame: round 7 px to this screen's points
 // ---------------------------------------------------------------------------------------------
 
@@ -348,19 +379,31 @@ function MapPlate({
 	);
 }
 
-function Stones({ frame, lit }: { frame: Frame; lit: ReadonlySet<number> }) {
+function Stones({
+	ahead,
+	frame,
+	lit,
+}: {
+	/** Stones on the roads ahead: full strength. */
+	ahead: ReadonlySet<number>;
+	frame: Frame;
+	lit: ReadonlySet<number>;
+}) {
+	// SteppingStone centers itself on (left, top), so a smaller leaf keeps the stone's center.
 	return STONES.map((stone, index) => (
 		<SteppingStone
 			active={lit.has(index)}
+			art={LEAVES[stone.variant - 1]}
 			key={`${stone.x}-${stone.y}`}
 			rotate={stone.rotate}
 			style={{
 				left: frame.x(stone.x),
+				opacity: ahead.has(index) ? 1 : FAINT,
 				position: "absolute",
 				top: frame.y(stone.y),
 			}}
 			variant={stone.variant}
-			width={stone.width}
+			width={LEAF_WIDTH}
 		/>
 	));
 }
@@ -450,7 +493,7 @@ function Plates({
 }
 
 /**
- * The hub (screen 11): stepping stones, the five place medallions, the goodnight node and the
+ * The hub (screen 11): stepping leaves, the five place medallions, the goodnight node and the
  * walking star, drawn between the top bar and the dock. It paints no background: put
  * `MapBackdrop` under the screen. It is as wide as the screen, whatever side margin the body has.
  * `walkTo` plays the walk from `here`, lighting each stone as the star passes, then `onWalked`.
@@ -459,6 +502,7 @@ export function StoryMap({
 	glowFrom,
 	goodnight,
 	here,
+	next,
 	onWalked,
 	places,
 	walkTo,
@@ -468,6 +512,8 @@ export function StoryMap({
 	goodnight: MapGoodnight;
 	/** Where the star stands. */
 	here: MapNode;
+	/** The places the child can go to next: the roads to them stay at full strength. */
+	next: readonly MapNode[];
 	onWalked: () => void;
 	places: Record<MapPlaceNode, MapPlace>;
 	walkTo?: MapNode;
@@ -531,7 +577,7 @@ export function StoryMap({
 		>
 			{measured ? (
 				<>
-					<Stones frame={frame} lit={lit} />
+					<Stones ahead={nextStones(here, next)} frame={frame} lit={lit} />
 					<Goal
 						filter={goalFilter}
 						height={goalHeight}

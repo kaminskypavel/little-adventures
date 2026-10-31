@@ -108,6 +108,7 @@ export default function StoryMapScreen() {
 					name: adventure.places.outro.name,
 				}}
 				here={progress.here}
+				next={next}
 				onWalked={() => walkTo && openPlace(walkTo)}
 				places={places}
 				walkTo={walkTo}
