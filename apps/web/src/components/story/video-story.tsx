@@ -32,6 +32,7 @@ const MOVE_SPEED = 1.2;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
 const DOTS = ["question", "adventure", "goodnight"] as const;
+const CUE_ARROWS = ["first", "second", "third"] as const;
 const LAYER = "absolute inset-0 size-full object-cover opacity-0";
 const TITLE =
 	"mb-[0.32em] text-balance font-black text-[length:clamp(28px,4.3vw,66px)] leading-[1.04] tracking-[-0.01em] [text-shadow:0_3px_0_rgba(18,37,74,0.55),0_10px_22px_rgba(0,0,0,0.45)] max-[899px]:text-[length:clamp(28px,8.6vw,40px)]";
@@ -296,13 +297,13 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 				state.leave();
 				warmBack(to);
+				cueLoop.kill();
 				gsap.to(hint, {
 					autoAlpha: 0,
 					duration: 0.35,
 					ease: "brandOut",
 					overwrite: true,
 				});
-				hintBob?.kill();
 				const from = sceneNow();
 				loops[from].pause();
 				swapCopy(from, to);
@@ -314,19 +315,40 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 			};
 
-			// The scroll hint rises in once the story shows; its arrow nudges downward until the
-			// first move. Reduced motion: a plain fade, no nudge.
+			// The scroll cue rises in once the story shows and fades out on the first move. While it
+			// shows, the mouse wheel rolls down and a soft wave runs down the three arrows.
+			// Reduced motion: a plain fade, everything shown, nothing loops.
 			gsap.set(hint, { autoAlpha: 0 });
-			const hintBob = calm
-				? null
-				: gsap.to("[data-hint-arrow]", {
-						duration: 0.9,
-						ease: "sine.inOut",
-						paused: true,
-						repeat: -1,
-						y: 6,
-						yoyo: true,
-					});
+			const cueLoop = gsap.timeline({ paused: true, repeat: -1 });
+			if (calm) {
+				gsap.set("[data-cue-wheel], [data-cue-arrow]", { opacity: 1 });
+			} else {
+				cueLoop
+					.fromTo(
+						"[data-cue-wheel]",
+						{ opacity: 0, y: 0 },
+						{ duration: 0.24, ease: "none", opacity: 1 }
+					)
+					.to("[data-cue-wheel]", {
+						duration: 0.88,
+						ease: "brandOut",
+						opacity: 0,
+						y: 12,
+					})
+					.to(
+						"[data-cue-arrow]",
+						{
+							duration: 0.56,
+							ease: "sine.inOut",
+							opacity: 1,
+							repeat: 1,
+							stagger: 0.2,
+							yoyo: true,
+						},
+						0
+					)
+					.to({}, { duration: 0.48 });
+			}
 			const showHint = () => {
 				gsap.fromTo(
 					hint,
@@ -339,7 +361,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 						duration: 0.5,
 						ease: "brandOut",
 						filter: "blur(0px)",
-						onComplete: () => hintBob?.play(),
+						onComplete: () => {
+							cueLoop.play();
+						},
 						y: 0,
 					}
 				);
@@ -510,25 +534,43 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 					</span>
 				))}
 			</div>
-			<p
-				className="invisible fixed bottom-7 left-1/2 z-[3] m-0 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px]"
+			<div
+				className="invisible fixed bottom-7 left-[max(16px,2.2vw)] z-[3] max-[899px]:bottom-6 max-[899px]:left-3 [@media(min-aspect-ratio:16/9)]:left-[calc((100vw-177.78vh)/2+2vw)]"
 				data-hint
 			>
-				{copy.hint}
-				<svg
-					aria-hidden="true"
-					className="size-3.5"
-					data-hint-arrow
-					fill="none"
-					stroke="currentColor"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2.5}
-					viewBox="0 0 24 24"
-				>
-					<path d="M6 9l6 6 6-6" />
-				</svg>
-			</p>
+				<div className="text-cream flex flex-col items-center gap-2 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.55))]">
+					<span
+						aria-hidden="true"
+						className="relative h-10 w-[26px] rounded-[14px] border-[2.5px] border-current pointer-coarse:hidden"
+					>
+						<span
+							className="bg-sun-hi absolute top-[7px] left-1/2 -ml-0.5 h-2 w-1 rounded-sm opacity-0"
+							data-cue-wheel
+						/>
+					</span>
+					<span className="flex flex-col items-center">
+						{CUE_ARROWS.map((arrow) => (
+							<svg
+								aria-hidden="true"
+								className="-mt-[3px] h-[9px] w-4 opacity-[0.15] pointer-coarse:h-3 pointer-coarse:w-[22px]"
+								data-cue-arrow
+								fill="none"
+								key={arrow}
+								stroke="currentColor"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2.5}
+								viewBox="0 0 22 12"
+							>
+								<path d="M3 2l8 8 8-8" />
+							</svg>
+						))}
+					</span>
+					<span className="text-[14px] font-extrabold whitespace-nowrap opacity-90 max-[899px]:text-[13px]">
+						{copy.hint}
+					</span>
+				</div>
+			</div>
 
 			<div
 				className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-[18px] bg-[image:var(--sky-puffy)]"
