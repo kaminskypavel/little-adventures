@@ -21,6 +21,7 @@
     "@hookform/resolvers": "^6.0.2",
     "@little-adventures/native-ui": "workspace:*",
     "@little-adventures/validation": "workspace:*",
+    "@trpc/client": "catalog:",
     "@varlock/expo-integration": "1.2.2",
     "expo": "~58.0.12",
     "expo-constants": "~58.0.12",
@@ -61,6 +62,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@little-adventures/api": "workspace:*",
     "@little-adventures/config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "~19.3.0",
