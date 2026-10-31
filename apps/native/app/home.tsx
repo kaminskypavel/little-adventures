@@ -1,54 +1,60 @@
+import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HeroCard } from "@little-adventures/native-ui/hero-card";
-import { ListRow } from "@little-adventures/native-ui/list-row";
 import { Pulse } from "@little-adventures/native-ui/pulse";
-import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { StarTake } from "@little-adventures/native-ui/star-take";
+import { StoryCover } from "@little-adventures/native-ui/story-cover";
+import { StoryShelf } from "@little-adventures/native-ui/story-shelf";
 import {
 	colors,
 	layout,
-	listCards,
 	motion,
+	storyCover,
 } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { devFlags, getHome, getProfile } from "@/src/data/adventure-client";
-import type { AdventureSummary } from "@/src/data/types";
+import {
+	devFlags,
+	getHome,
+	getIdeas,
+	getProfile,
+} from "@/src/data/adventure-client";
+import type { Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
-// Round 7 spacing (px / 0.72), measured from the bottom of the top bar.
-const HERO_GAP = 31;
-const HERO_HEIGHT = 178;
-const HERO_FIRST_GAP = 34;
-const HERO_FIRST_HEIGHT = 208;
-const HEADING_GAP = 38;
-const FINISHED_GAP = 50;
-const ROWS_GAP = 17;
-const HEADING_INSET = 6;
-const STAR_GAP = 81;
-const STAR_SIZE = 180;
-const FIRST_LINE_GAP = 32;
-const MAX_ROWS = 2;
-// The New adventure card pulses once, after the avatar star has waved.
+// Mockup B2 (390 x 844 phone, px = pt), measured as gaps between pieces.
+const TITLE_GAP = 8;
+const TITLE_SIZE = 33;
+const TITLE_LINE = 36;
+const TITLE_LINES = 2;
+const HERO_GAP = 17;
+const HERO_HEIGHT = 140;
+const LABEL_GAP = 16;
+const LABEL_INSET = 4;
+const SHELF_GAP = 9;
+const MIC_MSG_FONT = 22;
+const MIC_MSG_LINE = 28;
+// The Ask your own card pulses once, after the avatar star has waved.
 const HERO_PULSE_DELAY = motion.pulseOffset + 200;
+const SKELETON_FADE = 0.15;
 
 interface HomeData {
-	finished: AdventureSummary[];
-	keepGoing: AdventureSummary[];
+	hasStories: boolean;
 	name: string;
 }
 
 export default function Home() {
 	const router = useRouter();
-	const params = useLocalSearchParams<{ first?: string }>();
-	// Dev only: production builds ignore the query.
+	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
+	// Dev only: production builds ignore the queries.
 	const first = dev(params.first);
+	const micOff = dev(params.mic) === "off";
 	const [data, setData] = useState<HomeData | null>(null);
+	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
-	// Counts focuses: each one waves the avatar star again and pulses the New adventure card.
+	// Counts focuses: each one waves the avatar star again and pulses the Ask your own card.
 	// The first focus is the mount, which already plays both.
 	const [run, setRun] = useState(0);
 	const seenFocus = useRef(false);
@@ -64,15 +70,14 @@ export default function Home() {
 	useFocusEffect(
 		useCallback(() => {
 			let live = true;
-			// Dev query: /home?first=1 shows the first-home state.
+			// Dev query: /home?first=1 shows the first-home state (no stories yet).
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
 			Promise.all([getHome(), getProfile()]).then(([home, profile]) => {
 				if (live) {
 					setData({
-						finished: home.finished,
-						keepGoing: home.keepGoing,
+						hasStories: home.keepGoing.length + home.finished.length > 0,
 						name: profile.childName,
 					});
 				}
@@ -83,11 +88,22 @@ export default function Home() {
 		}, [first])
 	);
 
-	const isFirst =
-		data !== null && data.keepGoing.length === 0 && data.finished.length === 0;
+	useEffect(() => {
+		let live = true;
+		getIdeas().then((list) => live && setIdeas(list));
+		return () => {
+			live = false;
+		};
+	}, []);
+
+	const ask = (question: string) =>
+		router.push({ params: { question }, pathname: "/making" });
+
+	const dock = dockFor(data, () => router.push("/library"));
 
 	return (
 		<Screen
+			dock={dock}
 			topBar={
 				<TopBar
 					action={{
@@ -102,149 +118,95 @@ export default function Home() {
 				/>
 			}
 		>
-			{isFirst ? (
-				<FirstHome onNew={() => router.push("/pick")} run={run} />
-			) : (
-				<View style={{ marginTop: HERO_GAP }}>
-					<Pulse delay={HERO_PULSE_DELAY} play={run}>
+			<ClayText
+				accessibilityRole="header"
+				align="center"
+				color={colors.cream}
+				numberOfLines={TITLE_LINES}
+				style={styles.title}
+				variant="headline"
+			>
+				{data ? `What shall we explore, ${data.name}?` : ""}
+			</ClayText>
+			<View style={{ marginTop: HERO_GAP }}>
+				<Pulse delay={HERO_PULSE_DELAY} play={run}>
+					{micOff ? (
+						<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
+					) : (
 						<HeroCard
 							height={HERO_HEIGHT}
-							label={"New\nadventure"}
-							onPress={() => router.push("/pick")}
+							label={"Ask\nyour own"}
+							onPress={() => router.push("/listening")}
 						/>
-					</Pulse>
-					{data ? (
-						<Lists
-							finished={data.finished}
-							keepGoing={data.keepGoing}
-							onFinished={() => router.push("/end?id=moon-done")}
-							onKeepGoing={(id) => router.push(`/map?id=${id}`)}
-						/>
-					) : (
-						<LoadingLists />
 					)}
-				</View>
+				</Pulse>
+			</View>
+			{micOff ? (
+				<ClayText
+					align="center"
+					color={colors.cream}
+					style={styles.micMsg}
+					variant="label"
+				>
+					Ask a grown-up to turn it on.
+				</ClayText>
+			) : (
+				<ClayText color={colors.cream} style={styles.label} variant="label">
+					Or try an idea
+				</ClayText>
 			)}
+			<StoryShelf style={styles.shelf}>
+				{ideas
+					? ideas.map((idea) => (
+							<StoryCover
+								key={idea.question}
+								onPress={() => ask(idea.question)}
+								picture={idea.picture}
+								size="shelf"
+								title={idea.question}
+							/>
+						))
+					: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
+			</StoryShelf>
 		</Screen>
 	);
 }
 
-function Lists({
-	finished,
-	keepGoing,
-	onFinished,
-	onKeepGoing,
-}: {
-	finished: AdventureSummary[];
-	keepGoing: AdventureSummary[];
-	onFinished: () => void;
-	onKeepGoing: (id: string) => void;
-}) {
-	return (
-		<>
-			{keepGoing.length > 0 ? (
-				<>
-					<Heading />
-					<View style={styles.rows}>
-						{keepGoing.slice(0, MAX_ROWS).map((a) => (
-							<ListRow
-								caption={`${a.partsDone} of ${a.partsTotal} places`}
-								key={a.id}
-								onPress={() => onKeepGoing(a.id)}
-								picture={a.picture}
-								title={a.title}
-							/>
-						))}
-					</View>
-				</>
-			) : null}
-			{finished.length > 0 ? (
-				<RowCard
-					count={String(finished.length)}
-					onPress={onFinished}
-					picture={finished[0].picture}
-					style={{
-						marginTop: keepGoing.length > 0 ? FINISHED_GAP : HEADING_GAP,
-					}}
-					title="Finished"
-				/>
-			) : null}
-		</>
-	);
-}
-
-function Heading() {
-	return (
-		<ClayText
-			accessibilityRole="header"
-			color={colors.cream}
-			style={styles.heading}
-			variant="title"
-		>
-			Keep going
-		</ClayText>
-	);
-}
-
-// Same-size flat rows while the lists load. Never a spinner.
-function LoadingLists() {
-	return (
-		<>
-			<Heading />
-			<View style={styles.rows}>
-				<View style={styles.skeleton} />
-				<View style={styles.skeleton} />
-			</View>
-			<View style={[styles.skeleton, { marginTop: FINISHED_GAP }]} />
-		</>
-	);
-}
-
-// E4: both lists empty. One big card, the star, one friendly line.
-function FirstHome({ onNew, run }: { onNew: () => void; run: number }) {
-	return (
-		<View style={{ marginTop: HERO_FIRST_GAP }}>
-			<Pulse delay={HERO_PULSE_DELAY} play={run}>
-				<HeroCard
-					height={HERO_FIRST_HEIGHT}
-					label={"New\nadventure"}
-					onPress={onNew}
-				/>
-			</Pulse>
-			<View style={styles.star}>
-				<StarTake size={STAR_SIZE} take="idle" />
-			</View>
-			<ClayText
-				align="center"
-				color={colors.cream}
-				style={styles.firstLine}
-				variant="body"
-			>
-				Your adventures will live here
-			</ClayText>
-		</View>
-	);
+// The dock button shows once we know the child has stories. Same-size flat bar while loading.
+function dockFor(data: HomeData | null, onPress: () => void) {
+	if (data === null) {
+		return <View style={styles.dockSkeleton} />;
+	}
+	return data.hasStories ? (
+		<SecondaryButton label="Continue past stories" onPress={onPress} />
+	) : undefined;
 }
 
 const styles = StyleSheet.create({
-	firstLine: { fontSize: 21, lineHeight: 26, marginTop: FIRST_LINE_GAP },
-	heading: {
-		fontSize: 28,
-		lineHeight: 34,
-		marginTop: HEADING_GAP,
-		paddingLeft: HEADING_INSET,
+	dockSkeleton: {
+		backgroundColor: colors.sand,
+		borderRadius: layout.secondaryHeight / 2,
+		height: layout.secondaryHeight,
+		opacity: SKELETON_FADE,
 	},
-	rows: { gap: layout.gap, marginTop: ROWS_GAP },
+	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
+	micMsg: {
+		fontSize: MIC_MSG_FONT,
+		lineHeight: MIC_MSG_LINE,
+		marginTop: LABEL_GAP,
+	},
+	shelf: { marginTop: SHELF_GAP },
 	skeleton: {
 		backgroundColor: colors.sand,
-		borderRadius: listCards.list.radius,
-		height: listCards.list.height,
-		opacity: 0.15,
+		borderRadius: storyCover.radius,
+		height: storyCover.shelf.height,
+		opacity: SKELETON_FADE,
+		width: storyCover.shelf.width,
 	},
-	star: {
-		alignSelf: "center",
-		height: STAR_SIZE,
-		marginTop: STAR_GAP,
-		width: STAR_SIZE,
+	title: {
+		fontSize: TITLE_SIZE,
+		lineHeight: TITLE_LINE,
+		marginTop: TITLE_GAP,
+		minHeight: TITLE_LINE * TITLE_LINES,
 	},
 });
