@@ -296,9 +296,13 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 				state.leave();
 				warmBack(to);
-				if (hint) {
-					hint.style.opacity = "0";
-				}
+				gsap.to(hint, {
+					autoAlpha: 0,
+					duration: 0.35,
+					ease: "brandOut",
+					overwrite: true,
+				});
+				hintBob?.kill();
 				const from = sceneNow();
 				loops[from].pause();
 				swapCopy(from, to);
@@ -308,6 +312,37 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				} else {
 					playMove(from, to);
 				}
+			};
+
+			// The scroll hint rises in once the story shows; its arrow nudges downward until the
+			// first move. Reduced motion: a plain fade, no nudge.
+			gsap.set(hint, { autoAlpha: 0 });
+			const hintBob = calm
+				? null
+				: gsap.to("[data-hint-arrow]", {
+						duration: 0.9,
+						ease: "sine.inOut",
+						paused: true,
+						repeat: -1,
+						y: 6,
+						yoyo: true,
+					});
+			const showHint = () => {
+				gsap.fromTo(
+					hint,
+					calm
+						? { autoAlpha: 0 }
+						: { autoAlpha: 0, filter: "blur(3px)", y: 12 },
+					{
+						autoAlpha: 1,
+						delay: 0.6,
+						duration: 0.5,
+						ease: "brandOut",
+						filter: "blur(0px)",
+						onComplete: () => hintBob?.play(),
+						y: 0,
+					}
+				);
 			};
 
 			// ---- Start: the star bobs over the progress bar, then the story fades in ----
@@ -338,6 +373,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 					onComplete: () => spin.kill(),
 				});
 				rest(0);
+				showHint();
 			});
 
 			const observer = Observer.create({
@@ -475,10 +511,23 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				))}
 			</div>
 			<p
-				className="fixed bottom-7 left-1/2 z-[3] m-0 -translate-x-1/2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px] transition-opacity duration-300"
+				className="invisible fixed bottom-7 left-1/2 z-[3] m-0 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px]"
 				data-hint
 			>
 				{copy.hint}
+				<svg
+					aria-hidden="true"
+					className="size-3.5"
+					data-hint-arrow
+					fill="none"
+					stroke="currentColor"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2.5}
+					viewBox="0 0 24 24"
+				>
+					<path d="M6 9l6 6 6-6" />
+				</svg>
 			</p>
 
 			<div
