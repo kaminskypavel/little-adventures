@@ -563,7 +563,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 						data-dot
 						key={d}
 					>
-						<span className="bg-sun absolute inset-x-0 top-0 h-0 rounded-full" />
+						<span className="bg-cream absolute inset-x-0 top-0 h-0 rounded-full" />
 					</span>
 				))}
 			</div>
