@@ -1,8 +1,6 @@
-// apps/web has no @types/bun, so the import has no types; the runner is bun.
-// @ts-expect-error
 import { expect, test } from "bun:test";
 
-import { photoKey } from "./photo-key";
+import { photoKey, userPrefix } from "./photo-key";
 
 const EXTENSIONS: Record<string, string> = {
 	"image/heic": "heic",
@@ -14,6 +12,7 @@ test("each type gets its extension under the user's prefix", () => {
 	for (const [type, extension] of Object.entries(EXTENSIONS)) {
 		const key = photoKey("u1", type);
 		expect(key.startsWith("little-adventures/users/u1/photos/")).toBe(true);
+		expect(key.startsWith(userPrefix("u1"))).toBe(true);
 		expect(key.endsWith(`.${extension}`)).toBe(true);
 	}
 });

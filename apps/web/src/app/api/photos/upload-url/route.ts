@@ -1,3 +1,4 @@
+import { photoKey } from "@little-adventures/api/photo-key";
 import {
 	PHOTO_MAX_BYTES,
 	photoUploadRequestSchema,
@@ -5,7 +6,6 @@ import {
 
 import { verify } from "@/server/auth";
 import { preflight, withCors } from "@/server/cors";
-import { photoKey } from "@/server/photo-key";
 import { storage } from "@/server/storage";
 
 const BEARER_PREFIX = "bearer ";
