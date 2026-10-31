@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import { type StyleProp, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
@@ -7,7 +7,7 @@ import { listCards } from "./tokens";
 
 const { list } = listCards;
 
-/** A picture (a required module) or, when there is none, the neutral placeholder. */
+/** A picture (a required module or an image source) or, when there is none, the neutral placeholder. */
 export function CardPicture({
 	height,
 	picture,
@@ -15,7 +15,7 @@ export function CardPicture({
 	width,
 }: {
 	height: number;
-	picture: number | null;
+	picture: ImageSource | number | null;
 	radius: number;
 	width: number;
 }) {

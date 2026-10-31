@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import { type StyleProp, Text, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { Icon } from "./icons";
@@ -33,8 +33,8 @@ export function StoryCover({
 	caption?: string;
 	done?: boolean;
 	onPress?: () => void;
-	/** A required module, or null for the neutral placeholder. */
-	picture: number | null;
+	/** A required module or an image source, or null for the neutral placeholder. */
+	picture: ImageSource | number | null;
 	size: "grid" | "shelf";
 	style?: StyleProp<ViewStyle>;
 	title: string;

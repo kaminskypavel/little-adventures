@@ -1,3 +1,4 @@
+import type { ImageSource } from "expo-image";
 import { type StyleProp, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
@@ -17,7 +18,7 @@ export function RowCard({
 }: {
 	count?: string;
 	onPress?: () => void;
-	picture: number | null;
+	picture: ImageSource | number | null;
 	style?: StyleProp<ViewStyle>;
 	subtitle?: string;
 	title: string;

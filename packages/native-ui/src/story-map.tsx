@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -24,13 +24,13 @@ export interface MapPlace {
 	name: string;
 	/** Absent for places that do nothing but feel pressed (drawing, not reachable). */
 	onPress?: () => void;
-	picture: number | null;
+	picture: ImageSource | number | null;
 	state: MedallionState;
 }
 
 export interface MapGoodnight {
 	/** The end goal asset made for the question: closed gate, or open once goodnight unlocks. */
-	image: number;
+	image: ImageSource | number | null;
 	locked: boolean;
 	name: string;
 }
@@ -309,7 +309,7 @@ function Goal({
 }: {
 	filter: string;
 	height: number;
-	image: number;
+	image: ImageSource | number | null;
 	x: number;
 	y: number;
 }) {
@@ -650,8 +650,11 @@ export function EndMap({
 	style,
 }: {
 	/** The opened end goal asset. */
-	goal: number;
-	places: Record<MapPlaceNode, { name: string; picture: number | null }>;
+	goal: ImageSource | number | null;
+	places: Record<
+		MapPlaceNode,
+		{ name: string; picture: ImageSource | number | null }
+	>;
 	style?: ViewStyle;
 }) {
 	const [width, setWidth] = useState(0);

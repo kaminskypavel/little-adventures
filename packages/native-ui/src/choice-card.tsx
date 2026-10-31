@@ -1,5 +1,5 @@
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -45,7 +45,7 @@ function Art({
 }: {
 	blur: number;
 	kind: "goal" | "place";
-	picture: number | null;
+	picture: ImageSource | number | null;
 }) {
 	if (picture === null) {
 		return <Placeholder icon="image" style={StyleSheet.absoluteFill} />;
@@ -155,7 +155,7 @@ export function ChoiceCard({
 	kind?: "goal" | "place";
 	name: string;
 	onPress?: () => void;
-	picture: number | null;
+	picture: ImageSource | number | null;
 	/** Pulse once after mounting, this many ms from now. Omit for no pulse. */
 	pulseDelay?: number | null;
 	selected?: boolean;

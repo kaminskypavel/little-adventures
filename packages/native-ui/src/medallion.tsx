@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
@@ -49,7 +49,7 @@ function Disc({
 	size,
 	state,
 }: {
-	picture: number | null;
+	picture: ImageSource | number | null;
 	size: number;
 	state: MedallionState;
 }) {
@@ -106,8 +106,8 @@ export function Medallion({
 }: {
 	accessibilityLabel: string;
 	onPress?: () => void;
-	/** A bundled image, or null for the neutral picture placeholder. */
-	picture: number | null;
+	/** A bundled image or an image source, or null for the neutral picture placeholder. */
+	picture: ImageSource | number | null;
 	plain?: boolean;
 	/** Defaults to 86, or 97 for `here`. */
 	size?: number;
