@@ -153,13 +153,11 @@ body {
 	}
 }
 
-/* Slide mode: the page never scrolls, one gesture moves one slide.
-   Reduced motion keeps the normal scrolling page. */
-@media (prefers-reduced-motion: no-preference) {
-	html,
-	body {
-		height: 100%;
-		overflow: hidden;
-		overscroll-behavior: none;
-	}
+/* Story mode: the page never scrolls, one gesture moves one scene.
+   Reduced motion keeps the same scenes and swaps them with a short fade. */
+html,
+body {
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
 }
