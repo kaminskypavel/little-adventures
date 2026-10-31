@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { Database } from "@little-adventures/db";
 import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
+import type { Transcription } from "@little-adventures/transcribe";
 import { TRPCError } from "@trpc/server";
 
 import type { Context } from "../context";
@@ -26,6 +27,7 @@ const callerFor = (userId: string | null) =>
 		db: {} as Database,
 		principal: userId ? { user: { id: userId } } : null,
 		storage,
+		voice: {} as Transcription,
 		waitUntil: () => undefined,
 	} satisfies Context);
 

@@ -8,6 +8,7 @@ import { relations } from "@little-adventures/db/relations";
 import { waitlist } from "@little-adventures/db/schema/index";
 import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
+import type { Transcription } from "@little-adventures/transcribe";
 import { TRPCError } from "@trpc/server";
 import { drizzle } from "drizzle-orm/pglite";
 
@@ -40,6 +41,7 @@ describe("waitlist.join", () => {
 			db: db as unknown as Database,
 			principal: null,
 			storage: {} as Storage,
+			voice: {} as Transcription,
 			waitUntil: () => undefined,
 		});
 	});

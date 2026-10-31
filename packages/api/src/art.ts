@@ -1,5 +1,4 @@
 import {
-	aiCalls,
 	children as childrenTable,
 	type Drawings,
 } from "@little-adventures/db/schema/index";
@@ -16,6 +15,7 @@ import {
 } from "@little-adventures/image-editing/looks";
 import { and, eq } from "drizzle-orm";
 
+import { recordAiCall } from "./ai-calls";
 import type { Context } from "./context";
 import { userPrefix } from "./photo-key";
 
@@ -30,7 +30,7 @@ interface ArtRun {
 const HEX_LENGTH = 32;
 
 /** An opaque, stable id of the grown-up for the model API's abuse checks. */
-async function safetyIdOf(ownerId: string): Promise<string> {
+export async function safetyIdOf(ownerId: string): Promise<string> {
 	const digest = await crypto.subtle.digest(
 		"SHA-256",
 		new TextEncoder().encode(ownerId)
@@ -81,36 +81,17 @@ export async function drawArt(
 	}
 
 	/** One `ai_calls` row per model call, success or failure. */
-	async function recorded<T>(
+	const recorded = <T>(
 		operation: string,
 		model: string,
 		costMicroUsd: number,
 		call: () => Promise<T>
-	): Promise<T> {
-		const began = Date.now();
-		let result: T | undefined;
-		let failure: unknown;
-		try {
-			result = await call();
-		} catch (error) {
-			failure = error;
-		}
-		const ok = failure === undefined;
-		await db.insert(aiCalls).values({
-			childId,
-			costMicroUsd: ok ? costMicroUsd : 0,
-			error: ok ? null : String(failure),
-			model,
-			ms: Date.now() - began,
-			ok,
-			operation,
-			ownerId,
-		});
-		if (!ok) {
-			throw failure;
-		}
-		return result as T;
-	}
+	) =>
+		recordAiCall(
+			db,
+			{ childId, costMicroUsd, model, operation, ownerId },
+			call
+		);
 
 	/** A run that lost its row (photo deleted or replaced) must not leave likeness in the bucket. */
 	async function dropIfPhotoChanged(keys: string[]) {

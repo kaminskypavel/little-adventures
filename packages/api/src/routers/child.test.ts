@@ -8,6 +8,7 @@ import { relations } from "@little-adventures/db/relations";
 import { aiCalls } from "@little-adventures/db/schema/index";
 import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
+import type { Transcription } from "@little-adventures/transcribe";
 import { drizzle } from "drizzle-orm/pglite";
 
 import { drawArt } from "../art";
@@ -40,6 +41,7 @@ describe("child", () => {
 			db,
 			principal: { user: { id: userId } },
 			storage: {} as Storage,
+			voice: {} as Transcription,
 			waitUntil: () => undefined,
 		});
 
@@ -127,6 +129,7 @@ describe("photo.delete", () => {
 			db,
 			principal: { user: { id: userId } },
 			storage,
+			voice: {} as Transcription,
 			waitUntil: () => undefined,
 		});
 	const photo = "little-adventures/users/u1/photos/a.jpg";
@@ -233,6 +236,7 @@ describe("child art", () => {
 			db,
 			principal: { user: { id: userId } },
 			storage,
+			voice: {} as Transcription,
 			waitUntil: (work) => {
 				pending.push(work);
 			},
