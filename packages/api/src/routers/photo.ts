@@ -1,14 +1,36 @@
+import { children } from "@little-adventures/db/schema/index";
 import {
 	PHOTO_MAX_BYTES,
 	photoUploadRequestSchema,
 } from "@little-adventures/validation/photo";
 import { TRPCError } from "@trpc/server";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
 import { ownsKey, photoKey } from "../photo-key";
 
 export const photoRouter = router({
+	/** Deletes the stored photo of one of the caller's children and clears its key. */
+	delete: protectedProcedure
+		.input(z.object({ childId: z.uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			const ownerId = ctx.principal.user.id;
+			const owned = and(
+				eq(children.id, input.childId),
+				eq(children.ownerId, ownerId)
+			);
+			const [row] = await ctx.db.select().from(children).where(owned);
+			if (!row) {
+				throw new TRPCError({ code: "NOT_FOUND" });
+			}
+			if (row.photoKey && ownsKey(ownerId, row.photoKey)) {
+				await ctx.storage.deleteObject(row.photoKey);
+			}
+			await ctx.db.update(children).set({ photoKey: null }).where(owned);
+			return { ok: true };
+		}),
+
 	/** A url to read one of the caller's own photos. Any other key is refused. */
 	readUrl: protectedProcedure
 		.input(z.object({ key: z.string().min(1).max(512) }))

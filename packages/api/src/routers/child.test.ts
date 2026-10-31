@@ -98,3 +98,61 @@ describe("child", () => {
 		expect(error.code).toBe("BAD_REQUEST");
 	});
 });
+
+describe("photo.delete", () => {
+	let db: Database;
+	const deleted: string[] = [];
+	const storage = {
+		deleteObject: (key: string) => {
+			deleted.push(key);
+			return Promise.resolve();
+		},
+	} as unknown as Storage;
+	const callerFor = (userId: string) =>
+		appRouter.createCaller({
+			db,
+			principal: { user: { id: userId } },
+			storage,
+		});
+	const photo = "little-adventures/users/u1/photos/a.jpg";
+
+	beforeEach(async () => {
+		db = (await freshDb()) as unknown as Database;
+		deleted.length = 0;
+	});
+
+	test("deletes the object and clears the key", async () => {
+		const child = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		expect(await callerFor("u1").photo.delete({ childId: child.id })).toEqual({
+			ok: true,
+		});
+		expect(deleted).toEqual([photo]);
+		const [after] = await callerFor("u1").child.mine();
+		expect(after?.photoKey).toBeNull();
+	});
+
+	test("another user's child is NOT_FOUND and storage is untouched", async () => {
+		const theirs = await callerFor("u2").child.save({
+			...noah,
+			photoKey: "little-adventures/users/u2/photos/a.jpg",
+		});
+		const error = await callerFor("u1")
+			.photo.delete({ childId: theirs.id })
+			.catch((e) => e);
+		expect(error.code).toBe("NOT_FOUND");
+		expect(deleted).toEqual([]);
+		const [still] = await callerFor("u2").child.mine();
+		expect(still?.photoKey).toBe(theirs.photoKey);
+	});
+
+	test("a child without a photo is ok and storage is untouched", async () => {
+		const child = await callerFor("u1").child.save(noah);
+		expect(await callerFor("u1").photo.delete({ childId: child.id })).toEqual({
+			ok: true,
+		});
+		expect(deleted).toEqual([]);
+	});
+});
