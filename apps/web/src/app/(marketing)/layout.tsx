@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./landing.css";
 
-const TAGLINE = "Stories that start with your child's curiosity.";
-const DESCRIPTION = `${TAGLINE} Your child asks a question out loud, a small adventure grows from it with your child as the hero, and it always ends in goodnight.`;
+const TAGLINE = "Bedtime stories that start with your child's own questions.";
+const DESCRIPTION = `${TAGLINE} Your child asks out loud, a short illustrated story grows from it starring your child, with real answers on the way and a calm goodnight at the end.`;
 
 // Vercel sets this to the production domain (the custom one once it is connected).
 const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -20,15 +20,18 @@ export const metadata: Metadata = {
 		description: DESCRIPTION,
 		locale: "en_US",
 		siteName: "Little Adventures",
-		title: "Little Adventures: stories that start with your child's curiosity",
+		title:
+			"Little Adventures: bedtime stories that start with your child's own questions",
 		type: "website",
 		url: "/",
 	},
-	title: "Little Adventures: stories that start with your child's curiosity",
+	title:
+		"Little Adventures: bedtime stories that start with your child's own questions",
 	twitter: {
 		card: "summary_large_image",
 		description: DESCRIPTION,
-		title: "Little Adventures: stories that start with your child's curiosity",
+		title:
+			"Little Adventures: bedtime stories that start with your child's own questions",
 	},
 };
 
