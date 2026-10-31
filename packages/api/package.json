@@ -10,16 +10,19 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@little-adventures/auth": "workspace:*",
     "@little-adventures/db": "workspace:*",
+    "@little-adventures/storage": "workspace:*",
+    "@little-adventures/validation": "workspace:*",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
+    "drizzle-orm": "1.0.0-rc.5",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.13",
     "@little-adventures/config": "workspace:*",
     "@types/bun": "^1.4.4",
-    "drizzle-orm": "1.0.0-rc.5",
     "typescript": "^6.0.3"
   }
 }

@@ -118,7 +118,10 @@
     "packages/api": {
       "name": "@little-adventures/api",
       "dependencies": {
+        "@little-adventures/auth": "workspace:*",
         "@little-adventures/db": "workspace:*",
+        "@little-adventures/storage": "workspace:*",
+        "@little-adventures/validation": "workspace:*",
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
         "zod": "catalog:",
