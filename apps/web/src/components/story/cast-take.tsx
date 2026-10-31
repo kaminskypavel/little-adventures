@@ -2,11 +2,11 @@
 
 // One looping video of a character with a transparent background, plus the
 // helpers that start and stop it. A take never loads anything by itself: the
-// story stage sets its source and calls play() when its beat comes up.
+// story stage sets its source and calls play() when its slide comes up.
 // One file per engine: HEVC with alpha for Safari, VP9 with alpha for the
 // rest. The source is picked in the browser only, never during render.
 
-import type { BeatId } from "./beats";
+import type { SlideId } from "./slides";
 
 // WebKit only. Other engines can decode HEVC but drop its alpha layer.
 const SAFARI_ENGINE = /^(?:(?!chrome|chromium|android|crios|fxios).)*safari/iu;
@@ -15,30 +15,35 @@ const SAFARI_ENGINE = /^(?:(?!chrome|chromium|android|crios|fxios).)*safari/iu;
 const HIDDEN_TAKE = "opacity-[0.01]";
 
 interface CastTakeProps {
-	/** Beats where this take plays. */
-	beats: readonly BeatId[];
 	className?: string;
-	/** `boy-watch`, `girl-walk`, `star-idle`: the file name without extension. */
+	/** `boy-watch`, `girl-float`, `star-idle`: the file name without extension. */
 	name: string;
-	/** Keep the poster visible when motion is reduced. Takes of the first beat always do. */
-	still?: boolean;
+	/** Slides where this take plays. */
+	slides: readonly SlideId[];
 	/** Plays once, then hands over to the take with this name in the same box. */
 	then?: string;
+}
+
+/** Poster of a take: its transparent first frame. All star takes share one. */
+export function posterOf(name: string) {
+	return name.startsWith("star-")
+		? "/star/star-rest.webp"
+		: `/cast/${name}.webp`;
 }
 
 /** Opacity of a take that is not showing. Chrome stops painting a video at 0. */
 export const OFF = 0.01;
 
-/** True when the take plays on this beat. */
-export function listed(video: Element, id: BeatId) {
-	return (video.getAttribute("data-beats") ?? "").split(" ").includes(id);
+/** True when the take plays on this slide. */
+export function listed(video: Element, id: SlideId) {
+	return (video.getAttribute("data-slides") ?? "").split(" ").includes(id);
 }
 
 /**
- * True when the take plays on this beat and is on show. A take that follows a
+ * True when the take plays on this slide and is on show. A take that follows a
  * once-take (`then`) waits, hidden and parked, until that take is done.
  */
-export function onShow(video: Element, takes: readonly Element[], id: BeatId) {
+export function onShow(video: Element, takes: readonly Element[], id: SlideId) {
 	const name = video.getAttribute("data-take");
 	return (
 		listed(video, id) &&
@@ -87,12 +92,12 @@ function parkTake(video: HTMLVideoElement) {
 }
 
 /**
- * Starts the takes of one beat and stops the rest. Takes of the next beat get
+ * Starts the takes of one slide and stops the rest. Takes of the next slide get
  * their source so they are ready, but do not play.
  */
-export function syncTakes(stage: HTMLElement, id: BeatId, next?: BeatId) {
+export function syncTakes(stage: HTMLElement, id: SlideId, next?: SlideId) {
 	const videos = [
-		...stage.querySelectorAll<HTMLVideoElement>("video[data-beats]"),
+		...stage.querySelectorAll<HTMLVideoElement>("video[data-slides]"),
 	];
 	for (const video of videos) {
 		if (!listed(video, id)) {
@@ -116,24 +121,21 @@ export function stopTakes(stage: HTMLElement) {
 }
 
 export function CastTake({
-	beats,
 	className = "",
 	name,
-	still = false,
+	slides,
 	then,
 }: CastTakeProps) {
 	const isStar = name.startsWith("star-");
 	const dir = isStar ? "/star" : "/cast";
-	const first = beats.includes("hello");
-	const reduced = still ? "motion-reduce:opacity-100" : "motion-reduce:hidden";
-	const hidden = first ? "" : `${HIDDEN_TAKE} ${reduced}`;
+	const hidden = slides.includes("hello") ? "" : HIDDEN_TAKE;
 
 	return (
 		<video
 			aria-hidden="true"
 			className={`absolute inset-0 aspect-square size-full ${hidden} ${className}`}
 			data-base={`${dir}/${name}`}
-			data-beats={beats.join(" ")}
+			data-slides={slides.join(" ")}
 			data-take={name}
 			data-then={then}
 			disablePictureInPicture
@@ -141,7 +143,7 @@ export function CastTake({
 			loop={!then}
 			muted
 			playsInline
-			poster={isStar ? "/star/star-rest.webp" : `${dir}/${name}.webp`}
+			poster={posterOf(name)}
 			preload="none"
 			ref={(video) => {
 				if (!(video && then)) {

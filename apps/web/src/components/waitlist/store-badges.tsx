@@ -7,12 +7,36 @@ import { WaitlistDialog, type WaitlistDialogHandle } from "./waitlist-dialog";
 
 const BADGE_HEIGHT = 52;
 
-export function StoreBadges({ className = "" }: { className?: string }) {
+// "start" aligns to the start only from the 900px split up. Below it the
+// stacked layout is centred, so the row and the line stay centred there too.
+const ALIGN = {
+	center: {
+		column: "items-center",
+		line: "text-center",
+		row: "justify-center",
+	},
+	start: {
+		column: "items-center min-[900px]:items-start",
+		line: "text-center min-[900px]:text-left",
+		row: "justify-center min-[900px]:justify-start",
+	},
+} as const;
+
+export function StoreBadges({
+	align = "center",
+	className = "",
+}: {
+	align?: "center" | "start";
+	className?: string;
+}) {
 	const dialog = useRef<WaitlistDialogHandle>(null);
+	const place = ALIGN[align];
 
 	return (
-		<div className={`flex flex-col items-center gap-4 ${className}`}>
-			<div className="flex flex-wrap items-center justify-center gap-4">
+		<div className={`flex flex-col gap-4 ${place.column} ${className}`}>
+			<div
+				className={`flex flex-wrap items-center gap-3 min-[900px]:gap-4 ${place.row}`}
+			>
 				<button
 					className="cursor-pointer"
 					onClick={() => dialog.current?.open("ios")}
@@ -40,7 +64,7 @@ export function StoreBadges({ className = "" }: { className?: string }) {
 					<span className="sr-only"> (join the waitlist)</span>
 				</button>
 			</div>
-			<p className="text-cream/80 text-center text-[17px] font-bold">
+			<p className={`text-cream/80 text-[17px] font-bold ${place.line}`}>
 				Coming soon to iPhone and Android.
 			</p>
 			<WaitlistDialog ref={dialog} />
