@@ -1,0 +1,6 @@
+{
+  "extends": "@little-adventures/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  }
+}

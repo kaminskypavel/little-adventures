@@ -1,0 +1,25 @@
+{
+  "name": "@little-adventures/api",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@little-adventures/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "@little-adventures/config": "workspace:*",
+    "@types/bun": "^1.4.4",
+    "drizzle-orm": "1.0.0-rc.5",
+    "typescript": "^6.0.3"
+  }
+}

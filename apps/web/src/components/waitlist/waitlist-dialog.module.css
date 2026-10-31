@@ -1,0 +1,76 @@
+.dialog {
+	box-sizing: border-box;
+	width: min(440px, calc(100vw - 32px));
+	max-width: none;
+	max-height: calc(100dvh - 32px);
+	padding: 0;
+	margin: auto;
+	color: var(--color-cream);
+	background: var(--color-field-navy);
+	border: 0;
+	border-radius: var(--radius-card);
+	opacity: 0;
+	transform: translateY(14px);
+	transition:
+		opacity 160ms var(--ease-out),
+		transform 160ms var(--ease-out),
+		overlay 160ms allow-discrete,
+		display 160ms allow-discrete;
+}
+
+.dialog[open] {
+	opacity: 1;
+	transform: none;
+	transition:
+		opacity var(--duration-enter) var(--ease-out),
+		transform var(--duration-enter) var(--ease-out),
+		overlay var(--duration-enter) allow-discrete,
+		display var(--duration-enter) allow-discrete;
+}
+
+.dialog::backdrop {
+	background: rgba(10, 22, 44, 0.6);
+	opacity: 0;
+	transition:
+		opacity 160ms var(--ease-out),
+		overlay 160ms allow-discrete,
+		display 160ms allow-discrete;
+}
+
+.dialog[open]::backdrop {
+	opacity: 1;
+	transition:
+		opacity var(--duration-enter) var(--ease-out),
+		overlay var(--duration-enter) allow-discrete,
+		display var(--duration-enter) allow-discrete;
+}
+
+/* biome-ignore lint/suspicious/useBaseline: starting-style drives the enter motion, older browsers just skip it */
+@starting-style {
+	.dialog[open] {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+
+	.dialog[open]::backdrop {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dialog,
+	.dialog[open] {
+		transform: none;
+		transition:
+			opacity 200ms linear,
+			overlay 200ms allow-discrete,
+			display 200ms allow-discrete;
+	}
+
+	/* biome-ignore lint/suspicious/useBaseline: same as above */
+	@starting-style {
+		.dialog[open] {
+			transform: none;
+		}
+	}
+}

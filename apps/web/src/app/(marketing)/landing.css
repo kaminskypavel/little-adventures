@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* Brand tokens shared with the app. Values come from the design system; never invent new ones. */
+@theme {
+	--color-*: initial;
+	--color-sun: #ffc83d;
+	--color-sun-hi: #ffd65e;
+	--color-sun-lo: #ffc12a;
+	--color-sage: #b9cdb4;
+	--color-sage-hi: #c9dac3;
+	--color-sage-lo: #b0c6aa;
+	--color-sand: #f1e2b8;
+	--color-field-navy: #16294f;
+	--color-deep-navy: #1b3560;
+	--color-ink-navy: #12254a;
+	--color-cream: #f4ecd8;
+	--color-scrim: rgba(10, 22, 44, 0.5);
+	--color-plate-dark: rgba(14, 28, 56, 0.88);
+	--color-field-fill: #f1e6c6;
+	--color-caret: #e8a400;
+	--color-sky-top: #050b18;
+	--color-sky-bottom: #152e52;
+	--color-wm-sky: #7ec8f0;
+	--color-wm-leaf: #8fd694;
+	--color-wm-tangerine: #ff9f5a;
+	--color-wm-teal: #4fd1c5;
+	--color-wm-butter: #ffe08a;
+
+	--font-brand: var(--font-nunito), system-ui, sans-serif;
+
+	--radius-plate: 17px;
+	--radius-field: 30px;
+	--radius-chip: 32px;
+	--radius-card: 36px;
+	--radius-button: 44px;
+	--radius-hero: 50px;
+
+	--shadow-clay-lift:
+		inset 0 4px 3px rgba(255, 255, 255, 0.55),
+		inset 0 -6px 0 rgba(0, 0, 0, 0.15), 0 11px 17px -8px rgba(0, 0, 0, 0.55);
+	--shadow-clay-pressed:
+		inset 0 4px 3px rgba(255, 255, 255, 0.4),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 4px 8px -6px rgba(0, 0, 0, 0.5);
+	--shadow-character: 0 12px 10px rgba(0, 0, 0, 0.4);
+
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-overshoot: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+:root {
+	--duration-press: 100ms;
+	--duration-release: 220ms;
+	--duration-select: 160ms;
+	--duration-enter: 280ms;
+	--duration-exit: 160ms;
+	/* Puffy sky, top to bottom. */
+	--sky-puffy: linear-gradient(
+		180deg,
+		#050b18 0%,
+		#07152a 35%,
+		#0c1f3c 62%,
+		#112849 85%,
+		#152e52 100%
+	);
+	color-scheme: dark;
+}
+
+html {
+	background: #050b18;
+}
+
+body {
+	min-height: 100svh;
+	font-family: var(--font-brand);
+	font-weight: 700;
+	-webkit-font-smoothing: antialiased;
+	color: var(--color-cream);
+}
+
+/* Raised clay: anything with this look is tappable. Act on release, not on press. */
+.clay {
+	box-shadow: var(--shadow-clay-lift);
+	transition:
+		transform var(--duration-release) var(--ease-overshoot),
+		box-shadow var(--duration-release) var(--ease-overshoot),
+		filter var(--duration-release) var(--ease-out);
+	-webkit-tap-highlight-color: transparent;
+}
+
+.clay:active {
+	box-shadow: var(--shadow-clay-pressed);
+	transform: translateY(4px) scale(0.97);
+	transition-timing-function: var(--ease-out);
+	transition-duration: var(--duration-press);
+}
+
+.clay-sun {
+	color: var(--color-ink-navy);
+	background: linear-gradient(180deg, var(--color-sun-hi), var(--color-sun-lo));
+}
+
+.clay-sage {
+	color: var(--color-ink-navy);
+	background: linear-gradient(
+		180deg,
+		var(--color-sage-hi),
+		var(--color-sage-lo)
+	);
+}
+
+/* Recessed field: type into it. Never raised, never squashed. */
+.field-well {
+	color: var(--color-ink-navy);
+	caret-color: var(--color-caret);
+	background: var(--color-field-fill);
+	border: 2px solid rgba(18, 37, 74, 0.14);
+	border-radius: var(--radius-field);
+	box-shadow:
+		inset 0 3px 7px rgba(18, 37, 74, 0.3),
+		inset 0 -2px 0 rgba(255, 255, 255, 0.55);
+	transition:
+		border-color var(--duration-select) var(--ease-out),
+		box-shadow var(--duration-select) var(--ease-out);
+}
+
+.field-well::placeholder {
+	color: rgba(18, 37, 74, 0.35);
+}
+
+.field-well:focus {
+	outline: none;
+	border-color: var(--color-sun);
+	box-shadow:
+		inset 0 3px 7px rgba(18, 37, 74, 0.3),
+		inset 0 -2px 0 rgba(255, 255, 255, 0.55),
+		0 0 0 4px rgba(255, 200, 61, 0.38);
+}
+
+:focus-visible {
+	outline: 3px solid var(--color-cream);
+	outline-offset: 3px;
+}
+
+.field-well:focus-visible {
+	outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.clay:active {
+		filter: brightness(0.93);
+		transform: none;
+		transition-duration: 60ms;
+	}
+}
+
+/* Slide mode: the page never scrolls, one gesture moves one slide.
+   Reduced motion keeps the normal scrolling page. */
+@media (prefers-reduced-motion: no-preference) {
+	html,
+	body {
+		height: 100%;
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
+}

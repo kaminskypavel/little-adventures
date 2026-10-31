@@ -1,23 +1,14 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "../index.css";
-import Header from "@/components/header";
-import Providers from "@/components/providers";
+import localFont from "next/font/local";
 
-const geistSans = Geist({
-	subsets: ["latin"],
-	variable: "--font-geist-sans",
+// The brand font sits behind one variable, so a font change is a swap here only.
+const brandFont = localFont({
+	src: [
+		{ path: "./fonts/nunito-700.woff2", weight: "700" },
+		{ path: "./fonts/nunito-800.woff2", weight: "800" },
+		{ path: "./fonts/nunito-900.woff2", weight: "900" },
+	],
+	variable: "--font-nunito",
 });
-
-const geistMono = Geist_Mono({
-	subsets: ["latin"],
-	variable: "--font-geist-mono",
-});
-
-export const metadata: Metadata = {
-	description: "little-adventures",
-	title: "little-adventures",
-};
 
 export default function RootLayout({
 	children,
@@ -25,17 +16,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
-				<Providers>
-					<div className="grid h-svh grid-rows-[auto_1fr]">
-						<Header />
-						{children}
-					</div>
-				</Providers>
-			</body>
+		<html className={brandFont.variable} lang="en" suppressHydrationWarning>
+			<body>{children}</body>
 		</html>
 	);
 }
