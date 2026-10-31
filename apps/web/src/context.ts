@@ -1,9 +1,14 @@
 import type { Context as ApiContext } from "@little-adventures/api/context";
 import { resolvePrincipal } from "@little-adventures/auth/bearer";
+import { createImageEditing } from "@little-adventures/image-editing";
+import { after } from "next/server";
 
+import { ENV } from "./env.server";
 import { auth, verify } from "./server/auth";
 import { storage } from "./server/storage";
 import { db } from "./services";
+
+const art = createImageEditing({ apiKey: ENV.META_API_KEY });
 
 export async function createContext(req: Request): Promise<ApiContext> {
 	const principal = await resolvePrincipal({
@@ -24,7 +29,7 @@ export async function createContext(req: Request): Promise<ApiContext> {
 		},
 		verify,
 	});
-	return { db, principal, storage };
+	return { art, db, principal, storage, waitUntil: (work) => after(work) };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
