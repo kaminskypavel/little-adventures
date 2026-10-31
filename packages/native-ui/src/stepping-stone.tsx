@@ -65,12 +65,15 @@ function Copy({
  */
 export function SteppingStone({
 	active = false,
+	art,
 	rotate,
 	style,
 	variant,
 	width,
 }: {
 	active?: boolean;
+	/** Another cut-out in place of the pebble (the story map uses leaves). */
+	art?: { ratio: number; source: number };
 	/** Degrees. */
 	rotate: number;
 	style?: StyleProp<ViewStyle>;
@@ -78,7 +81,7 @@ export function SteppingStone({
 	width: number;
 }) {
 	const calm = useCalm();
-	const { ratio, source } = pebbles[variant];
+	const { ratio, source } = art ?? pebbles[variant];
 	const glow = useSharedValue(active ? 1 : 0);
 	useEffect(() => {
 		glow.set(
