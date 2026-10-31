@@ -104,15 +104,22 @@ const summary = (
 });
 
 const moonDust = require("../../assets/story/places/moon-dust.jpg");
-const theBox = require("../../assets/story/places/the-box.jpg");
 const whaleSongs = require("../../assets/story/places/whale-songs.jpg");
+const earthRise = require("../../assets/story/places/earth-rise.jpg");
+const glowFlowers = require("../../assets/story/places/glow-flowers.jpg");
+const theBox = require("../../assets/story/places/the-box.jpg");
+const ideaBee = require("../../assets/story/idea-bee.jpg");
+const ideaMoon = require("../../assets/story/idea-moon.jpg");
 
 export const keepGoing = [
-	summary("box", "The Box That Flew", 2, 0, moonDust),
+	summary("box", "The Box That Flew", 2, 0, theBox),
 	summary("whales", "Whale songs", 1, 0, whaleSongs),
 ];
 export const finished = [
-	summary("moon-done", "The Box That Flew", 6, 4, theBox),
+	summary("bees-done", "Honey bees", 6, 3, ideaBee),
+	summary("moon-done", "Moon shapes", 6, 4, ideaMoon),
+	summary("earth-done", "Earth rise", 6, 2, earthRise),
+	summary("flowers-done", "Glow flowers", 6, 5, glowFlowers),
 ];
 export const grownUpList = [
 	summary("moon-done", "The Box That Flew", 6, 4, moonDust),
@@ -120,14 +127,11 @@ export const grownUpList = [
 ];
 
 export const ideas: Idea[] = [
-	{
-		picture: require("../../assets/story/idea-moon.jpg"),
-		question: "Why does the moon change shape?",
-	},
-	{
-		picture: require("../../assets/story/idea-bee.jpg"),
-		question: "How do bees make honey?",
-	},
+	{ picture: ideaMoon, question: "Why does the moon change shape?" },
+	{ picture: ideaBee, question: "How do bees make honey?" },
+	{ picture: whaleSongs, question: "Why do whales sing?" },
+	{ picture: theBox, question: "How can a box fly?" },
+	{ picture: glowFlowers, question: "Why do flowers glow?" },
 ];
 
 export const transcribedQuestion = "Why do whales sing?";
