@@ -6,9 +6,9 @@ import { useRef } from "react";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { WaitlistDialog, type WaitlistDialogHandle } from "./waitlist-dialog";
 
-const BADGE_HEIGHT = 80;
-// Big on computers; on phones they shrink with the width so both stay on one row.
-const BADGE_SIZE = "h-20 w-auto max-[899px]:h-[clamp(44px,13vw,60px)]";
+const BADGE_HEIGHT = 112;
+// Big on computers, growing with the screen; on phones they wrap onto two rows.
+const BADGE_SIZE = "h-[clamp(80px,7.8vw,124px)] w-auto max-[899px]:h-16";
 
 // "start" aligns to the start only from the 900px split up. Below it the
 // stacked layout is centred, so the row and the line stay centred there too.
@@ -52,7 +52,7 @@ export function StoreBadges({
 						className={BADGE_SIZE}
 						height={BADGE_HEIGHT}
 						src="/badges/app-store.svg"
-						width={240}
+						width={336}
 					/>
 					<span className="sr-only"> {copy.badges.joinWaitlist}</span>
 				</button>
@@ -66,7 +66,7 @@ export function StoreBadges({
 						className={BADGE_SIZE}
 						height={BADGE_HEIGHT}
 						src="/badges/google-play.png"
-						width={269}
+						width={377}
 					/>
 					<span className="sr-only"> {copy.badges.joinWaitlist}</span>
 				</button>

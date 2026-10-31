@@ -160,7 +160,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 			const layers = [...stills, ...loops, ...moves, ...backs].filter(
 				Boolean
 			) as HTMLElement[];
+			let shown: HTMLElement | null = null;
 			const only = (layer: HTMLElement) => {
+				shown = layer;
 				for (const x of layers) {
 					gsap.set(x, { opacity: x === layer ? 1 : 0 });
 				}
@@ -177,13 +179,22 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 			};
 			const story = createStoryStore();
 			const sceneNow = () => story.getState().at;
+			// A move that just ended keeps its last frame on screen until the loop's first frame
+			// replaces it, so no still flashes in between.
 			const rest = (i: number) => {
-				only(stills[i]);
+				const fromMove = [...moves, ...backs].includes(
+					shown as HTMLVideoElement
+				);
+				if (calm || !fromMove) {
+					only(stills[i]);
+				}
 				if (calm) {
 					return;
 				}
 				const v = loops[i];
-				v.currentTime = 0;
+				if (v.currentTime) {
+					v.currentTime = 0;
+				}
 				v.onended = () => {
 					v.currentTime = 0;
 					v.play().catch(() => undefined);
@@ -270,6 +281,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 				clip.currentTime = 0;
 				clip.playbackRate = MOVE_SPEED;
+				// Seek the landing loop to its first frame now, so it starts the instant the move ends.
+				loops[to].pause();
+				loops[to].currentTime = 0;
 				whenFrame(clip, () => only(clip));
 				clip.onended = () => arrive(to);
 				clip.play().catch(() => arrive(to));
