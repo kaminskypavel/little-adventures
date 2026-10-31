@@ -18,6 +18,7 @@
     "@little-adventures/db": "workspace:*",
     "@little-adventures/image-editing": "workspace:*",
     "@little-adventures/storage": "workspace:*",
+    "@little-adventures/transcribe": "workspace:*",
     "@little-adventures/ui": "workspace:*",
     "@little-adventures/validation": "workspace:*",
     "@swc/helpers": "^0.5.23",

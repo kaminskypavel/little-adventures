@@ -91,6 +91,7 @@
         "@little-adventures/db": "workspace:*",
         "@little-adventures/image-editing": "workspace:*",
         "@little-adventures/storage": "workspace:*",
+        "@little-adventures/transcribe": "workspace:*",
         "@little-adventures/ui": "workspace:*",
         "@little-adventures/validation": "workspace:*",
         "@swc/helpers": "^0.5.23",
@@ -128,6 +129,7 @@
         "@little-adventures/db": "workspace:*",
         "@little-adventures/image-editing": "workspace:*",
         "@little-adventures/storage": "workspace:*",
+        "@little-adventures/transcribe": "workspace:*",
         "@little-adventures/validation": "workspace:*",
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
@@ -173,12 +175,35 @@
         "varlock": "catalog:",
       },
     },
+    "packages/decision": {
+      "name": "@little-adventures/decision",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@little-adventures/config": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "catalog:",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/image-editing": {
       "name": "@little-adventures/image-editing",
       "version": "0.0.0",
       "dependencies": {
         "@meta-sam/parser": "^0.1.0",
         "sharp": "^0.35.5",
+      },
+      "devDependencies": {
+        "@little-adventures/config": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "catalog:",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/llm": {
+      "name": "@little-adventures/llm",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@little-adventures/config": "workspace:*",
@@ -228,6 +253,16 @@
         "@aws-sdk/client-s3": "^3.1157.0",
         "@aws-sdk/s3-request-presigner": "^3.1157.0",
       },
+      "devDependencies": {
+        "@little-adventures/config": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "catalog:",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/transcribe": {
+      "name": "@little-adventures/transcribe",
+      "version": "0.0.0",
       "devDependencies": {
         "@little-adventures/config": "workspace:*",
         "@types/bun": "^1.4.4",
@@ -737,11 +772,17 @@
 
     "@little-adventures/db": ["@little-adventures/db@workspace:packages/db"],
 
+    "@little-adventures/decision": ["@little-adventures/decision@workspace:packages/decision"],
+
     "@little-adventures/image-editing": ["@little-adventures/image-editing@workspace:packages/image-editing"],
+
+    "@little-adventures/llm": ["@little-adventures/llm@workspace:packages/llm"],
 
     "@little-adventures/native-ui": ["@little-adventures/native-ui@workspace:packages/native-ui"],
 
     "@little-adventures/storage": ["@little-adventures/storage@workspace:packages/storage"],
+
+    "@little-adventures/transcribe": ["@little-adventures/transcribe@workspace:packages/transcribe"],
 
     "@little-adventures/ui": ["@little-adventures/ui@workspace:packages/ui"],
 
