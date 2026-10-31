@@ -22,17 +22,17 @@ import { uploadChildPhoto } from "@/src/data/photo-upload";
 import type { Profile } from "@/src/data/types";
 
 // Round 7 04 at 0.72 scale: ring 170 px = 236 pt with a 64 px = 89 pt camera, line 15 px = 21 pt.
-const RING = 236;
+export const RING = 236;
 const CAMERA = 89;
 const RING_FILL = 0.14;
-const LINE = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
+export const LINE = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
 // The check pops in over one release spring, then the screen moves on.
-const ADVANCE_MS = 600;
+export const ADVANCE_MS = 600;
 const POP_FROM = 0.6;
 const overshoot = cubicBezier(...motion.overshoot);
 
-const CAMERA_OFF = "Camera is off. Choose a photo instead.";
-const UPLOAD_FAILED = "That did not upload. Try again.";
+export const CAMERA_OFF = "Camera is off. Choose a photo instead.";
+export const UPLOAD_FAILED = "That did not upload. Try again.";
 
 const popIn = {
 	from: { opacity: 0, transform: [{ scale: POP_FROM }] },
@@ -40,7 +40,7 @@ const popIn = {
 };
 const fadeIn = { from: { opacity: 0 }, to: { opacity: 1 } };
 
-type Source = "camera" | "library";
+export type Source = "camera" | "library";
 
 const pickerOptions = {
 	allowsEditing: false,
@@ -49,7 +49,7 @@ const pickerOptions = {
 } as const;
 
 /** The picked image's uri, "denied" when the camera is off, null when the picker was closed. */
-async function pick(source: Source): Promise<string | "denied" | null> {
+export async function pick(source: Source): Promise<string | "denied" | null> {
 	// The web preview has no camera; "Take a photo" opens the file picker there.
 	if (source === "camera" && Platform.OS !== "web") {
 		try {
@@ -67,7 +67,7 @@ async function pick(source: Source): Promise<string | "denied" | null> {
 	return chosen.canceled ? null : chosen.assets[0].uri;
 }
 
-function PhotoRing({ done }: { done: boolean }) {
+export function PhotoRing({ done }: { done: boolean }) {
 	const calm = useCalm();
 	const pop = calm
 		? ({

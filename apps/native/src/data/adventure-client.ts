@@ -184,3 +184,21 @@ export const deleteChildPhoto = async (): Promise<Profile> => {
 	}
 	return (await loadChild()).profile;
 };
+
+/** The grown-up's own photo (signed url), or null when none is saved. */
+export const getGrownUpPhoto = async (): Promise<{
+	photoUrl: string;
+} | null> => {
+	const row = await trpc.grownUp.mine.query();
+	return row ? { photoUrl: row.photoUrl } : null;
+};
+
+/** Saves the grown-up's uploaded photo; a replaced photo's drawings are removed by the server. */
+export const saveGrownUpPhoto = async (photoKey: string): Promise<void> => {
+	await trpc.grownUp.save.mutate({ photoKey });
+};
+
+/** Deletes the grown-up's photo and everything drawn from it. */
+export const deleteGrownUpPhoto = async (): Promise<void> => {
+	await trpc.grownUp.delete.mutate();
+};

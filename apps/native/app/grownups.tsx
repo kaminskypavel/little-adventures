@@ -6,14 +6,17 @@ import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { colors, layout, spacing } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { Image } from "expo-image";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import {
 	deleteChildPhoto,
+	deleteGrownUpPhoto,
 	getAdventures,
+	getGrownUpPhoto,
 	getProfile,
 } from "@/src/data/adventure-client";
 import type { AdventureSummary, Profile } from "@/src/data/types";
@@ -38,6 +41,9 @@ export default function Grownups() {
 	const insets = useSafeAreaInsets();
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [adventures, setAdventures] = useState<AdventureSummary[] | null>(null);
+	const [grownUpPhoto, setGrownUpPhoto] = useState<{
+		photoUrl: string;
+	} | null>(null);
 
 	useEffect(() => {
 		let live = true;
@@ -47,6 +53,22 @@ export default function Grownups() {
 			live = false;
 		};
 	}, []);
+
+	// Read again each time the screen is shown, so a photo just replaced appears.
+	useFocusEffect(
+		useCallback(() => {
+			let live = true;
+			getGrownUpPhoto().then((p) => live && setGrownUpPhoto(p));
+			return () => {
+				live = false;
+			};
+		}, [])
+	);
+
+	const deleteOwnPhoto = async () => {
+		await deleteGrownUpPhoto();
+		setGrownUpPhoto(null);
+	};
 
 	const deletePhoto = async () => {
 		setProfile(await deleteChildPhoto());
@@ -120,6 +142,38 @@ export default function Grownups() {
 								style={styles.wide}
 							/>
 						</View>
+						{grownUpPhoto ? (
+							<>
+								<ClayText
+									color={colors.cream}
+									style={styles.heading}
+									variant="label"
+								>
+									Your photo
+								</ClayText>
+								<View style={[styles.profile, styles.own]}>
+									<Image
+										contentFit="cover"
+										source={grownUpPhoto.photoUrl}
+										style={styles.portrait}
+									/>
+									<View style={styles.ownChips}>
+										<Chip
+											label="Replace"
+											onPress={() => router.push("/grownup-photo?replace=1")}
+											size="label"
+											style={styles.flex}
+										/>
+										<Chip
+											label="Delete"
+											onPress={deleteOwnPhoto}
+											size="label"
+											style={styles.flex}
+										/>
+									</View>
+								</View>
+							</>
+						) : null}
 						<ClayText
 							color={colors.cream}
 							style={styles.heading}
@@ -168,6 +222,8 @@ const styles = StyleSheet.create({
 		paddingLeft: spacing.sm,
 	},
 	list: { gap: layout.gap, marginTop: spacing.md },
+	own: { marginTop: spacing.md },
+	ownChips: { flex: 1, flexDirection: "row", gap: layout.gapTight },
 	portrait: {
 		borderColor: colors.sand,
 		borderRadius: PORTRAIT / 2,

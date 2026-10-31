@@ -11,7 +11,11 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
-import { getProfile, saveProfile } from "@/src/data/adventure-client";
+import {
+	getGrownUpPhoto,
+	getProfile,
+	saveProfile,
+} from "@/src/data/adventure-client";
 import type { Profile } from "@/src/data/types";
 
 // Round 7 04b at 0.72 scale: portrait 96 px = 133 pt with a 4 px = 5.5 pt border.
@@ -68,7 +72,10 @@ function Coming({ profile }: { profile: Profile }) {
 
 	const next = async () => {
 		await saveProfile({ grownUp, puppy });
-		router.push("/handover");
+		// "You" without a saved photo of your own asks for one first.
+		router.push(
+			grownUp && !(await getGrownUpPhoto()) ? "/grownup-photo" : "/handover"
+		);
 	};
 
 	return (
