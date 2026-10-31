@@ -1,7 +1,21 @@
 export type NodeId = "intro" | "p1" | "p2" | "p1a" | "p2a" | "outro";
 /** Still being made, or playable. */
 export type PlaceStatus = "drawing" | "ready";
+/** A bundled image module, or a picture from the engine: `cacheKey` is its storage key. */
+export type Picture = number | { cacheKey?: string; uri: string };
+/** One spoken word and when it is said, in seconds from the start of the narration. */
+export interface WordTiming {
+	endSec: number;
+	startSec: number;
+	text: string;
+}
+export interface NarrationAudio {
+	url: string;
+	words: WordTiming[];
+}
 export interface Place {
+	/** The spoken narration with its word timings. Absent for the bundled adventure. */
+	audio?: NarrationAudio | null;
 	/** e.g. "Moon dust keeps footprints". */
 	fact: string;
 	id: NodeId;
@@ -9,17 +23,17 @@ export interface Place {
 	name: string;
 	/** Words of the read-along line, in order. */
 	narration: string[];
-	/** require()'d image module, or null = neutral placeholder. */
-	picture: number | null;
+	/** An image, or null = neutral placeholder. */
+	picture: Picture | null;
 	status: PlaceStatus;
-	/** require()'d video module, or null = show picture as the frame. */
-	video: number | null;
+	/** require()'d video module or a video url, or null = show picture as the frame. */
+	video: number | string | null;
 }
-/** e.g. "Goodnight moon", gate image, open image. */
+/** e.g. "Goodnight moon", gate image, open image. The pictures are null until they are made. */
 export interface EndGoal {
-	closed: number;
+	closed: Picture | null;
 	name: string;
-	open: number;
+	open: Picture | null;
 }
 export interface Cast {
 	childAge: number;
@@ -29,10 +43,13 @@ export interface Cast {
 	puppy: boolean;
 }
 export interface Adventure {
-	cast: Cast;
+	/** Absent for engine adventures: the screens read the child from the profile. */
+	cast?: Cast;
 	endGoal: EndGoal;
 	id: string;
 	places: Record<NodeId, Place>;
+	/** Seconds until the next read while any place is still being made. Absent or null: all done. */
+	pollAfterSec?: number | null;
 	/** e.g. "How do you get to the moon?". */
 	question: string;
 	/** e.g. "The Box That Flew". */
@@ -40,6 +57,8 @@ export interface Adventure {
 }
 export interface Progress {
 	here: NodeId;
+	/** From the engine: true while goodnight is locked. Absent: the map rules decide. */
+	outroLocked?: boolean;
 	visited: NodeId[];
 }
 export interface AdventureSummary {
@@ -48,16 +67,20 @@ export interface AdventureSummary {
 	id: string;
 	partsDone: number;
 	partsTotal: number;
-	picture: number | null;
+	picture: Picture | null;
 	title: string;
 }
 export interface Idea {
 	picture: number;
 	question: string;
 }
+/**
+ * `stage` (0 to 2) is the engine's own word on how far the making is; the bundled adventure
+ * leaves it out and the screen goes by its bar. `goalName` appears once the end goal has a name.
+ */
 export type MakeStatus =
-	| { state: "making"; progress: number }
-	| { state: "ready" }
+	| { goalName?: string; progress: number; stage?: number; state: "making" }
+	| { goalName?: string; state: "ready" }
 	| { state: "failed" };
 
 export type Look = "clay" | "felt" | "wood";

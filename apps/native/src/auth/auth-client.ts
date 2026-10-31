@@ -1,6 +1,7 @@
 import { openAuthSessionAsync, openBrowserAsync } from "expo-web-browser";
 import { Platform } from "react-native";
 import { ENV } from "@/src/env";
+import { withRetryOn401 } from "./retry-on-401";
 import { clearToken, readToken, writeToken } from "./token-store";
 
 export interface User {
@@ -14,7 +15,8 @@ export interface Session {
 	user: User | null;
 }
 
-const SERVER = ENV.EXPO_PUBLIC_SERVER_URL.replace(/\/$/u, "");
+const TRAILING_SLASH = /\/$/u;
+const SERVER = ENV.EXPO_PUBLIC_SERVER_URL.replace(TRAILING_SLASH, "");
 const NATIVE_RETURN = "little-adventures://auth/callback";
 const SIGNED_OUT: Session = { status: "signed-out", user: null };
 
@@ -198,33 +200,47 @@ export async function getToken() {
 	return token ?? (await mint());
 }
 
+const withBearer = (headers: HeadersInit | undefined, jwt: string | null) => {
+	const next = new Headers(headers);
+	if (jwt) {
+		next.set("authorization", `Bearer ${jwt}`);
+	}
+	return next;
+};
+
 /**
  * fetch against our server with the bearer JWT. A 401 mints a fresh JWT once and retries once;
  * if that fails too the session is over and the user is signed out.
  */
-export async function authedFetch(path: string, init: RequestInit = {}) {
-	const call = (jwt: string | null) => {
-		const headers = new Headers(init.headers);
-		if (jwt) {
-			headers.set("authorization", `Bearer ${jwt}`);
-		}
-		return fetch(`${SERVER}${path}`, {
-			...init,
-			credentials: "include",
-			headers,
+export const authedFetch = (path: string, init: RequestInit = {}) =>
+	withRetryOn401({
+		call: (jwt) =>
+			fetch(`${SERVER}${path}`, {
+				...init,
+				credentials: "include",
+				headers: withBearer(init.headers, jwt),
+			}),
+		getToken,
+		mint,
+		signOut,
+	});
+
+/**
+ * The same bearer token and the same 401 rule against another server (the engine), by its base
+ * url. The token alone signs the call, so no cookies travel.
+ */
+export const authedFetchTo = (base: string) => {
+	const origin = base.replace(TRAILING_SLASH, "");
+	return (path: string, init: RequestInit = {}) =>
+		withRetryOn401({
+			call: (jwt) =>
+				fetch(`${origin}${path}`, {
+					...init,
+					credentials: "omit",
+					headers: withBearer(init.headers, jwt),
+				}),
+			getToken,
+			mint,
+			signOut,
 		});
-	};
-	let res = await call(await getToken());
-	if (res.status !== 401) {
-		return res;
-	}
-	const fresh = await mint();
-	if (fresh) {
-		res = await call(fresh);
-		if (res.status !== 401) {
-			return res;
-		}
-	}
-	await signOut();
-	return res;
-}
+};

@@ -1,0 +1,314 @@
+import { describe, expect, test } from "bun:test";
+import type { EngineAdventure, EngineNode } from "./engine-client";
+import {
+	initialWait,
+	MAX_FAILED_READS,
+	makeStatusOf,
+	nextWait,
+	placeStatus,
+	progressOf,
+	toAdventure,
+	toSummary,
+	WAIT_CEILING_MS,
+} from "./engine-map";
+
+const media = (id: string, url = `https://files.test/${id}?sig=1`) => ({
+	id,
+	url,
+});
+
+const node = (id: string, patch: Partial<EngineNode> = {}): EngineNode => ({
+	clip: null,
+	fact: null,
+	id,
+	locked: false,
+	name: `${id} name`,
+	narration: null,
+	neighbours: [],
+	picture: media(`${id}-picture`),
+	status: "ready",
+	visited: false,
+	...patch,
+});
+
+const IDS = ["intro", "p1", "p2", "p1a", "p2a", "outro"];
+
+const adventure = (patch: Partial<EngineAdventure> = {}): EngineAdventure => ({
+	endGoal: {
+		closed: media("gate"),
+		name: "Goodnight moon",
+		open: media("gate-open"),
+	},
+	id: "a1",
+	nodes: IDS.map((id) => node(id)),
+	pollAfterSec: null,
+	question: "Why do whales sing?",
+	source: "live",
+	status: "ready",
+	title: "The Song Below",
+	...patch,
+});
+
+describe("placeStatus", () => {
+	test.each([
+		["ready", true, "ready"],
+		["ready", false, "ready"],
+		["waiting", true, "drawing"],
+		["making", true, "drawing"],
+		["failed", true, "drawing"],
+		["something-new", true, "drawing"],
+	] as [string, boolean, string][])(
+		"%s while polling=%s reads %s",
+		(status, polling, expected) => {
+			expect(placeStatus(status, polling)).toBe(expected);
+		}
+	);
+
+	test("once polling has stopped nothing stays drawing", () => {
+		expect(placeStatus("failed", false)).toBe("ready");
+		expect(placeStatus("something-new", false)).toBe("ready");
+	});
+});
+
+describe("toAdventure", () => {
+	test("carries the adventure's own question, title, goal and poll interval", () => {
+		const a = toAdventure(adventure({ pollAfterSec: 3 }), new Map());
+		expect(a.question).toBe("Why do whales sing?");
+		expect(a.title).toBe("The Song Below");
+		expect(a.endGoal.name).toBe("Goodnight moon");
+		expect(a.pollAfterSec).toBe(3);
+	});
+
+	test("nodes still being made read as drawing while the adventure polls", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) => node(id, id === "p2" ? { status: "making" } : {})),
+			pollAfterSec: 3,
+		});
+		const a = toAdventure(raw, new Map());
+		expect(a.places.p2.status).toBe("drawing");
+		expect(a.places.p1.status).toBe("ready");
+	});
+
+	test("a node with a clip carries its video url, one without carries none", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) =>
+				node(
+					id,
+					id === "p1" ? { clip: media("p1-clip", "https://files.test/c") } : {}
+				)
+			),
+		});
+		const a = toAdventure(raw, new Map());
+		expect(a.places.p1.video).toBe("https://files.test/c");
+		expect(a.places.p2.video).toBe(null);
+	});
+
+	test("narration gives the audio url, its word timings and the words to read", () => {
+		const words = [
+			{ endSec: 0.4, startSec: 0, text: "Whales" },
+			{ endSec: 0.9, startSec: 0.5, text: "sing" },
+		];
+		const raw = adventure({
+			nodes: IDS.map((id) =>
+				node(
+					id,
+					id === "p1" ? { narration: { ...media("p1-voice"), words } } : {}
+				)
+			),
+		});
+		const place = toAdventure(raw, new Map()).places.p1;
+		expect(place.audio?.words).toEqual(words);
+		expect(place.narration).toEqual(["Whales", "sing"]);
+	});
+
+	test("pictures are cached by their storage key", () => {
+		const a = toAdventure(adventure(), new Map());
+		expect(a.places.p1.picture).toEqual({
+			cacheKey: "p1-picture",
+			uri: "https://files.test/p1-picture?sig=1",
+		});
+	});
+
+	test("a read keeps the urls it has seen, so polling never restarts playback", () => {
+		const urls = new Map<string, string>();
+		toAdventure(adventure(), urls);
+		const later = toAdventure(
+			adventure({
+				nodes: IDS.map((id) =>
+					node(id, {
+						picture: media(`${id}-picture`, "https://files.test/new"),
+					})
+				),
+			}),
+			urls
+		);
+		expect(later.places.p1.picture).toEqual({
+			cacheKey: "p1-picture",
+			uri: "https://files.test/p1-picture?sig=1",
+		});
+	});
+
+	test("a node the engine has not sent yet reads as drawing and empty", () => {
+		const a = toAdventure(adventure({ nodes: [], pollAfterSec: 3 }), new Map());
+		expect(a.places.p1.status).toBe("drawing");
+		expect(a.places.p1.picture).toBe(null);
+		expect(a.places.p1.name).toBe("");
+	});
+
+	test("a goal that is not named or drawn yet has an empty name and no pictures", () => {
+		const a = toAdventure(
+			adventure({ endGoal: { closed: null, name: null, open: null } }),
+			new Map()
+		);
+		expect(a.endGoal).toEqual({ closed: null, name: "", open: null });
+	});
+});
+
+describe("makeStatusOf", () => {
+	test("a failed adventure fails the wait", () => {
+		expect(makeStatusOf(adventure({ status: "failed" }))).toEqual({
+			state: "failed",
+		});
+	});
+
+	test("the wait ends when the intro is ready, with the goal's name", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) => node(id, id === "p1" ? { status: "making" } : {})),
+		});
+		expect(makeStatusOf(raw)).toEqual({
+			goalName: "Goodnight moon",
+			state: "ready",
+		});
+	});
+
+	test("the status line follows the engine: writing, making, intro in the making", () => {
+		const notReady = (intro: string, status: string) =>
+			adventure({
+				endGoal: { closed: null, name: null, open: null },
+				nodes: IDS.map((id) =>
+					node(id, { status: id === "intro" ? intro : "waiting" })
+				),
+				status,
+			});
+		expect(makeStatusOf(notReady("waiting", "writing"))).toEqual({
+			goalName: undefined,
+			progress: 0,
+			stage: 0,
+			state: "making",
+		});
+		expect(makeStatusOf(notReady("waiting", "making"))).toEqual({
+			goalName: undefined,
+			progress: 0,
+			stage: 1,
+			state: "making",
+		});
+		expect(makeStatusOf(notReady("making", "making"))).toEqual({
+			goalName: undefined,
+			progress: 0,
+			stage: 2,
+			state: "making",
+		});
+	});
+
+	test("the goal's name is passed on as soon as it exists", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) => node(id, { status: "waiting" })),
+			status: "making",
+		});
+		expect(makeStatusOf(raw)).toEqual({
+			goalName: "Goodnight moon",
+			progress: 0,
+			stage: 1,
+			state: "making",
+		});
+	});
+});
+
+describe("progressOf", () => {
+	test("the intro counts as walked, the rest as the engine says", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) => node(id, { visited: id === "p2" })),
+		});
+		expect(progressOf(raw)).toEqual({
+			here: "p2",
+			outroLocked: false,
+			visited: ["intro", "p2"],
+		});
+	});
+
+	test("goodnight's lock comes from the engine", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) => node(id, { locked: id === "outro" })),
+		});
+		expect(progressOf(raw).outroLocked).toBe(true);
+	});
+
+	test("with nothing walked the child is at the intro", () => {
+		expect(progressOf(adventure()).here).toBe("intro");
+	});
+});
+
+describe("toSummary", () => {
+	const item = {
+		cover: media("cover"),
+		id: "a1",
+		placesDone: 2,
+		question: "Why do whales sing?",
+		source: "live",
+		status: "ready",
+		title: null,
+	};
+
+	test("an adventure in progress shows its places and falls back to its question", () => {
+		const s = toSummary(item);
+		expect(s.finished).toBe(false);
+		expect(s.partsDone).toBe(2);
+		expect(s.partsTotal).toBe(4);
+		expect(s.title).toBe("Why do whales sing?");
+	});
+
+	test("all 4 places make it finished", () => {
+		expect(toSummary({ ...item, placesDone: 4 }).finished).toBe(true);
+	});
+});
+
+describe("the wait", () => {
+	const START = 1_000_000;
+
+	test("keeps waiting while reads work and the ceiling is far", () => {
+		const next = nextWait(initialWait(START), "ok", START + 1000);
+		expect(next.giveUp).toBe(false);
+	});
+
+	test("gives up at the ceiling", () => {
+		const before = nextWait(
+			initialWait(START),
+			"ok",
+			START + WAIT_CEILING_MS - 1
+		);
+		const at = nextWait(initialWait(START), "ok", START + WAIT_CEILING_MS);
+		expect(before.giveUp).toBe(false);
+		expect(at.giveUp).toBe(true);
+	});
+
+	test("gives up after several failed reads in a row", () => {
+		let state = initialWait(START);
+		for (let n = 1; n < MAX_FAILED_READS; n += 1) {
+			state = nextWait(state, "failed", START + n);
+			expect(state.giveUp).toBe(false);
+		}
+		expect(nextWait(state, "failed", START + MAX_FAILED_READS).giveUp).toBe(
+			true
+		);
+	});
+
+	test("a good read in between starts the count again", () => {
+		let state = initialWait(START);
+		for (let n = 1; n < MAX_FAILED_READS; n += 1) {
+			state = nextWait(state, "failed", START + n);
+		}
+		state = nextWait(state, "ok", START + MAX_FAILED_READS);
+		state = nextWait(state, "failed", START + MAX_FAILED_READS + 1);
+		expect(state.giveUp).toBe(false);
+	});
+});
