@@ -315,9 +315,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 			};
 
-			// The scroll cue rises in once the story shows and fades out on the first move. While it
-			// shows, the mouse wheel rolls down and a soft wave runs down the three arrows.
-			// Reduced motion: a plain fade, everything shown, nothing loops.
+			// The scroll cue sits under the first scene's line. It rises in once the story shows and
+			// fades out on the first move; while it shows, the mouse wheel rolls down and a soft wave
+			// runs down the three arrows. Reduced motion: a plain fade, everything shown, no loop.
 			gsap.set(hint, { autoAlpha: 0 });
 			const cueLoop = gsap.timeline({ paused: true, repeat: -1 });
 			if (calm) {
@@ -333,7 +333,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 						duration: 0.88,
 						ease: "brandOut",
 						opacity: 0,
-						y: 12,
+						y: 16,
 					})
 					.to(
 						"[data-cue-arrow]",
@@ -515,6 +515,48 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 						<p className="text-cream/90 mb-[1.2em] leading-[1.38] text-balance text-[length:clamp(17px,1.55vw,24px)] [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] max-[899px]:text-[length:clamp(17px,4.9vw,20px)]">
 							{scene.line}
 						</p>
+						{i === 0 ? (
+							<div
+								className="invisible mt-[2.5vh] flex justify-center"
+								data-hint
+							>
+								<div className="text-cream flex flex-col items-center gap-2.5 [filter:drop-shadow(0_2px_8px_rgba(0,0,0,0.6))]">
+									<span
+										aria-hidden="true"
+										className="relative h-14 w-9 rounded-[20px] border-[3px] border-current pointer-coarse:hidden"
+									>
+										<span
+											className="bg-sun-hi absolute top-[9px] left-1/2 -ml-[3px] h-2.5 w-1.5 rounded-sm opacity-0"
+											data-cue-wheel
+										/>
+									</span>
+									<span className="flex flex-col items-center">
+										{CUE_ARROWS.map((arrow) => (
+											<svg
+												aria-hidden="true"
+												className="-mt-1 h-3 w-[22px] opacity-[0.15] pointer-coarse:h-3.5 pointer-coarse:w-[26px]"
+												data-cue-arrow
+												fill="none"
+												key={arrow}
+												stroke="currentColor"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2.5}
+												viewBox="0 0 22 12"
+											>
+												<path d="M3 2l8 8 8-8" />
+											</svg>
+										))}
+									</span>
+									<span className="text-[16px] font-extrabold whitespace-nowrap opacity-90 pointer-coarse:hidden">
+										{copy.hint.scroll}
+									</span>
+									<span className="hidden text-[15px] font-extrabold whitespace-nowrap opacity-90 pointer-coarse:inline">
+										{copy.hint.swipe}
+									</span>
+								</div>
+							</div>
+						) : null}
 						{i === N - 1 ? <StoreBadges copy={copy} /> : null}
 					</section>
 				);
@@ -533,43 +575,6 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 						<span className="bg-sun absolute inset-x-0 top-0 h-0 rounded-full" />
 					</span>
 				))}
-			</div>
-			<div
-				className="invisible fixed bottom-7 left-[max(16px,2.2vw)] z-[3] max-[899px]:bottom-6 max-[899px]:left-3 [@media(min-aspect-ratio:16/9)]:left-[calc((100vw-177.78vh)/2+2vw)]"
-				data-hint
-			>
-				<div className="text-cream flex flex-col items-center gap-2 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.55))]">
-					<span
-						aria-hidden="true"
-						className="relative h-10 w-[26px] rounded-[14px] border-[2.5px] border-current pointer-coarse:hidden"
-					>
-						<span
-							className="bg-sun-hi absolute top-[7px] left-1/2 -ml-0.5 h-2 w-1 rounded-sm opacity-0"
-							data-cue-wheel
-						/>
-					</span>
-					<span className="flex flex-col items-center">
-						{CUE_ARROWS.map((arrow) => (
-							<svg
-								aria-hidden="true"
-								className="-mt-[3px] h-[9px] w-4 opacity-[0.15] pointer-coarse:h-3 pointer-coarse:w-[22px]"
-								data-cue-arrow
-								fill="none"
-								key={arrow}
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2.5}
-								viewBox="0 0 22 12"
-							>
-								<path d="M3 2l8 8 8-8" />
-							</svg>
-						))}
-					</span>
-					<span className="text-[14px] font-extrabold whitespace-nowrap opacity-90 max-[899px]:text-[13px]">
-						{copy.hint}
-					</span>
-				</div>
 			</div>
 
 			<div

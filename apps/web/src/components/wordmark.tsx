@@ -20,10 +20,10 @@ const TILTS = [
 	-3.5, 2.5, -1.5, 4, -4.5, 1.5, 3, -2, 4.5, -3, 1, -4, 2, -1, 3.5, -2.5,
 ] as const;
 
-// A stacked navy edge (in em, so it scales with the size) reads as a raised, 3D letter,
-// then a soft drop shadow lifts the whole word off the picture.
+// A stacked navy edge (in em, so it scales with the size, with a pixel minimum so it
+// still reads as raised on phones) makes a 3D letter; a soft drop shadow lifts the word.
 const SHADOW =
-	"[text-shadow:0_0.016em_0_#1d3359,0_0.032em_0_#192d50,0_0.048em_0_#152746,0_0.064em_0_#11203b,0_0.1em_0.06em_rgba(0,0,0,0.45),0_0.18em_0.3em_rgba(0,0,0,0.35)]";
+	"[text-shadow:0_max(1.5px,0.016em)_0_#1d3359,0_max(3px,0.032em)_0_#192d50,0_max(4.5px,0.048em)_0_#152746,0_max(6px,0.064em)_0_#11203b,0_max(8px,0.1em)_max(4px,0.06em)_rgba(0,0,0,0.45),0_max(12px,0.18em)_max(18px,0.3em)_rgba(0,0,0,0.35)]";
 const DEFAULT_SIZE = "text-[length:clamp(46px,9vw,104px)] leading-none";
 const HAS_SIZE = /(?:^|\s)text-/u;
 

@@ -17,7 +17,8 @@ export interface Dictionary {
 		googlePlay: string;
 		joinWaitlist: string;
 	};
-	hint: string;
+	/** The scroll cue: "scroll" on computers, "swipe" on touch screens. */
+	hint: { scroll: string; swipe: string };
 	language: { label: string; name: string };
 	loader: string;
 	meta: {
@@ -52,7 +53,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 			googlePlay: "Get it on Google Play",
 			joinWaitlist: "(join the waitlist)",
 		},
-		hint: "Scroll or swipe down",
+		hint: { scroll: "Scroll down", swipe: "Swipe down" },
 		language: { label: "Language", name: "English" },
 		loader: "Getting the adventure ready",
 		meta: {
@@ -111,7 +112,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 			googlePlay: "Disponible en Google Play",
 			joinWaitlist: "(únete a la lista de espera)",
 		},
-		hint: "Desliza hacia abajo",
+		hint: { scroll: "Desplázate hacia abajo", swipe: "Desliza hacia abajo" },
 		language: { label: "Idioma", name: "Español" },
 		loader: "Preparando la aventura",
 		meta: {
@@ -170,7 +171,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
 			googlePlay: "Disponible sur Google Play",
 			joinWaitlist: "(rejoindre la liste d'attente)",
 		},
-		hint: "Faites défiler vers le bas",
+		hint: {
+			scroll: "Faites défiler vers le bas",
+			swipe: "Glissez vers le bas",
+		},
 		language: { label: "Langue", name: "Français" },
 		loader: "Préparation de l'aventure",
 		meta: {
