@@ -1,7 +1,7 @@
 import { createAuth } from "@little-adventures/auth";
 import { createBearerVerifier } from "@little-adventures/auth/bearer";
 
-import { ENV } from "@/env";
+import { ENV } from "@/env.server";
 
 export const auth = createAuth(ENV);
 

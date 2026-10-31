@@ -1,4 +1,4 @@
-import { ENV } from "@/env";
+import { ENV } from "@/env.server";
 
 // The Expo web preview runs on its own origin. Only in development: in
 // production the app is a native client and CORS does not apply.

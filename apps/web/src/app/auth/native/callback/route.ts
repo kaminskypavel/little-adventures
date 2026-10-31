@@ -1,6 +1,6 @@
 import { nativeCallbackUrl } from "@little-adventures/auth/native-callback";
 
-import { ENV } from "@/env";
+import { ENV } from "@/env.server";
 
 // Neon Auth only accepts http(s) callbacks, so sign-in on a phone lands here
 // and the browser is handed on to the app's URL scheme.
