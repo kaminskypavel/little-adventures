@@ -1,5 +1,5 @@
 import { defineRelations } from "drizzle-orm";
 
-import { waitlist } from "./schema";
+import { children, waitlist } from "./schema";
 
-export const relations = defineRelations({ waitlist });
+export const relations = defineRelations({ children, waitlist });
