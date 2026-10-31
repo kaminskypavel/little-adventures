@@ -1,13 +1,19 @@
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HeroCard } from "@little-adventures/native-ui/hero-card";
 import { ListRow } from "@little-adventures/native-ui/list-row";
+import { Pulse } from "@little-adventures/native-ui/pulse";
 import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
-import { colors, layout, listCards } from "@little-adventures/native-ui/tokens";
+import {
+	colors,
+	layout,
+	listCards,
+	motion,
+} from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { devFlags, getHome, getProfile } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
@@ -26,6 +32,8 @@ const STAR_GAP = 81;
 const STAR_SIZE = 180;
 const FIRST_LINE_GAP = 32;
 const MAX_ROWS = 2;
+// The New adventure card pulses once, after the avatar star has waved.
+const HERO_PULSE_DELAY = motion.pulseOffset + 200;
 
 interface HomeData {
 	finished: AdventureSummary[];
@@ -39,6 +47,19 @@ export default function Home() {
 	// Dev only: production builds ignore the query.
 	const first = dev(params.first);
 	const [data, setData] = useState<HomeData | null>(null);
+
+	// Counts focuses: each one waves the avatar star again and pulses the New adventure card.
+	// The first focus is the mount, which already plays both.
+	const [run, setRun] = useState(0);
+	const seenFocus = useRef(false);
+	useFocusEffect(
+		useCallback(() => {
+			if (seenFocus.current) {
+				setRun((n) => n + 1);
+			}
+			seenFocus.current = true;
+		}, [])
+	);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -75,19 +96,23 @@ export default function Home() {
 						onPress: () => router.push("/gate"),
 					}}
 					avatar
+					take="wave"
+					takeRun={run}
 					title={data ? `Hi ${data.name}!` : ""}
 				/>
 			}
 		>
 			{isFirst ? (
-				<FirstHome onNew={() => router.push("/pick")} />
+				<FirstHome onNew={() => router.push("/pick")} run={run} />
 			) : (
 				<View style={{ marginTop: HERO_GAP }}>
-					<HeroCard
-						height={HERO_HEIGHT}
-						label={"New\nadventure"}
-						onPress={() => router.push("/pick")}
-					/>
+					<Pulse delay={HERO_PULSE_DELAY} play={run}>
+						<HeroCard
+							height={HERO_HEIGHT}
+							label={"New\nadventure"}
+							onPress={() => router.push("/pick")}
+						/>
+					</Pulse>
 					{data ? (
 						<Lists
 							finished={data.finished}
@@ -176,14 +201,16 @@ function LoadingLists() {
 }
 
 // E4: both lists empty. One big card, the star, one friendly line.
-function FirstHome({ onNew }: { onNew: () => void }) {
+function FirstHome({ onNew, run }: { onNew: () => void; run: number }) {
 	return (
 		<View style={{ marginTop: HERO_FIRST_GAP }}>
-			<HeroCard
-				height={HERO_FIRST_HEIGHT}
-				label={"New\nadventure"}
-				onPress={onNew}
-			/>
+			<Pulse delay={HERO_PULSE_DELAY} play={run}>
+				<HeroCard
+					height={HERO_FIRST_HEIGHT}
+					label={"New\nadventure"}
+					onPress={onNew}
+				/>
+			</Pulse>
 			<View style={styles.star}>
 				<StarTake size={STAR_SIZE} take="idle" />
 			</View>

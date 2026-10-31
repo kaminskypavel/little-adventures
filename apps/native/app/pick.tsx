@@ -2,9 +2,15 @@ import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HeroCard } from "@little-adventures/native-ui/hero-card";
 import { PictureRow } from "@little-adventures/native-ui/picture-row";
+import { Pulse } from "@little-adventures/native-ui/pulse";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
-import { colors, layout, listCards } from "@little-adventures/native-ui/tokens";
+import {
+	colors,
+	layout,
+	listCards,
+	motion,
+} from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -60,7 +66,7 @@ export default function Pick() {
 				)}
 				{micOff ? null : (
 					<View pointerEvents="none" style={styles.star}>
-						<StarTake size={STAR_SIZE} take="idle" />
+						<StarTake size={STAR_SIZE} take="think" />
 					</View>
 				)}
 			</View>
@@ -85,18 +91,23 @@ export default function Pick() {
 			)}
 			<View style={styles.rows}>
 				{ideas ? (
-					ideas.map((idea) => (
-						<PictureRow
+					ideas.map((idea, index) => (
+						<Pulse
+							delay={index * motion.pulseOffset}
 							key={idea.question}
-							onPress={() =>
-								router.push({
-									params: { question: idea.question },
-									pathname: "/making",
-								})
-							}
-							picture={idea.picture}
-							title={idea.question}
-						/>
+							play={ideas}
+						>
+							<PictureRow
+								onPress={() =>
+									router.push({
+										params: { question: idea.question },
+										pathname: "/making",
+									})
+								}
+								picture={idea.picture}
+								title={idea.question}
+							/>
+						</Pulse>
 					))
 				) : (
 					<>
