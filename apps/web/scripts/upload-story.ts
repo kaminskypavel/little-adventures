@@ -1,6 +1,7 @@
 // Uploads the landing story clips to the CDN bucket and records their names in
 // src/components/story/story-media.json, which the story tests check against.
-// Usage: bun scripts/upload-story.ts <folder with the clips>   (needs `wrangler login`)
+// Usage: CLOUDFLARE_ACCOUNT_ID=<account> bun scripts/upload-story.ts <folder with the clips>
+// (needs `wrangler login`; the account id picks the account when the login sees several)
 // Before uploading it runs the frame test on that folder: every move must start
 // and end on the frames of the scenes it joins.
 import { readdirSync, writeFileSync } from "node:fs";
