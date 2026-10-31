@@ -67,7 +67,7 @@ const LAST = slides.length - 1;
 // height, so a pose in percent of the stage needs no pixels and survives a
 // resize.
 const STAGE =
-	"overflow-hidden [container-type:size] [--kid:74vw] [--star:44vw] min-[900px]:[--kid:min(74vh,35vw)] min-[900px]:[--star:34vh]";
+	"overflow-hidden [container-type:size] [--kid:84vw] [--star:46vw] min-[900px]:[--kid:min(74vh,35vw)] min-[900px]:[--star:34vh]";
 const STAGE_LIVE = `${STAGE} absolute inset-x-0 bottom-0 z-10 h-[56svh] min-[900px]:inset-x-auto min-[900px]:inset-y-0 min-[900px]:right-0 min-[900px]:h-svh min-[900px]:w-[56vw] motion-reduce:hidden`;
 const STAGE_STILL = `${STAGE} relative h-[56svh] w-full min-[900px]:h-svh min-[900px]:w-[56vw]`;
 
@@ -77,10 +77,10 @@ const ACTOR =
 const KID = "size-[var(--kid)] bottom-0 min-[900px]:bottom-[4%]";
 
 const ACTOR_AT: Record<StageActor, string> = {
-	boy: `${KID} left-[-15vw] min-[900px]:left-[-2%]`,
+	boy: `${KID} left-[-22vw] min-[900px]:left-[-2%]`,
 	bubble:
 		"left-[3vw] bottom-[calc(var(--kid)*0.86+10px)] w-max origin-bottom-left min-[900px]:left-[calc(1%+var(--kid)*0.43)] min-[900px]:bottom-[calc(4%+var(--kid)*0.9+28px)]",
-	girl: `${KID} right-[-15vw] min-[900px]:right-[-2%]`,
+	girl: `${KID} right-[-22vw] min-[900px]:right-[-2%]`,
 	moonCrescent:
 		"aspect-[700/602] h-[8vh] right-[6%] top-[3%] min-[900px]:h-[13vh] min-[900px]:right-[8%] min-[900px]:top-[7%]",
 	moonHammock:
@@ -89,7 +89,7 @@ const ACTOR_AT: Record<StageActor, string> = {
 		"w-[26vw] left-[6vw] top-[3%] min-[900px]:w-[24vh] min-[900px]:left-[calc(30%-12vh)] min-[900px]:top-[12%]",
 	planetB:
 		"w-[26vw] right-[6vw] top-[7%] min-[900px]:w-[24vh] min-[900px]:right-[calc(30%-12vh)] min-[900px]:top-[17%]",
-	star: "size-[var(--star)] left-[calc(50%-var(--star)/2)] top-[calc(40%-var(--star)/2)] min-[900px]:top-[calc(52%-var(--star)/2)]",
+	star: "size-[var(--star)] left-[calc(50%-var(--star)/2)] top-[calc(36%-var(--star)/2)] min-[900px]:top-[calc(52%-var(--star)/2)]",
 };
 
 // The pictures are illustrations, not buttons, so they stay flat: no clay

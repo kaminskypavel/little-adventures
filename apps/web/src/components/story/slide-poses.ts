@@ -204,11 +204,11 @@ const NARROW: Record<SlideId, Poses> = {
 		star: HERE,
 	},
 	goodnight: {
-		boy: { s: 0.82, x: 10.5, y: -25 },
+		boy: { s: 0.56, x: 10.5, y: -15 },
 		bubble: BUBBLE_GONE,
 		clouds: { alpha: 0.7, y: 0 },
 		dim: { alpha: 1 },
-		girl: { s: 0.82, x: -10.3, y: -24 },
+		girl: { s: 0.56, x: -10.3, y: -14 },
 		moonCrescent: { ...NARROW_MOON_NEAR, alpha: 0 },
 		moonHammock: HERE,
 		planetA: PLANET_GONE,
