@@ -8,13 +8,14 @@ Website: [littleadventures.app](https://littleadventures.app)
 
 Everything in this repo was written during the hackathon (building period Oct 27 to Nov 4, 2026). This repo was started on Oct 30, 2026, and its commit history is the real record of that work.
 
-This repo is the client. All AI generation happens in a separate backend service. This repo calls no AI model itself.
+This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe). All of it was written this week. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app, which predates the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
 
-The Next.js app serves the landing page and a small tRPC API. The Expo app talks only to that API, which holds the landing's waitlist and passes app requests on to the backend service.
+The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through a documented player API with the same sign-in token.
 
 ```
-apps/native (child + parent app) ─► apps/web API (tRPC, /api/trpc) ─► backend service
-apps/web (landing page) ──────────┘        └─ Postgres (waitlist)
+apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* ─► Meta models
+        │                              └─ Postgres (waitlist)
+        └─ player API, same token ─► private engine (engine.littleadventures.app)
 ```
 
 ## Apps
@@ -24,6 +25,10 @@ apps/web (landing page) ──────────┘        └─ Postgres
 | `apps/native` | The app the child and parent use. Runs in the browser first, then ships to iOS from the same code. | Expo, React Native, Uniwind |
 | `apps/web` | Public landing page and the tRPC API the app talks to. | Next.js, GSAP, tRPC |
 | `packages/api` | tRPC routers (waitlist). | tRPC, Zod |
+| `packages/llm` | Structured-output client for Muse Spark. | Zod |
+| `packages/decision` | Yes or no question sets on Muse Spark, with a pass threshold. | Zod |
+| `packages/image-editing` | SAM 3.1 person cut-out and Muse Image looks, edits and generation. | |
+| `packages/transcribe` | Muse Voice Transcribe for the child's spoken question. | |
 | `packages/db` | Database schema and client. | Drizzle, Postgres (Neon) |
 | `packages/ui` | Shared web UI primitives. | shadcn/ui, Tailwind CSS |
 | `packages/config` | Shared TypeScript config. | |
@@ -39,6 +44,8 @@ bun run dev:web      # landing + API on http://localhost:3001
 bun run dev:native   # Expo dev server, press w to open the app in the browser
 ```
 
+The app runs with no engine: with `EXPO_PUBLIC_ENGINE_URL` unset it plays its bundled sample adventure, so you can try it alone. To use an engine, set the variable (see Configuration) before `bun run dev:native`. Allowlisted accounts then get live adventures and every other account gets a recorded adventure.
+
 To build for iOS, run `bun run ios` from `apps/native` (needs Xcode).
 
 ## Configuration
@@ -48,7 +55,19 @@ Each app declares its environment in `.env.schema`, and Varlock generates a type
 | Variable | App | Value |
 | --- | --- | --- |
 | `EXPO_PUBLIC_SERVER_URL` | `apps/native` | Base URL of the apps/web API |
+| `EXPO_PUBLIC_ENGINE_URL` | `apps/native` | Optional. Base URL of the private engine's player API. Unset: the bundled sample adventure plays |
 | `DATABASE_URL` | `apps/web` | Postgres connection string for the waitlist |
+
+## Prompts
+
+The public packages ship no production prompts and no question sets. `packages/llm` throws without instructions, and `packages/decision` throws when `createDecision` gets none. Each expects its caller to bring its own:
+
+- `llm`: instructions, a prompt and a zod schema per call. It returns JSON validated against the schema.
+- `decision`: the shared instructions (and optional note for attached images) when you create it, then a named question set per call, each question with its own instructions, plus a pass threshold and what to do when the API cannot be reached.
+- `image-editing`: the image or images and the edit or generation request per call. Calls throw on failure; the caller decides what that means.
+- `transcribe`: a WAV recording (16 kHz, mono).
+
+The production prompts are held by the private engine, because the media production behind them predates the hackathon and is the team's trade secret. [ARCHITECTURE.md](ARCHITECTURE.md) has the reasoning and the organizers' ruling.
 
 ## Scripts
 

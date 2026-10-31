@@ -13,7 +13,7 @@ Better-T-Stack monorepo (Turborepo, bun). Two apps:
 - Expo app for the child and parent. It is built and run on the web first (react-native-web), then shipped to iOS from the same code.
 - Next.js web app for the public landing page (littleadventures.app) and the parent dashboard.
 
-No backend in this repo. Everything goes through the backend's player API (REST with a bearer token).
+This repo holds the app, the app server and the public packages that call the Meta models. Video and voice production, with the production prompts, lives in a private engine, and the app reaches it through the engine's player API (REST with a bearer token). See ARCHITECTURE.md.
 
 ## Users
 
@@ -48,7 +48,7 @@ From the backend's player API:
 
 Binding constraints:
 
-- Only Meta models. This repo calls no model at all; all generation happens in the backend.
+- Only Meta models. Every Meta model call goes through a public package in this repo; the production prompts and the video and voice production live in the private engine.
 - Nothing in this repo may describe how the backend works inside. The client sees only the player API.
 - The repo is public and holds only work from the hackathon week.
 - Undecided: the companion character's name.
