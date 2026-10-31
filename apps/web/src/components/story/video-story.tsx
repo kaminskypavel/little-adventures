@@ -34,7 +34,7 @@ const CALM_MS = 350;
 const DOTS = ["question", "adventure", "goodnight"] as const;
 const LAYER = "absolute inset-0 size-full object-cover opacity-0";
 const TITLE =
-	"mb-[0.32em] text-balance font-black text-[length:clamp(28px,4.3vw,66px)] leading-[1.04] tracking-[-0.01em] [text-shadow:0_3px_0_rgba(18,37,74,0.55),0_10px_22px_rgba(0,0,0,0.45)] max-[899px]:text-[length:clamp(28px,8.4vw,40px)]";
+	"mb-[0.32em] text-balance font-black text-[length:clamp(28px,4.3vw,66px)] leading-[1.04] tracking-[-0.01em] [text-shadow:0_3px_0_rgba(18,37,74,0.55),0_10px_22px_rgba(0,0,0,0.45)] max-[899px]:text-[length:clamp(28px,8.6vw,40px)]";
 
 const NAV_KEYS = {
 	back: ["ArrowUp", "PageUp"],
@@ -473,12 +473,12 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				const scene = copy.scenes[id];
 				return (
 					<section
-						className="fixed top-[6vh] left-1/2 z-[2] w-[min(92vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[5svh]"
+						className="fixed top-[6vh] left-1/2 z-[2] w-[min(94vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[5svh]"
 						data-copy={i}
 						key={id}
 					>
 						{i === 0 ? (
-							<Wordmark className="mb-[0.28em] leading-none text-[length:clamp(46px,7vw,96px)]" />
+							<Wordmark className="mb-[0.28em] leading-none text-[length:clamp(46px,8vw,116px)] max-[899px]:text-[length:clamp(50px,14vw,60px)]" />
 						) : null}
 						{scene.question ? (
 							<h2 className={`${TITLE} text-sun`}>
@@ -488,7 +488,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 							</h2>
 						) : null}
 						{scene.title ? <h2 className={TITLE}>{scene.title}</h2> : null}
-						<p className="text-cream/90 mb-[1.2em] leading-[1.38] text-balance text-[length:clamp(17px,1.55vw,24px)] [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] max-[899px]:text-[17px]">
+						<p className="text-cream/90 mb-[1.2em] leading-[1.38] text-balance text-[length:clamp(17px,1.55vw,24px)] [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] max-[899px]:text-[length:clamp(17px,4.9vw,20px)]">
 							{scene.line}
 						</p>
 						{i === N - 1 ? <StoreBadges copy={copy} /> : null}
