@@ -7,10 +7,9 @@ import "./landing.css";
 // title up to 60 characters, share description up to 125, meta description up to 160.
 const { description, ogLocale, shareDescription, title } = dictionaries.en.meta;
 
-// Vercel sets this to the production domain (the custom one once it is connected).
-const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
-	? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-	: "https://littleadventures.app";
+// The address search engines and shares should use. The bare domain redirects here, and
+// Vercel's production-domain variable picks the shortest domain, so it is set by hand.
+const SITE_URL = "https://www.littleadventures.app";
 
 export const metadata: Metadata = {
 	alternates: { canonical: "/", languages: LANGUAGES },
