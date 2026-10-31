@@ -24,7 +24,7 @@ const SCENES = [
 	},
 	{
 		id: "star",
-		line: "Your child asks out loud. No typing, no reading.",
+		line: "Let them generate their own story.",
 		title: "Children are curious. Help them learn.",
 	},
 	{
@@ -39,12 +39,12 @@ const SCENES = [
 	},
 	{
 		id: "ocean",
-		line: "At every stop, your child picks what happens next.",
+		line: "At every stop, let them pick what they're curious about.",
 		question: "What's under the ocean?",
 	},
 	{
 		id: "dinosaurs",
-		line: "Real facts along the way. Curiosity becomes learning.",
+		line: "Every story becomes an interesting lesson about the universe.",
 		question: "Who are the dinosaurs?",
 	},
 	{
