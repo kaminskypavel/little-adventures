@@ -22,6 +22,10 @@ const SCENE_IDS: readonly SceneId[] = [
 ];
 const N = SCENE_IDS.length;
 const MOVE_SPEED = 1.2;
+// Every move eases out over its last ~0.4 s and every loop eases in, so the handover read as a
+// half-second freeze. The tail of each move plays fast instead.
+const TAIL_SEC = 0.45;
+const TAIL_SPEED = 3;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
 const CUE_ARROWS = ["first", "second", "third"] as const;
@@ -281,6 +285,16 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				}
 				clip.currentTime = 0;
 				clip.playbackRate = MOVE_SPEED;
+				const speedTail = () => {
+					if (clip.currentTime >= clip.duration - TAIL_SEC) {
+						clip.playbackRate = TAIL_SPEED;
+					} else {
+						clip.requestVideoFrameCallback(speedTail);
+					}
+				};
+				if ("requestVideoFrameCallback" in clip) {
+					clip.requestVideoFrameCallback(speedTail);
+				}
 				// Seek the landing loop to its first frame now, so it starts the instant the move ends.
 				loops[to].pause();
 				loops[to].currentTime = 0;
