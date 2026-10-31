@@ -62,3 +62,19 @@ describe.skipIf(!(hasFfmpeg && DIR))("moves line up with the scenes", () => {
 		}
 	}
 });
+
+// A scene swaps its still for its loop once the loop plays, so the loop starts on that still.
+describe.skipIf(!(hasFfmpeg && DIR))("loops start on their scene", () => {
+	for (const shape of ["w", "t"]) {
+		for (let scene = 0; scene < SCENE_COUNT; scene += 1) {
+			test(`${shape === "w" ? "computer" : "phone"} loop in scene ${scene}`, () => {
+				expect(
+					diff(
+						thumb(`loop-${shape}${scene}.mp4`, "first"),
+						thumb(`still-${shape}${scene}.webp`, "first")
+					)
+				).toBeLessThan(MAX_DIFF);
+			});
+		}
+	}
+});

@@ -9,7 +9,8 @@ import { join, resolve } from "node:path";
 import { spawn, spawnSync } from "bun";
 
 const BUCKET = "little-adventures";
-const PREFIX = "landing/story/v1";
+// A changed set of clips goes to a new version folder: the CDN keeps files for a year.
+const PREFIX = "landing/story/v2";
 const CACHE = "public, max-age=31536000, immutable";
 const PARALLEL = 6;
 const TYPES: Record<string, string> = { mp4: "video/mp4", webp: "image/webp" };

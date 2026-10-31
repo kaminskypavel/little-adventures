@@ -9,14 +9,13 @@ import {
 	GATE,
 	litDot,
 	loadPlan,
-	restsOnLoop,
 	type Screen,
 	storyUrls,
 } from "./story-plan";
 import { createStoryStore } from "./story-store";
 
 // The landing story: seven scenes joined by short video moves. One gesture plays
-// one move; the scene then rests on a one second back-and-forth loop or its still.
+// one move; the scene then rests on a one second back-and-forth loop.
 // Copy is edited here: questions show as yellow quotes, each line names a feature.
 const SCENES = [
 	{
@@ -200,7 +199,7 @@ export function VideoStory() {
 			const sceneNow = () => story.getState().at;
 			const rest = (i: number) => {
 				only(stills[i]);
-				if (!restsOnLoop(screenNow, i)) {
+				if (calm) {
 					return;
 				}
 				const v = loops[i];

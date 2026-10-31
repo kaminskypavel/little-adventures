@@ -2,20 +2,10 @@
 // Pure functions, so the rules are tested without a browser.
 
 export const SCENE_COUNT = 7;
-// Phones rest on the still frame where the tall loop could not hold still.
-export const TALL_LOOP = [
-	true,
-	true,
-	false,
-	false,
-	false,
-	true,
-	false,
-] as const;
 // Scenes downloaded whole before the loading screen lifts; the rest follow in story order.
 export const GATE = 3;
 // The clips live on the CDN; a new set of files gets a new version folder.
-export const MEDIA_BASE = "https://cdn.littleadventures.app/landing/story/v1";
+export const MEDIA_BASE = "https://cdn.littleadventures.app/landing/story/v2";
 
 export interface Screen {
 	/** A very wide screen that gets the 4K loops (AV1 only). */
@@ -38,9 +28,6 @@ export interface PlanItem {
 	scene: number;
 	src: string;
 }
-
-export const restsOnLoop = (screen: Screen, scene: number) =>
-	!(screen.calm || (screen.tall && !TALL_LOOP[scene]));
 
 export const storyUrls = (screen: Screen) => {
 	const shape = screen.tall ? "t" : "w";
@@ -69,7 +56,8 @@ export const loadPlan = (screen: Screen): PlanItem[] => {
 	const plan: PlanItem[] = [];
 	for (let scene = 0; scene < SCENE_COUNT; scene += 1) {
 		plan.push({ index: scene, kind: "still", scene, src: url.still(scene) });
-		if (restsOnLoop(screen, scene)) {
+		// Every scene rests on its loop; reduced motion keeps to the stills.
+		if (!screen.calm) {
 			plan.push({ index: scene, kind: "loop", scene, src: url.loop(scene) });
 		}
 		const next = scene + 1;

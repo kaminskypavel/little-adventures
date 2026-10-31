@@ -6,7 +6,6 @@ import {
 	litDot,
 	loadPlan,
 	MEDIA_BASE,
-	restsOnLoop,
 	SCENE_COUNT,
 	type Screen,
 	storyUrls,
@@ -79,24 +78,13 @@ describe("load order", () => {
 });
 
 describe("resting", () => {
-	test("computers loop every scene", () => {
-		const wide: Screen = { big: false, calm: false, codec: "", tall: false };
-		expect(SCENES.map((i) => restsOnLoop(wide, i))).toEqual(
-			SCENES.map(() => true)
-		);
-	});
-
-	test("phones rest on stills for the moon, Saturn, ocean and goodnight", () => {
-		const phone: Screen = { big: false, calm: false, codec: "", tall: true };
-		expect(SCENES.map((i) => restsOnLoop(phone, i))).toEqual([
-			true,
-			true,
-			false,
-			false,
-			false,
-			true,
-			false,
-		]);
+	test("phones and computers rest on a loop in every scene", () => {
+		for (const tall of [false, true]) {
+			const loops = loadPlan({ big: false, calm: false, codec: "", tall })
+				.filter((f) => f.kind === "loop")
+				.map((f) => f.scene);
+			expect(loops).toEqual(SCENES);
+		}
 	});
 });
 
