@@ -1,11 +1,4 @@
-import type {
-	Adventure,
-	AdventureSummary,
-	Idea,
-	NodeId,
-	Place,
-	Profile,
-} from "./types";
+import type { Adventure, AdventureSummary, Idea, NodeId, Place } from "./types";
 
 const place = (
 	id: NodeId,
@@ -141,14 +134,3 @@ export const transcribedQuestion = "Why do whales sing?";
 
 /** Child name from the cast, never hard-coded in UI strings. */
 export const childName = (a: Adventure): string => a.cast.childName;
-
-/** No child yet: the grown-up sets one up on first run. */
-export const mockProfile: Profile = {
-	childAge: null,
-	childKind: "boy",
-	childName: "",
-	grownUp: false,
-	hasPhoto: false,
-	look: "clay",
-	puppy: false,
-};
