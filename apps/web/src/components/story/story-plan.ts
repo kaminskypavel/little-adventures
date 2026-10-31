@@ -5,7 +5,10 @@ export const SCENE_COUNT = 7;
 // Scenes downloaded whole before the loading screen lifts; the rest follow in story order.
 export const GATE = 3;
 // The clips live on the CDN; a new set of files gets a new version folder.
-export const MEDIA_BASE = "https://cdn.littleadventures.app/landing/story/v5";
+// NEXT_PUBLIC_STORY_MEDIA_BASE previews a local set before it is uploaded.
+export const MEDIA_BASE =
+	process.env.NEXT_PUBLIC_STORY_MEDIA_BASE ??
+	"https://cdn.littleadventures.app/landing/story/v6";
 
 export interface Screen {
 	/** A very wide screen that gets the 4K loops (AV1 only). */
