@@ -89,6 +89,7 @@
         "@little-adventures/api": "workspace:*",
         "@little-adventures/auth": "workspace:*",
         "@little-adventures/db": "workspace:*",
+        "@little-adventures/image-editing": "workspace:*",
         "@little-adventures/storage": "workspace:*",
         "@little-adventures/ui": "workspace:*",
         "@little-adventures/validation": "workspace:*",
@@ -122,6 +123,7 @@
       "dependencies": {
         "@little-adventures/auth": "workspace:*",
         "@little-adventures/db": "workspace:*",
+        "@little-adventures/image-editing": "workspace:*",
         "@little-adventures/storage": "workspace:*",
         "@little-adventures/validation": "workspace:*",
         "@trpc/client": "catalog:",
@@ -166,6 +168,20 @@
         "drizzle-kit": "1.0.0-rc.5",
         "typescript": "^6.0.3",
         "varlock": "catalog:",
+      },
+    },
+    "packages/image-editing": {
+      "name": "@little-adventures/image-editing",
+      "version": "0.0.0",
+      "dependencies": {
+        "@meta-sam/parser": "^0.1.0",
+        "sharp": "^0.35.5",
+      },
+      "devDependencies": {
+        "@little-adventures/config": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "catalog:",
+        "typescript": "^6.0.3",
       },
     },
     "packages/native-ui": {
@@ -718,6 +734,8 @@
 
     "@little-adventures/db": ["@little-adventures/db@workspace:packages/db"],
 
+    "@little-adventures/image-editing": ["@little-adventures/image-editing@workspace:packages/image-editing"],
+
     "@little-adventures/native-ui": ["@little-adventures/native-ui@workspace:packages/native-ui"],
 
     "@little-adventures/storage": ["@little-adventures/storage@workspace:packages/storage"],
@@ -727,6 +745,8 @@
     "@little-adventures/validation": ["@little-adventures/validation@workspace:packages/validation"],
 
     "@marsidev/react-turnstile": ["@marsidev/react-turnstile@1.6.3", "", { "peerDependencies": { "react": "^17.0.2 || ^18.0.0 || ^19.0", "react-dom": "^17.0.2 || ^18.0.0 || ^19.0" } }, "sha512-JdMMArjEVDMs5jnGMBeXl3y6dkMuIXPG4Tu88Uo2Rkf8ujEw/iJ2Yp/3n4kDF3BjJ+bJB9WC19LPWc5a7/4srA=="],
+
+    "@meta-sam/parser": ["@meta-sam/parser@0.1.0", "", {}, "sha512-099xq4EhULxm7gV+kEllQ9WTaNgwYumGRvCX5WAT2bny/SEh+U9tVT9bAzN1mISOC7TO6mgOt3MJmZ2Mv2RTmw=="],
 
     "@modelcontextprotocol/core": ["@modelcontextprotocol/core@2.4.0", "", { "dependencies": { "zod": "^4.2.0" } }, "sha512-z8QBKqdfXLPzkLQuG4xp8hrVEMm1PZ1IgxMN2sMbJiFiAKOWXnAzogXn2W4aqIBlP1ea6U5yiqVquvUNM1Cj6Q=="],
 
