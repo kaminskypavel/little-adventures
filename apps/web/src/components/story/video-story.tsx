@@ -130,6 +130,28 @@ export function VideoStory() {
 				blobs.push(blobUrl);
 				return blobUrl;
 			};
+			// After the loading screen, files load one at a time in the order asked for. A file
+			// an element already plays (it was needed before its turn) is never swapped under it.
+			let queue = Promise.resolve();
+			const queueLoad = (
+				m: HTMLImageElement | HTMLVideoElement,
+				src: string
+			) => {
+				queue = queue.then(async () => {
+					if (!alive || m.getAttribute("src")) {
+						return;
+					}
+					let file = src;
+					try {
+						file = await readWhole(await fetch(src), () => undefined);
+					} catch {
+						// No streaming download: the element fetches the file itself.
+					}
+					if (alive && !m.getAttribute("src")) {
+						m.src = file;
+					}
+				});
+			};
 			const loadAll = async (onProgress: (p: number) => void) => {
 				const gate = plan.filter((f) => f.scene < GATE);
 				const later = plan.filter((f) => f.scene >= GATE);
@@ -158,22 +180,9 @@ export function VideoStory() {
 					}
 				}
 				onProgress(1);
-				(async () => {
-					for (const f of later) {
-						if (!alive) {
-							return;
-						}
-						try {
-							// biome-ignore lint/performance/noAwaitInLoops: the rest loads one file at a time, in story order.
-							f.media.src = await readWhole(
-								await fetch(f.src),
-								() => undefined
-							);
-						} catch {
-							f.media.src = f.src;
-						}
-					}
-				})();
+				for (const f of later) {
+					queueLoad(f.media, f.src);
+				}
 			};
 
 			// ---- Showing scenes ----
@@ -234,16 +243,39 @@ export function VideoStory() {
 				});
 			};
 			const swapCopy = (from: number, to: number) => {
-				gsap.to(copies[from], { autoAlpha: 0, duration: 0.25 });
+				// overwrite: a queued swipe can leave a scene before its line finished fading in.
+				gsap.to(copies[from], {
+					autoAlpha: 0,
+					duration: 0.25,
+					overwrite: true,
+				});
 				gsap.fromTo(
 					copies[to],
 					{ autoAlpha: 0, y: 24 },
-					{ autoAlpha: 1, delay: 0.3, duration: 0.45, ease: "brandOut", y: 0 }
+					{
+						autoAlpha: 1,
+						delay: 0.3,
+						duration: 0.45,
+						ease: "brandOut",
+						overwrite: true,
+						y: 0,
+					}
 				);
 			};
+			// The way back from a scene loads once the visitor is there, so going back never waits.
+			const warmBack = (scene: number) => {
+				const clip = backs[scene];
+				if (clip && !calm) {
+					queueLoad(clip, url.back(scene));
+				}
+			};
 			const arrive = (to: number) => {
-				story.getState().arrive(to, CALM_MS);
+				const queued = story.getState().arrive(to, CALM_MS);
 				rest(to);
+				warmBack(to);
+				if (queued) {
+					go(queued, true);
+				}
 			};
 
 			// Reduced motion: a short fade between the scenes' stills.
@@ -262,7 +294,7 @@ export function VideoStory() {
 					arrive(to);
 					return;
 				}
-				// Backward moves are not preloaded; most visitors never scroll back up.
+				// Not loaded yet (a fast visitor, or the way back still loading): stream it.
 				if (!clip.getAttribute("src")) {
 					clip.src = forward ? url.move(to) : url.back(from);
 				}
@@ -273,11 +305,18 @@ export function VideoStory() {
 				clip.play().catch(() => arrive(to));
 			};
 
-			const go = (to: number) => {
-				if (!story.getState().canGo(to, N)) {
+			// `step` is +1 or -1. A touch swipe skips the trackpad calm window, and one made
+			// during a move is kept and played when the move lands.
+			const go = (step: number, touch = false) => {
+				const state = story.getState();
+				const to = state.at + step;
+				if (!state.canGo(to, N, touch)) {
+					if (touch) {
+						state.queueSwipe(step);
+					}
 					return;
 				}
-				story.getState().leave();
+				state.leave();
 				if (hint) {
 					hint.style.opacity = "0";
 				}
@@ -323,8 +362,9 @@ export function VideoStory() {
 			});
 
 			const observer = Observer.create({
-				onDown: () => go(sceneNow() - 1),
-				onUp: () => go(sceneNow() + 1),
+				onDown: (self) => go(-1, self.event.type !== "wheel"),
+				onPress: () => story.getState().press(),
+				onUp: (self) => go(1, self.event.type !== "wheel"),
 				preventDefault: true,
 				target: window,
 				tolerance: 10,
@@ -339,10 +379,10 @@ export function VideoStory() {
 					return;
 				}
 				if (NAV_KEYS.next.includes(e.key)) {
-					go(sceneNow() + 1);
+					go(1);
 				}
 				if (NAV_KEYS.back.includes(e.key)) {
-					go(sceneNow() - 1);
+					go(-1);
 				}
 			};
 			addEventListener("keydown", onKey);

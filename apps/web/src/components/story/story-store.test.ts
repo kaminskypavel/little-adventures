@@ -47,4 +47,40 @@ describe("story store", () => {
 		createStoryStore().getState().canGo(1, SCENES);
 		expect(clock).toHaveBeenCalled();
 	});
+
+	test("a touch swipe skips the calm window: a finger has no momentum", () => {
+		const store = createStoryStore();
+		store.getState().press();
+		store.getState().leave();
+		store.getState().arrive(1, CALM_MS);
+		store.getState().press();
+		expect(store.getState().canGo(2, SCENES, true)).toBe(true);
+	});
+
+	test("the swipe that started a move never moves twice, even after it lands", () => {
+		const store = createStoryStore();
+		store.getState().press();
+		store.getState().leave();
+		store.getState().queueSwipe(1);
+		expect(store.getState().arrive(1, CALM_MS)).toBe(0);
+		expect(store.getState().canGo(2, SCENES, true)).toBe(false);
+	});
+
+	test("a new swipe during a move is kept and played when the move lands", () => {
+		const store = createStoryStore();
+		store.getState().press();
+		store.getState().leave();
+		store.getState().press();
+		store.getState().queueSwipe(1);
+		expect(store.getState().arrive(1, CALM_MS)).toBe(1);
+		expect(store.getState().canGo(2, SCENES, true)).toBe(true);
+		expect(store.getState().arrive(2, CALM_MS)).toBe(0);
+	});
+
+	test("nothing is kept while no move plays", () => {
+		const store = createStoryStore();
+		store.getState().press();
+		store.getState().queueSwipe(-1);
+		expect(store.getState().queued).toBe(0);
+	});
 });
