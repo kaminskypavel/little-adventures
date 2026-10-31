@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef } from "react";
 
+import type { Dictionary } from "@/i18n/dictionaries";
 import { WaitlistDialog, type WaitlistDialogHandle } from "./waitlist-dialog";
 
 const BADGE_HEIGHT = 52;
@@ -25,9 +26,11 @@ const ALIGN = {
 export function StoreBadges({
 	align = "center",
 	className = "",
+	copy,
 }: {
 	align?: "center" | "start";
 	className?: string;
+	copy: Dictionary;
 }) {
 	const dialog = useRef<WaitlistDialogHandle>(null);
 	const place = ALIGN[align];
@@ -43,12 +46,12 @@ export function StoreBadges({
 					type="button"
 				>
 					<Image
-						alt="Download on the App Store"
+						alt={copy.badges.appStore}
 						height={BADGE_HEIGHT}
 						src="/badges/app-store.svg"
 						width={156}
 					/>
-					<span className="sr-only"> (join the waitlist)</span>
+					<span className="sr-only"> {copy.badges.joinWaitlist}</span>
 				</button>
 				<button
 					className="cursor-pointer"
@@ -56,18 +59,18 @@ export function StoreBadges({
 					type="button"
 				>
 					<Image
-						alt="Get it on Google Play"
+						alt={copy.badges.googlePlay}
 						height={BADGE_HEIGHT}
 						src="/badges/google-play.png"
 						width={175}
 					/>
-					<span className="sr-only"> (join the waitlist)</span>
+					<span className="sr-only"> {copy.badges.joinWaitlist}</span>
 				</button>
 			</div>
 			<p className={`text-cream/80 text-[17px] font-bold ${place.line}`}>
-				Coming soon to iPhone and Android.
+				{copy.badges.comingSoon}
 			</p>
-			<WaitlistDialog ref={dialog} />
+			<WaitlistDialog copy={copy.waitlist} ref={dialog} />
 		</div>
 	);
 }

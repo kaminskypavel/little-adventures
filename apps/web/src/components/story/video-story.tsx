@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { StoreBadges } from "@/components/waitlist/store-badges";
 import { Wordmark } from "@/components/wordmark";
+import type { Dictionary, SceneId } from "@/i18n/dictionaries";
 import { gsap, Observer, useGSAP } from "@/lib/gsap";
 import {
 	dotFill,
@@ -16,44 +17,17 @@ import { createStoryStore } from "./story-store";
 
 // The landing story: seven scenes joined by short video moves. One gesture plays
 // one move; the scene then rests on a one second back-and-forth loop.
-// Copy is edited here: questions show as yellow quotes, each line names a feature.
-const SCENES = [
-	{
-		id: "playroom",
-		line: "Bedtime stories that start with your child's own questions.",
-	},
-	{
-		id: "star",
-		line: "Let them generate their own story.",
-		title: "Children are curious. Help them learn.",
-	},
-	{
-		id: "moon",
-		line: "Each question becomes a narrated, illustrated story.",
-		question: "What does the moon look like?",
-	},
-	{
-		id: "saturn",
-		line: "Your child is the hero, drawn from a photo you add.",
-		question: "What are Saturn's rings made of?",
-	},
-	{
-		id: "ocean",
-		line: "At every stop, let them pick what they're curious about.",
-		question: "What's under the ocean?",
-	},
-	{
-		id: "dinosaurs",
-		line: "Every story becomes an interesting lesson about the universe.",
-		question: "Who are the dinosaurs?",
-	},
-	{
-		id: "goodnight",
-		line: "Every story ends calm, with what your child found out.",
-		title: "A small adventure. Then goodnight.",
-	},
-] as const;
-const N = SCENES.length;
+// Copy lives in the language dictionaries: questions show as yellow quotes, each line names a feature.
+const SCENE_IDS: readonly SceneId[] = [
+	"playroom",
+	"star",
+	"moon",
+	"saturn",
+	"ocean",
+	"dinosaurs",
+	"goodnight",
+];
+const N = SCENE_IDS.length;
 const MOVE_SPEED = 1.2;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
@@ -67,7 +41,7 @@ const NAV_KEYS = {
 	next: ["ArrowDown", "PageDown", " "],
 };
 
-export function VideoStory() {
+export function VideoStory({ copy }: { copy: Dictionary }) {
 	const root = useRef<HTMLDivElement>(null);
 
 	useGSAP(
@@ -415,42 +389,42 @@ export function VideoStory() {
 				aria-hidden="true"
 				className="fixed inset-0 bg-[#050b18] [@media(min-aspect-ratio:16/9)]:right-auto [@media(min-aspect-ratio:16/9)]:left-1/2 [@media(min-aspect-ratio:16/9)]:w-[177.78vh] [@media(min-aspect-ratio:16/9)]:-translate-x-1/2 [@media(min-aspect-ratio:16/9)]:[mask-image:linear-gradient(90deg,transparent_0,#000_6%,#000_94%,transparent_100%)]"
 			>
-				{SCENES.map((s, i) => (
+				{SCENE_IDS.map((id, i) => (
 					// biome-ignore lint/performance/noImgElement: frames load as blob URLs, which next/image cannot serve.
 					<img
 						alt=""
 						className={LAYER}
 						data-still={i}
 						height={1080}
-						key={`still-${s.id}`}
+						key={`still-${id}`}
 						width={1920}
 					/>
 				))}
-				{SCENES.map((s, i) => (
+				{SCENE_IDS.map((id, i) => (
 					<video
 						className={LAYER}
 						data-loop={i}
-						key={`loop-${s.id}`}
+						key={`loop-${id}`}
 						muted
 						playsInline
 						preload="none"
 					/>
 				))}
-				{SCENES.slice(1).map((s, k) => (
+				{SCENE_IDS.slice(1).map((id, k) => (
 					<video
 						className={LAYER}
 						data-move={k + 1}
-						key={`move-${s.id}`}
+						key={`move-${id}`}
 						muted
 						playsInline
 						preload="none"
 					/>
 				))}
-				{SCENES.slice(1).map((s, k) => (
+				{SCENE_IDS.slice(1).map((id, k) => (
 					<video
 						className={LAYER}
 						data-back={k + 1}
-						key={`back-${s.id}`}
+						key={`back-${id}`}
 						muted
 						playsInline
 						preload="none"
@@ -459,25 +433,32 @@ export function VideoStory() {
 			</div>
 			<div className="pointer-events-none fixed inset-x-0 top-0 z-[1] h-[42vh] bg-[linear-gradient(180deg,rgba(5,11,24,0.72)_0%,rgba(5,11,24,0.35)_55%,rgba(5,11,24,0)_100%)]" />
 
-			{SCENES.map((s, i) => (
-				<section
-					className="fixed top-[6vh] left-1/2 z-[2] w-[min(92vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[5svh]"
-					data-copy={i}
-					key={s.id}
-				>
-					{i === 0 ? (
-						<Wordmark className="mb-[0.28em] leading-none text-[length:clamp(46px,7vw,96px)]" />
-					) : null}
-					{"question" in s ? (
-						<h2 className={`${TITLE} text-sun`}>“{s.question}”</h2>
-					) : null}
-					{"title" in s ? <h2 className={TITLE}>{s.title}</h2> : null}
-					<p className="text-cream/90 mb-[1.2em] leading-[1.38] text-balance text-[length:clamp(17px,1.55vw,24px)] [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] max-[899px]:text-[17px]">
-						{s.line}
-					</p>
-					{i === N - 1 ? <StoreBadges /> : null}
-				</section>
-			))}
+			{SCENE_IDS.map((id, i) => {
+				const scene = copy.scenes[id];
+				return (
+					<section
+						className="fixed top-[6vh] left-1/2 z-[2] w-[min(92vw,1100px)] -translate-x-1/2 text-center max-[899px]:top-[5svh]"
+						data-copy={i}
+						key={id}
+					>
+						{i === 0 ? (
+							<Wordmark className="mb-[0.28em] leading-none text-[length:clamp(46px,7vw,96px)]" />
+						) : null}
+						{scene.question ? (
+							<h2 className={`${TITLE} text-sun`}>
+								{copy.quote[0]}
+								{scene.question}
+								{copy.quote[1]}
+							</h2>
+						) : null}
+						{scene.title ? <h2 className={TITLE}>{scene.title}</h2> : null}
+						<p className="text-cream/90 mb-[1.2em] leading-[1.38] text-balance text-[length:clamp(17px,1.55vw,24px)] [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] max-[899px]:text-[17px]">
+							{scene.line}
+						</p>
+						{i === N - 1 ? <StoreBadges copy={copy} /> : null}
+					</section>
+				);
+			})}
 
 			<div
 				aria-hidden="true"
@@ -497,7 +478,7 @@ export function VideoStory() {
 				className="fixed bottom-7 left-1/2 z-[3] m-0 -translate-x-1/2 rounded-full bg-[rgba(5,11,24,0.55)] px-3.5 py-2 text-[15px] transition-opacity duration-300"
 				data-hint
 			>
-				Scroll or swipe down
+				{copy.hint}
 			</p>
 
 			<div
@@ -514,9 +495,7 @@ export function VideoStory() {
 					src="/loader-star.webp"
 					width={120}
 				/>
-				<p className="text-cream/90 m-0 text-[17px]">
-					Getting the adventure ready
-				</p>
+				<p className="text-cream/90 m-0 text-[17px]">{copy.loader}</p>
 				<div className="bg-cream/20 h-[5px] w-[200px] overflow-hidden rounded-full">
 					<span className="bg-sun block h-full w-0 rounded-full" data-bar />
 				</div>
