@@ -24,6 +24,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import {
 	getAdventure,
 	startAdventure,
+	usesEngine,
 	watchMaking,
 } from "@/src/data/adventure-client";
 import type { Adventure } from "@/src/data/types";
@@ -177,10 +178,16 @@ export default function Making() {
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);
+	// The engine's own word on how far along it is; null goes by the bar (the bundled adventure).
+	const [told, setTold] = useState<number | null>(null);
 	const [serverReady, setServerReady] = useState(false);
 	const { finish, full, progress, stage } = useWaitProgress();
 
 	const revealed = full && adventure !== null;
+	// The engine's adventure says what it is about; the bundled one keeps the question asked.
+	const shownQuestion = usesEngine
+		? (adventure?.question ?? "")
+		: question || (adventure?.question ?? "");
 	const fadeMs = calm ? motion.reducedReveal : REVEAL_MS;
 
 	useEffect(() => {
@@ -191,17 +198,6 @@ export default function Making() {
 		let live = true;
 		let stop: (() => void) | undefined;
 
-		// The status line names the end goal, so ask early. A miss only keeps the fallback noun.
-		const loadNoun = async (id: string) => {
-			try {
-				const early = await getAdventure(id);
-				if (live) {
-					setNoun(nounOf(early.endGoal.name));
-				}
-			} catch {
-				// keep the fallback noun
-			}
-		};
 		const loadMade = async (id: string) => {
 			try {
 				const made = await getAdventure(id);
@@ -213,23 +209,38 @@ export default function Making() {
 			}
 		};
 		const run = async () => {
-			const { id } = await startAdventure(question);
+			let id: string;
+			try {
+				({ id } = await startAdventure(question));
+			} catch {
+				if (live) {
+					router.replace("/oops");
+				}
+				return;
+			}
 			if (!live) {
 				return;
 			}
 			setAdventureId(id);
-			loadNoun(id);
+			// The status line names the end goal; the wait reports its name as soon as it exists.
 			stop = watchMaking(id, (status) => {
 				if (!live) {
 					return;
 				}
 				if (status.state === "failed") {
 					router.replace("/oops");
-				} else if (status.state === "ready") {
+					return;
+				}
+				if (status.goalName) {
+					setNoun(nounOf(status.goalName));
+				}
+				if (status.state === "ready") {
 					stop?.();
 					setServerReady(true);
 					finish();
 					loadMade(id);
+				} else if (status.stage !== undefined) {
+					setTold(status.stage);
 				}
 			});
 		};
@@ -311,17 +322,14 @@ export default function Making() {
 					show={!revealed}
 					style={[styles.row, { top: STATUS_TOP }]}
 				>
-					<StatusPill text={statusText(stage, full, noun)} />
+					<StatusPill text={statusText(told ?? stage, full, noun)} />
 				</Fade>
 				<Fade
 					ms={fadeMs}
 					show={revealed}
 					style={[styles.row, { top: QUESTION_TOP }]}
 				>
-					<Plate
-						label={question || (adventure?.question ?? "")}
-						variant="question"
-					/>
+					<Plate label={shownQuestion} variant="question" />
 				</Fade>
 				{adventure ? (
 					<View

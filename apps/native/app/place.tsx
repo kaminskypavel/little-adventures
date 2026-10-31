@@ -5,9 +5,12 @@ import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { NarrationBar } from "@little-adventures/native-ui/narration-bar";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
 import { colors, layout, radii } from "@little-adventures/native-ui/tokens";
+import { useEventListener } from "expo";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import {
 	type ReactNode,
 	useCallback,
@@ -19,6 +22,7 @@ import { StyleSheet, View } from "react-native";
 import {
 	cancelAnimation,
 	Easing,
+	type SharedValue,
 	useAnimatedReaction,
 	useSharedValue,
 	withTiming,
@@ -26,12 +30,22 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { getProfile } from "@/src/data/adventure-client";
-import type { Adventure, NodeId } from "@/src/data/types";
+import { playbackOf, wordIndexAt } from "@/src/data/playback";
+import type {
+	Adventure,
+	NarrationAudio,
+	NodeId,
+	Picture,
+} from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 
-// Mock narration length: how long the line takes to read before the screen moves on.
+// Bundled narration length: how long the line takes to read before the screen moves on.
 const PLACE_MS = 8000;
 const GOODNIGHT_MS = 6000;
+// How often the narration reports its time, in ms: often enough for the word chip to keep up.
+const NARRATION_TICK_MS = 100;
+// How often the clip reports its time, in seconds. It only shows that a frame is on screen.
+const CLIP_TICK_SEC = 0.25;
 
 // Round 7 video scrim: dark navy, stronger at the bottom. Not in tokens yet.
 const SCRIM_TOP = "rgba(10,22,44,0.6)";
@@ -63,11 +77,86 @@ function Scrim() {
 }
 
 /**
- * The player: a full-frame picture, a back-to-map button with the place name, the
- * words being read, and one big pause button. The mock "narration" is a timer; the
- * current word advances evenly and pause holds it.
+ * What the player shows, whatever keeps its time: a full-frame picture or clip, a back-to-map
+ * button with the place name, the words being read, and one big pause button.
  */
-function Player({
+function PlayerChrome({
+	current,
+	frame,
+	name,
+	onBack,
+	onToggle,
+	playing,
+	progress,
+	words,
+}: {
+	current: number;
+	frame: ReactNode;
+	name: string;
+	onBack: () => void;
+	onToggle: () => void;
+	playing: boolean;
+	progress: number | SharedValue<number>;
+	words: string[];
+}) {
+	const insets = useSafeAreaInsets();
+	return (
+		<View style={styles.root}>
+			{frame}
+			<Scrim />
+			<View
+				pointerEvents="box-none"
+				style={[styles.top, { top: insets.top + layout.topBarOffset }]}
+			>
+				<IconButton
+					accessibilityLabel="Back to the map"
+					icon="map"
+					onPress={onBack}
+				/>
+				<NamePill text={name} />
+			</View>
+			<NarrationBar
+				current={current}
+				progress={progress}
+				style={[
+					styles.narration,
+					{
+						bottom:
+							insets.bottom +
+							layout.dockBottom +
+							layout.primaryHeight +
+							layout.gap,
+					},
+				]}
+				words={words}
+			/>
+			<View
+				pointerEvents="box-none"
+				style={[styles.control, { bottom: insets.bottom + layout.dockBottom }]}
+			>
+				<ClayPressable
+					accessibilityLabel={playing ? "Pause" : "Play"}
+					onPress={onToggle}
+					radius={radii.full}
+					style={styles.pause}
+					tone="sun"
+				>
+					<Icon
+						color={colors.inkNavy}
+						name={playing ? "pause" : "play"}
+						size={PAUSE_ICON}
+					/>
+				</ClayPressable>
+			</View>
+		</View>
+	);
+}
+
+/**
+ * The player for the bundled adventure, which has no sound: a timer. The current word advances
+ * evenly over `durationMs` and pause holds it.
+ */
+function TimerPlayer({
 	durationMs,
 	frame,
 	name,
@@ -82,7 +171,6 @@ function Player({
 	onEnd: () => void;
 	words: string[];
 }) {
-	const insets = useSafeAreaInsets();
 	const progress = useSharedValue(0);
 	const [current, setCurrent] = useState(0);
 	const [playing, setPlaying] = useState(true);
@@ -133,64 +221,184 @@ function Player({
 	};
 
 	return (
-		<View style={styles.root}>
-			{frame}
-			<Scrim />
-			<View
-				pointerEvents="box-none"
-				style={[styles.top, { top: insets.top + layout.topBarOffset }]}
-			>
-				<IconButton
-					accessibilityLabel="Back to the map"
-					icon="map"
-					onPress={onBack}
-				/>
-				<NamePill text={name} />
-			</View>
-			<NarrationBar
-				current={current}
-				progress={progress}
-				style={[
-					styles.narration,
-					{
-						bottom:
-							insets.bottom +
-							layout.dockBottom +
-							layout.primaryHeight +
-							layout.gap,
-					},
-				]}
-				words={words}
-			/>
-			<View
-				pointerEvents="box-none"
-				style={[styles.control, { bottom: insets.bottom + layout.dockBottom }]}
-			>
-				<ClayPressable
-					accessibilityLabel={playing ? "Pause" : "Play"}
-					onPress={toggle}
-					radius={radii.full}
-					style={styles.pause}
-					tone="sun"
-				>
-					<Icon
-						color={colors.inkNavy}
-						name={playing ? "pause" : "play"}
-						size={PAUSE_ICON}
-					/>
-				</ClayPressable>
-			</View>
-		</View>
+		<PlayerChrome
+			current={current}
+			frame={frame}
+			name={name}
+			onBack={onBack}
+			onToggle={toggle}
+			playing={playing}
+			progress={progress}
+			words={words}
+		/>
 	);
 }
 
-function PlaceFrame({ picture }: { picture: number | null }) {
+const setPaused = (
+	player: { pause: () => void; play: () => void },
+	paused: boolean
+) => (paused ? player.pause() : player.play());
+
+/**
+ * The player for an engine node: its clip (muted) and its narration start together. The picture
+ * stays up until the clip shows a frame. A node with a clip moves on when the clip ends; one
+ * without shows its picture for the narration's length. The words follow the narration.
+ */
+function MediaPlayer({
+	audio,
+	clip,
+	cover,
+	name,
+	onBack,
+	onEnd,
+	onMediaError,
+	words,
+}: {
+	audio: NarrationAudio | null;
+	clip: number | string | null;
+	/** The picture, shown when there is no clip and until the clip has a frame. */
+	cover: ReactNode;
+	name: string;
+	onBack: () => void;
+	onEnd: () => void;
+	onMediaError: () => void;
+	words: string[];
+}) {
+	const audioPlayer = useAudioPlayer(audio?.url ?? null, {
+		updateInterval: NARRATION_TICK_MS,
+	});
+	const heard = useAudioPlayerStatus(audioPlayer);
+	const videoPlayer = useVideoPlayer(clip, (created) => {
+		created.loop = false;
+		created.muted = true;
+		created.timeUpdateEventInterval = CLIP_TICK_SEC;
+	});
+	const [clipStatus, setClipStatus] = useState(videoPlayer.status);
+	const [framed, setFramed] = useState(false);
+	const [playing, setPlaying] = useState(true);
+	const started = useRef<boolean>(false);
+	const ended = useRef<boolean>(false);
+
+	const clipFailed = clipStatus === "error";
+	const narrationFailed = Boolean(heard.error);
+	const hasClip = clip !== null && !clipFailed;
+	const hasNarration = audio !== null && !narrationFailed;
+
+	const endRef = useRef(onEnd);
+	endRef.current = onEnd;
+	const fireEnd = useCallback(() => {
+		if (!ended.current) {
+			ended.current = true;
+			endRef.current();
+		}
+	}, []);
+
+	useEventListener(videoPlayer, "statusChange", ({ status }) =>
+		setClipStatus(status)
+	);
+	useEventListener(videoPlayer, "timeUpdate", ({ currentTime }) => {
+		if (currentTime > 0) {
+			setFramed(true);
+		}
+	});
+	useEventListener(videoPlayer, "playToEnd", () => {
+		if (hasClip) {
+			fireEnd();
+		}
+	});
+	// Without a clip the narration's end ends the node.
+	useEffect(() => {
+		if (!hasClip && hasNarration && heard.didJustFinish) {
+			fireEnd();
+		}
+	}, [fireEnd, hasClip, hasNarration, heard.didJustFinish]);
+	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
+	useEffect(() => {
+		if (clipFailed || narrationFailed) {
+			onMediaError();
+		}
+	}, [clipFailed, narrationFailed, onMediaError]);
+
+	// Start the clip and the narration together, once both can play.
+	const ready =
+		(!hasNarration || heard.isLoaded) &&
+		(!hasClip || clipStatus === "readyToPlay");
+	useEffect(() => {
+		if (started.current || !ready || !playing) {
+			return;
+		}
+		started.current = true;
+		if (hasNarration) {
+			audioPlayer.play();
+		}
+		if (hasClip) {
+			videoPlayer.play();
+		}
+	}, [audioPlayer, hasClip, hasNarration, playing, ready, videoPlayer]);
+
+	const toggle = () => {
+		if (started.current) {
+			if (hasNarration) {
+				setPaused(audioPlayer, playing);
+			}
+			if (hasClip) {
+				setPaused(videoPlayer, playing);
+			}
+		}
+		setPlaying(!playing);
+	};
+
+	const showCover = !(hasClip && framed);
+	const spoken = hasNarration ? heard.currentTime : 0;
+	const length = hasNarration ? heard.duration : 0;
+	const frame = (
+		<View style={StyleSheet.absoluteFill}>
+			{hasClip ? (
+				<VideoView
+					allowsPictureInPicture={false}
+					contentFit="cover"
+					nativeControls={false}
+					onFirstFrameRender={() => setFramed(true)}
+					player={videoPlayer}
+					playsInline
+					pointerEvents="none"
+					style={StyleSheet.absoluteFill}
+				/>
+			) : null}
+			{showCover ? cover : null}
+		</View>
+	);
+
+	return (
+		<PlayerChrome
+			current={
+				hasNarration && audio ? wordIndexAt(audio.words, spoken, length) : 0
+			}
+			frame={frame}
+			name={name}
+			onBack={onBack}
+			onToggle={toggle}
+			playing={playing}
+			progress={length > 0 ? spoken / length : 0}
+			words={words}
+		/>
+	);
+}
+
+function PlaceFrame({
+	onError,
+	picture,
+}: {
+	onError?: () => void;
+	picture: Picture | null;
+}) {
 	if (picture === null) {
 		return <Placeholder icon="image" style={StyleSheet.absoluteFill} />;
 	}
 	return (
 		<Image
 			contentFit="cover"
+			onError={onError}
 			source={picture}
 			style={StyleSheet.absoluteFill}
 		/>
@@ -226,7 +434,7 @@ export default function Place() {
 	const params = useLocalSearchParams<{ id?: string; node?: string }>();
 	const id = params.id ?? "box";
 	const node = (params.node ?? "p1") as NodeId;
-	const { adventure, visit } = useAdventure(id);
+	const { adventure, onMediaError, visit } = useAdventure(id);
 	const [childName, setChildName] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -255,25 +463,43 @@ export default function Place() {
 		return null;
 	}
 	const place = adventure.places[node];
+	const audio = place.audio ?? null;
+	// The goodnight plays its own node; without narration it keeps the fixed line on the open goal.
+	const fixedLine = goodnight && audio === null;
+	const words = fixedLine
+		? `And the moon said goodnight, ${childName}.`.split(" ")
+		: place.narration;
+	const cover =
+		goodnight && place.picture === null ? (
+			<GoodnightFrame adventure={adventure} />
+		) : (
+			<PlaceFrame onError={onMediaError} picture={place.picture} />
+		);
+	const playback = playbackOf(place);
 
+	if (audio === null && playback === "picture") {
+		return (
+			<TimerPlayer
+				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
+				frame={cover}
+				name={place.name}
+				onBack={onBack}
+				onEnd={onEnd}
+				words={words}
+			/>
+		);
+	}
 	return (
-		<Player
-			durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
-			frame={
-				goodnight ? (
-					<GoodnightFrame adventure={adventure} />
-				) : (
-					<PlaceFrame picture={place.picture} />
-				)
-			}
+		<MediaPlayer
+			audio={audio}
+			clip={playback === "video" ? place.video : null}
+			cover={cover}
+			key={`${place.video}|${audio?.url}`}
 			name={place.name}
 			onBack={onBack}
 			onEnd={onEnd}
-			words={
-				goodnight
-					? `And the moon said goodnight, ${childName}.`.split(" ")
-					: place.narration
-			}
+			onMediaError={onMediaError}
+			words={words}
 		/>
 	);
 }

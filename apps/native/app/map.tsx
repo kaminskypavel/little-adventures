@@ -93,7 +93,11 @@ export default function StoryMapScreen() {
 		const places = Object.fromEntries(
 			PLACE_IDS.map((node) => [node, place(node)])
 		) as Record<MapPlaceNode, MapPlace>;
-		const goodnightOpen = isGoodnightOpen(progress.visited);
+		// With the engine, it says when goodnight unlocks; otherwise the map rules do.
+		const goodnightOpen =
+			progress.outroLocked === undefined
+				? isGoodnightOpen(progress.visited)
+				: !progress.outroLocked;
 		// The road just walked glows: from the node visited before this one, to this one.
 		const at = progress.visited.indexOf(progress.here);
 

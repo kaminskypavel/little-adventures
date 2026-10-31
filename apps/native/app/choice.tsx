@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { getProfile, getProgress } from "@/src/data/adventure-client";
 import { choicesFrom, missingPlaces } from "@/src/data/map-rules";
-import type { NodeId, Progress } from "@/src/data/types";
+import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 
@@ -32,9 +32,64 @@ const STAR_SIZE = 78;
 const STAR_BOTTOM = 19;
 // Round 7 message lines: 800 at 21 pt.
 const LINE = { fontSize: 21, lineHeight: 26 } as const;
+// Said by the star while the places to choose from are still being drawn.
+const WAITING_LINE = "Still being drawn. One moment.";
+
+interface Card {
+	goal: boolean;
+	name: string;
+	node: NodeId;
+	picture: Picture | null;
+	state: "drawing" | "locked" | "open";
+}
+
+/** The cards to choose from at `from`: a locked or still-drawing place shows as such. */
+function cardsOf(
+	adventure: Adventure,
+	from: NodeId,
+	visited: NodeId[],
+	lock: boolean | undefined,
+	devDrawing: string | undefined
+): Card[] {
+	return choicesFrom(from, visited).map(({ locked: ruled, node }) => {
+		const place = adventure.places[node];
+		const goal = node === "outro";
+		const locked = goal && lock !== undefined ? lock : ruled;
+		let { picture } = place;
+		if (goal) {
+			picture = locked ? adventure.endGoal.closed : adventure.endGoal.open;
+		}
+		let state: Card["state"] = "open";
+		if (locked) {
+			state = "locked";
+		} else if (node === devDrawing || place.status === "drawing") {
+			state = "drawing";
+		}
+		return { goal, name: place.name, node, picture, state };
+	});
+}
+
+/** The star waits and thinks while nothing can be chosen, steps aside for a peek, else points. */
+function starTakeFor({
+	drawing,
+	goodnightOpen,
+	waiting,
+}: {
+	drawing: boolean;
+	goodnightOpen: boolean;
+	waiting: boolean;
+}): "jump" | "point" | "think" | null {
+	if (waiting) {
+		return "think";
+	}
+	if (drawing) {
+		return null;
+	}
+	return goodnightOpen ? "jump" : "point";
+}
 
 /** The small star. No still under it: the take's arm would leave a ghost; the screen fade covers the load. */
-function Star({ take }: { take: "jump" | "point" }) {
+function Star({ take }: { take: "jump" | "point" | "think" }) {
 	return (
 		<View pointerEvents="none" style={styles.starRow}>
 			<StarTake size={STAR_SIZE} take={take} />
@@ -75,25 +130,11 @@ export default function Choice() {
 	const visited = devVisited
 		? (devVisited.split(",") as NodeId[])
 		: progress?.visited;
+	// With the engine, it says when goodnight unlocks; otherwise the map rules do.
+	const lock = devVisited ? undefined : progress?.outroLocked;
 	const cards =
 		adventure && visited
-			? choicesFrom(from, visited).map(({ locked, node }) => {
-					const place = adventure.places[node];
-					const goal = node === "outro";
-					let picture = place.picture;
-					if (goal) {
-						picture = locked
-							? adventure.endGoal.closed
-							: adventure.endGoal.open;
-					}
-					let state: "drawing" | "locked" | "open" = "open";
-					if (locked) {
-						state = "locked";
-					} else if (node === devDrawing || place.status === "drawing") {
-						state = "drawing";
-					}
-					return { goal, name: place.name, node, picture, state };
-				})
+			? cardsOf(adventure, from, visited, lock, devDrawing)
 			: [];
 
 	const goodnight = cards.find((c) => c.goal);
@@ -101,6 +142,8 @@ export default function Choice() {
 	const goodnightOpen = goodnight?.state === "open";
 	const drawing = cards.some((c) => c.state === "drawing");
 	const other = cards.find((c) => c.state === "open");
+	// Nothing to peek at: the places to choose from are all still being drawn.
+	const waiting = drawing && !other;
 
 	useEffect(() => {
 		if (goodnightOpen) {
@@ -122,6 +165,7 @@ export default function Choice() {
 		timer.current = setTimeout(() => walkTo(node), SELECT_MS);
 	};
 	const peek = drawing ? other : undefined;
+	const starTake = starTakeFor({ drawing, goodnightOpen, waiting });
 	const missing = missingPlaces(visited);
 
 	return (
@@ -153,7 +197,9 @@ export default function Choice() {
 						key={card.node}
 						kind={card.goal ? "goal" : "place"}
 						name={card.name}
-						onPress={() => pick(card.node)}
+						onPress={
+							card.state === "drawing" ? undefined : () => pick(card.node)
+						}
 						picture={card.picture}
 						pulseDelay={
 							card.state === "drawing" ? null : index * motion.pulseOffset
@@ -186,7 +232,17 @@ export default function Choice() {
 					{`That one is almost ready. Peek at ${peek.name} first?`}
 				</ClayText>
 			) : null}
-			{drawing ? null : <Star take={goodnightOpen ? "jump" : "point"} />}
+			{waiting ? (
+				<ClayText
+					align="center"
+					color={colors.cream}
+					style={[LINE, styles.message]}
+					variant="label"
+				>
+					{WAITING_LINE}
+				</ClayText>
+			) : null}
+			{starTake ? <Star take={starTake} /> : null}
 		</Screen>
 	);
 }
