@@ -1,8 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./landing.css";
 
-const TAGLINE = "Bedtime stories that start with your child's own questions.";
-const DESCRIPTION = `${TAGLINE} Your child asks out loud, a short illustrated story grows from it starring your child, with real answers on the way and a calm goodnight at the end.`;
+// Search and share text, kept inside what Google and social previews show in full:
+// title up to 60 characters, share description up to 125, meta description up to 160.
+const TITLE = "Little Adventures: bedtime stories sparked by your child";
+const SHARE_DESCRIPTION =
+	"Your child asks a question out loud. A short illustrated story answers it, starring your child, then says goodnight.";
+const DESCRIPTION =
+	"Your child asks a question out loud. A short illustrated story answers it, starring your child, with real facts and a calm goodnight.";
 
 // Vercel sets this to the production domain (the custom one once it is connected).
 const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -17,21 +22,18 @@ export const metadata: Metadata = {
 	formatDetection: { telephone: false },
 	metadataBase: new URL(SITE_URL),
 	openGraph: {
-		description: DESCRIPTION,
+		description: SHARE_DESCRIPTION,
 		locale: "en_US",
 		siteName: "Little Adventures",
-		title:
-			"Little Adventures: bedtime stories that start with your child's own questions",
+		title: TITLE,
 		type: "website",
 		url: "/",
 	},
-	title:
-		"Little Adventures: bedtime stories that start with your child's own questions",
+	title: TITLE,
 	twitter: {
 		card: "summary_large_image",
-		description: DESCRIPTION,
-		title:
-			"Little Adventures: bedtime stories that start with your child's own questions",
+		description: SHARE_DESCRIPTION,
+		title: TITLE,
 	},
 };
 
