@@ -24,6 +24,7 @@
     "@trpc/client": "catalog:",
     "@varlock/expo-integration": "1.2.2",
     "expo": "~58.0.12",
+    "expo-audio": "~58.0.11",
     "expo-constants": "~58.0.12",
     "expo-dev-client": "~58.0.13",
     "expo-font": "~58.0.8",

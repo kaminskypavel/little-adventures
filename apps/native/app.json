@@ -47,7 +47,13 @@
         {
           "photosPermission": "Little Adventures uses your photo only to draw your child as the storybook hero.",
           "cameraPermission": "Little Adventures uses your photo only to draw your child as the storybook hero.",
-          "microphonePermission": false
+          "microphonePermission": "Little Adventures listens only while your child says a question."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Little Adventures listens only while your child says a question."
         }
       ]
     ],
