@@ -1,0 +1,341 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "94ac6a82-a0ac-4e32-b156-6c4c0f75f401",
+  "prevIds": ["04ef93d3-16d2-4711-bf40-04045bfa209f"],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "little_adventures", "ai_calls"],
+      "writes": [
+        "s|tbl|little_adventures.ai_calls",
+        "n|tbl|little_adventures.ai_calls",
+        "e|tbl|little_adventures.ai_calls",
+        "n|rel|little_adventures.ai_calls",
+        "n|type|little_adventures.ai_calls",
+        "n|rel|little_adventures.ai_calls_pkey"
+      ],
+      "reads": ["n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "children",
+        "art_status"
+      ],
+      "writes": [
+        "s|col|little_adventures.children.art_status",
+        "n|col|little_adventures.children.art_status",
+        "e|col|little_adventures.children.art_status"
+      ],
+      "reads": ["n|tbl|little_adventures.children", "n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "children",
+        "drawings"
+      ],
+      "writes": [
+        "s|col|little_adventures.children.drawings",
+        "n|col|little_adventures.children.drawings",
+        "e|col|little_adventures.children.drawings"
+      ],
+      "reads": ["n|tbl|little_adventures.children", "n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "children",
+        "face_key"
+      ],
+      "writes": [
+        "s|col|little_adventures.children.face_key",
+        "n|col|little_adventures.children.face_key",
+        "e|col|little_adventures.children.face_key"
+      ],
+      "reads": ["n|tbl|little_adventures.children", "n|sch|little_adventures"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "little_adventures",
+        "ai_calls",
+        "ai_calls_owner_id_idx"
+      ],
+      "writes": [
+        "s|idx|little_adventures.ai_calls_owner_id_idx",
+        "n|idx|little_adventures.ai_calls_owner_id_idx",
+        "e|idx|little_adventures.ai_calls_owner_id_idx",
+        "n|rel|little_adventures.ai_calls_owner_id_idx"
+      ],
+      "reads": [
+        "n|tbl|little_adventures.ai_calls",
+        "n|sch|little_adventures",
+        "n|col|little_adventures.ai_calls.owner_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "name": "ai_calls",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "child_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "cost_micro_usd",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "error",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "model",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "ms",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "ok",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "operation",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "owner_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "children",
+        "name": "art_status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'idle'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "children",
+        "name": "drawings",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "children",
+        "name": "face_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "ai_calls_owner_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "owner_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "ai_calls",
+        "name": "ai_calls_pkey",
+        "columns": ["id"],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}
