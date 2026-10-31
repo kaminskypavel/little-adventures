@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Placeholders only: varlock validates these at build and start time, and the
+# landing page never calls auth or the database.
+env:
+  DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+  NEON_AUTH_BASE_URL: https://placeholder.invalid
+  NEON_AUTH_COOKIE_SECRET: placeholder-placeholder-placeholder-32
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - name: Lint and format
+        run: bunx ultracite check
+      - name: Type check
+        run: bun run check-types
+      - name: Unit tests
+        run: bun run test
+        working-directory: apps/web
+
+  e2e:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        working-directory: apps/web
+      - uses: actions/cache@v4
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install browser and system libraries
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: Install system libraries only
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+        working-directory: apps/web
+      - name: Build
+        run: bun run build
+        working-directory: apps/web
+      - name: End-to-end tests
+        run: bun run test:e2e
+        working-directory: apps/web
+        env:
+          CI: "true"
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
