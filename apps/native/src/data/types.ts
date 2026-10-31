@@ -61,11 +61,16 @@ export type MakeStatus =
 	| { state: "failed" };
 
 export type Look = "clay" | "felt" | "wood";
+/** State of the child's drawn art: idle (none started), working, ready or failed. */
+export type ArtStatus = "idle" | "working" | "ready" | "failed";
 export interface Profile {
+	artStatus: ArtStatus;
 	/** Null until the grown-up picks an age. */
 	childAge: number | null;
 	childKind: "girl" | "boy";
 	childName: string;
+	/** Signed url of the face cutout (transparent PNG), once drawn. */
+	faceUrl?: string;
 	grownUp: boolean;
 	hasPhoto: boolean;
 	look: Look;

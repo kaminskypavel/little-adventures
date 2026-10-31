@@ -101,6 +101,7 @@ export const getAdventures = (): Promise<AdventureSummary[]> =>
 	wait(grownUpList);
 
 const emptyProfile: Profile = {
+	artStatus: "idle",
 	childAge: null,
 	childKind: "boy",
 	childName: "",
@@ -123,9 +124,11 @@ async function loadChild(): Promise<{ id?: string; profile: Profile }> {
 	return {
 		id: row.id,
 		profile: {
+			artStatus: row.artStatus,
 			childAge: row.age,
 			childKind: row.kind,
 			childName: row.name,
+			faceUrl: row.faceUrl ?? undefined,
 			grownUp: row.grownUp,
 			hasPhoto: row.photoKey !== null,
 			look: row.look as Look,
