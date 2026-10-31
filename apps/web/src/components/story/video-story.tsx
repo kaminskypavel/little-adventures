@@ -467,7 +467,7 @@ export function VideoStory() {
 					className="h-auto w-[120px]"
 					data-loader-star
 					height={99}
-					src="/story/star.webp"
+					src="/loader-star.webp"
 					width={120}
 				/>
 				<p className="text-cream/90 m-0 text-[17px]">

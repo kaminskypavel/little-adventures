@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import media from "./story-media.json";
 import {
 	dotFill,
 	GATE,
 	litDot,
 	loadPlan,
+	MEDIA_BASE,
 	restsOnLoop,
 	SCENE_COUNT,
 	type Screen,
 	storyUrls,
 } from "./story-plan";
 
-const PUBLIC = join(import.meta.dir, "../../../public");
+const ON_CDN = new Set(media.files.map((f) => `${MEDIA_BASE}/${f}`));
 const SCREENS: Screen[] = [false, true].flatMap((tall) =>
 	(["", "-hevc"] as const).flatMap((codec) =>
 		[false, true].flatMap((big) =>
@@ -26,11 +26,11 @@ const SCENES = Array.from({ length: SCENE_COUNT }, (_, i) => i);
 
 describe("story files", () => {
 	for (const screen of SCREENS) {
-		test(`every file exists: ${label(screen)}`, () => {
+		test(`every file is on the CDN: ${label(screen)}`, () => {
 			const url = storyUrls(screen);
 			const backs = SCENES.slice(1).map(url.back);
 			const missing = [...loadPlan(screen).map((f) => f.src), ...backs].filter(
-				(src) => !existsSync(join(PUBLIC, src))
+				(src) => !ON_CDN.has(src)
 			);
 			expect(missing).toEqual([]);
 		});
@@ -70,10 +70,10 @@ describe("load order", () => {
 
 	test("4K loops only for AV1 on big screens; Safari keeps its HEVC files", () => {
 		expect(storyUrls({ ...wide, big: true }).loop(2)).toBe(
-			"/story/loop-w2-4k.mp4"
+			`${MEDIA_BASE}/loop-w2-4k.mp4`
 		);
 		expect(storyUrls({ ...wide, big: true, codec: "-hevc" }).loop(2)).toBe(
-			"/story/loop-w2-hevc.mp4"
+			`${MEDIA_BASE}/loop-w2-hevc.mp4`
 		);
 	});
 });

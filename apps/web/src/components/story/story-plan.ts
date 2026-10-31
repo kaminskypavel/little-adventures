@@ -14,6 +14,8 @@ export const TALL_LOOP = [
 ] as const;
 // Scenes downloaded whole before the loading screen lifts; the rest follow in story order.
 export const GATE = 3;
+// The clips live on the CDN; a new set of files gets a new version folder.
+export const MEDIA_BASE = "https://cdn.littleadventures.app/landing/story/v1";
 
 export interface Screen {
 	/** A very wide screen that gets the 4K loops (AV1 only). */
@@ -45,18 +47,19 @@ export const storyUrls = (screen: Screen) => {
 	const { codec } = screen;
 	return {
 		/** The move from `scene` back to the one before it. */
-		back: (scene: number) => `/story/move-${shape}${scene}-back${codec}.mp4`,
+		back: (scene: number) =>
+			`${MEDIA_BASE}/move-${shape}${scene}-back${codec}.mp4`,
 		loop: (scene: number) => {
 			if (screen.tall) {
-				return `/story/loop-t${scene}${codec}.mp4`;
+				return `${MEDIA_BASE}/loop-t${scene}${codec}.mp4`;
 			}
 			return screen.big && !codec
-				? `/story/loop-w${scene}-4k.mp4`
-				: `/story/loop-w${scene}${codec}.mp4`;
+				? `${MEDIA_BASE}/loop-w${scene}-4k.mp4`
+				: `${MEDIA_BASE}/loop-w${scene}${codec}.mp4`;
 		},
 		/** The move that lands on `scene`. */
-		move: (scene: number) => `/story/move-${shape}${scene}${codec}.mp4`,
-		still: (scene: number) => `/story/still-${shape}${scene}.webp`,
+		move: (scene: number) => `${MEDIA_BASE}/move-${shape}${scene}${codec}.mp4`,
+		still: (scene: number) => `${MEDIA_BASE}/still-${shape}${scene}.webp`,
 	};
 };
 

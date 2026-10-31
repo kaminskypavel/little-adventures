@@ -6,7 +6,8 @@ import { SCENE_COUNT } from "./story-plan";
 // The images line up: every move starts on the frame of the scene it leaves and
 // ends on the frame of the scene it lands on, so nothing jumps between clips.
 // Frames are compared as 32x18 greyscale thumbnails (mean difference, 0 to 255).
-const PUBLIC = join(import.meta.dir, "../../../public/story");
+// The clips are not in the repo: point STORY_MEDIA_DIR at a local copy (the upload script does).
+const DIR = process.env.STORY_MEDIA_DIR ?? "";
 const MAX_DIFF = 14;
 const hasFfmpeg = spawnSync(["ffmpeg", "-version"], {
 	stderr: "ignore",
@@ -21,7 +22,7 @@ const thumb = (file: string, where: "first" | "last") => {
 		"error",
 		...seek,
 		"-i",
-		join(PUBLIC, file),
+		join(DIR, file),
 		"-frames:v",
 		"1",
 		"-vf",
@@ -40,7 +41,7 @@ const diff = (a: Uint8Array, b: Uint8Array) => {
 	return sum / a.length;
 };
 
-describe.skipIf(!hasFfmpeg)("moves line up with the scenes", () => {
+describe.skipIf(!(hasFfmpeg && DIR))("moves line up with the scenes", () => {
 	for (const shape of ["w", "t"]) {
 		for (let scene = 1; scene < SCENE_COUNT; scene += 1) {
 			test(`${shape === "w" ? "computer" : "phone"} move into scene ${scene}`, () => {
