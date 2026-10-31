@@ -5,13 +5,19 @@ import {
 } from "@little-adventures/native-ui/listen-glow";
 import { MicDone } from "@little-adventures/native-ui/mic-done";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { StarTake } from "@little-adventures/native-ui/star-take";
+import {
+	StarTake,
+	type StarTakeName,
+} from "@little-adventures/native-ui/star-take";
 import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { VoiceWave } from "@little-adventures/native-ui/voice-wave";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { transcribe } from "@/src/data/adventure-client";
+import { askMicPermission } from "@/src/data/mic-permission";
+import { useRecorder } from "@/src/data/recorder";
+import { canRecord } from "@/src/data/voice-rules";
 
 // Round 7 09a at 0.72 scale (px / 0.72), measured from the screen top.
 const GLOW_TOP = 61;
@@ -26,7 +32,13 @@ const LINE_TOP = 578;
 /** 09a Listening: the star listens, the wave moves, one big mic says "done". Mic only, no typing. */
 export default function Listening() {
 	const router = useRouter();
-	const sent = useRef<boolean>(false);
+	const { start, stop } = useRecorder();
+	const busy = useRef<boolean>(false);
+	const finishRef = useRef<() => void>(() => undefined);
+	// While the question goes to be turned into text the star thinks and the mic waits.
+	const [thinking, setThinking] = useState(false);
+	// A failed call, an empty recording or no words: back to listening, with one calm line.
+	const [missed, setMissed] = useState(false);
 	// The listen take plays once. Dropping to idle for one render and asking for listen again
 	// queues it behind the one that is playing, so the star never stops listening.
 	const [rest, setRest] = useState(false);
@@ -41,22 +53,57 @@ export default function Listening() {
 		}
 	}, [rest]);
 
-	const done = useCallback(() => {
-		if (sent.current) {
+	const listen = useCallback(async () => {
+		const permission = await askMicPermission();
+		if (!canRecord(permission)) {
+			// Home reads the permission on focus and shows the mic-off state.
+			router.dismissTo("/home");
 			return;
 		}
-		sent.current = true;
-		transcribe()
-			.then((question) =>
-				router.replace({ params: { question }, pathname: "/verify" })
-			)
-			.catch(() => {
-				sent.current = false;
-			});
-	}, [router]);
+		try {
+			await start(() => finishRef.current());
+		} catch {
+			setMissed(true);
+		}
+	}, [router, start]);
+
+	const finish = useCallback(async () => {
+		if (busy.current) {
+			return;
+		}
+		busy.current = true;
+		setThinking(true);
+		let question = "";
+		try {
+			question = (await transcribe(await stop())).trim();
+		} catch {
+			// Counts as not heard: the same retry line as an empty recording.
+		}
+		if (question) {
+			router.replace({ params: { question }, pathname: "/verify" });
+			return;
+		}
+		setMissed(true);
+		setThinking(false);
+		busy.current = false;
+		listen();
+	}, [listen, router, stop]);
+	finishRef.current = finish;
+
+	// Once per visit: a changed callback must never start a second recording.
+	const began = useRef<boolean>(false);
+	useEffect(() => {
+		if (!began.current) {
+			began.current = true;
+			listen();
+		}
+	}, [listen]);
 
 	return (
-		<Screen bodyStyle={styles.body} dock={<MicDone onPress={done} />}>
+		<Screen
+			bodyStyle={styles.body}
+			dock={<MicDone disabled={thinking} onPress={finish} />}
+		>
 			<View pointerEvents="none" style={styles.hero}>
 				<View style={styles.group}>
 					<ListenGlow />
@@ -64,12 +111,12 @@ export default function Listening() {
 						<StarTake
 							onTakeEnd={queueAgain}
 							size={STAR_SIZE}
-							take={rest ? "idle" : "listen"}
+							take={takeFor(rest, thinking)}
 						/>
 					</View>
 				</View>
 			</View>
-			<VoiceWave style={styles.wave} />
+			<VoiceWave style={[styles.wave, thinking && styles.hidden]} />
 			<ClayText
 				accessibilityRole="header"
 				align="center"
@@ -77,7 +124,7 @@ export default function Listening() {
 				style={styles.title}
 				variant="headline"
 			>
-				{"I'm listening..."}
+				{thinking ? "Let me think..." : "I'm listening..."}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -85,10 +132,26 @@ export default function Listening() {
 				style={[LINE, styles.line]}
 				variant="body"
 			>
-				{"Tap the mic when you're done"}
+				{lineFor(thinking, missed)}
 			</ClayText>
 		</Screen>
 	);
+}
+
+function takeFor(rest: boolean, thinking: boolean): StarTakeName {
+	if (rest) {
+		return "idle";
+	}
+	return thinking ? "think" : "listen";
+}
+
+function lineFor(thinking: boolean, missed: boolean): string {
+	if (thinking) {
+		return "";
+	}
+	return missed
+		? "I missed that. Say it again?"
+		: "Tap the mic when you're done";
 }
 
 const styles = StyleSheet.create({
@@ -101,6 +164,7 @@ const styles = StyleSheet.create({
 		right: 0,
 		top: GLOW_TOP,
 	},
+	hidden: { opacity: 0 },
 	line: {
 		left: layout.sideMargin,
 		position: "absolute",

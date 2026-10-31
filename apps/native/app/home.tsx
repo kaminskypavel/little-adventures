@@ -21,6 +21,7 @@ import {
 	getIdeas,
 	getProfile,
 } from "@/src/data/adventure-client";
+import { micPermission } from "@/src/data/mic-permission";
 import type { Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -50,7 +51,10 @@ export default function Home() {
 	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
 	// Dev only: production builds ignore the queries.
 	const first = dev(params.first);
-	const micOff = dev(params.mic) === "off";
+	// Denied in the phone's settings: the Ask your own card goes off. Read on every focus, so a
+	// grown-up who turns it on in settings finds it on when they come back.
+	const [micDenied, setMicDenied] = useState(false);
+	const micOff = dev(params.mic) === "off" || micDenied;
 	const [data, setData] = useState<HomeData | null>(null);
 	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
@@ -64,6 +68,18 @@ export default function Home() {
 				setRun((n) => n + 1);
 			}
 			seenFocus.current = true;
+		}, [])
+	);
+
+	useFocusEffect(
+		useCallback(() => {
+			let live = true;
+			micPermission()
+				.then((status) => live && setMicDenied(status === "denied"))
+				.catch(() => undefined);
+			return () => {
+				live = false;
+			};
 		}, [])
 	);
 
