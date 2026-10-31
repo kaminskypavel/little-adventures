@@ -36,6 +36,8 @@ import type {
 	Profile,
 	Progress,
 } from "./types";
+import { hasAudio } from "./voice-rules";
+import { bytesToBase64 } from "./wav";
 
 const ENGINE_URL = ENV.EXPO_PUBLIC_ENGINE_URL?.replace(/\/$/u, "");
 const engine = ENGINE_URL
@@ -181,7 +183,22 @@ export const getHome = async (): Promise<{
 
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
 
-export const transcribe = (): Promise<string> => wait(transcribedQuestion);
+/**
+ * A spoken question (WAV bytes) as text. An empty recording is never sent and gives "". With the
+ * bundled adventure the canned question comes back, as it always did.
+ */
+export const transcribe = async (wav: Uint8Array): Promise<string> => {
+	if (!hasAudio(wav)) {
+		return "";
+	}
+	if (!engine) {
+		return wait(transcribedQuestion);
+	}
+	const { text } = await trpc.voice.transcribe.mutate({
+		audioBase64: bytesToBase64(wav),
+	});
+	return text;
+};
 
 export const startAdventure = async (
 	question: string
