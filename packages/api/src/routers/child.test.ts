@@ -184,8 +184,10 @@ describe("child art", () => {
 	let segmentCalls: number;
 	let failLook: string | null;
 	let configured: boolean;
+	let beforeSegment: (() => Promise<unknown>) | null;
 
 	const photo = "little-adventures/users/u1/photos/a.jpg";
+	const newer = "little-adventures/users/u1/photos/b.jpg";
 	const storage = {
 		deleteObject: (key: string) => {
 			deleted.push(key);
@@ -197,7 +199,7 @@ describe("child art", () => {
 		},
 		readUrl: (key: string) =>
 			Promise.resolve(
-				key === photo
+				key.includes("/photos/")
 					? `data:image/png;base64,${TINY_PNG}`
 					: `https://files.test/${key}`
 			),
@@ -212,14 +214,17 @@ describe("child art", () => {
 			}
 			return Promise.resolve(new Uint8Array([1, 2, 3]));
 		},
-		segment: () => {
+		segment: async () => {
 			segmentCalls += 1;
-			return Promise.resolve({
+			const hook = beforeSegment;
+			beforeSegment = null;
+			await hook?.();
+			return {
 				box: { x1: 0, x2: 1, y1: 0, y2: 1 },
 				mask: new Uint8Array([1]),
 				maskHeight: 1,
 				maskWidth: 1,
-			});
+			};
 		},
 	} as unknown as ImageEditing;
 	const callerFor = (userId: string) =>
@@ -243,6 +248,7 @@ describe("child art", () => {
 		segmentCalls = 0;
 		failLook = null;
 		configured = true;
+		beforeSegment = null;
 	});
 
 	test("a new photo draws the face and three looks after the response", async () => {
@@ -255,7 +261,7 @@ describe("child art", () => {
 		const [child] = await callerFor("u1").child.mine();
 		expect(child?.artStatus).toBe("ready");
 		expect(child?.faceUrl).toBe(
-			`https://files.test/${folder}${saved.id}/face.png`
+			`https://files.test/${folder}${saved.id}/art/a/face.png`
 		);
 		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([
 			"clay",
@@ -322,7 +328,6 @@ describe("child art", () => {
 			photoKey: photo,
 		});
 		await settle();
-		const newer = "little-adventures/users/u1/photos/b.jpg";
 		await callerFor("u1").child.save({
 			...noah,
 			id: first.id,
@@ -337,6 +342,55 @@ describe("child art", () => {
 		expect(segmentCalls).toBe(before);
 	});
 
+	test("an older run still drawing when the photo changes leaves the newer art alone", async () => {
+		const first = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		// The photo changes while the first run is still drawing.
+		beforeSegment = () =>
+			callerFor("u1").child.save({ ...noah, id: first.id, photoKey: newer });
+		await settle();
+		await settle();
+		const [child] = await callerFor("u1").child.mine();
+		expect(child).toMatchObject({ artStatus: "ready", photoKey: newer });
+		expect(child?.faceUrl).toBe(
+			`https://files.test/${folder}${first.id}/art/b/face.png`
+		);
+		const older = `${folder}${first.id}/art/a/`;
+		expect([...new Set(deleted)].sort()).toEqual(
+			[
+				`${older}face.png`,
+				`${older}looks/clay.png`,
+				`${older}looks/felt.png`,
+				`${older}looks/wood.png`,
+			].sort()
+		);
+	});
+
+	test("a new photo removes the old photo's art", async () => {
+		const first = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		await callerFor("u1").child.save({
+			...noah,
+			id: first.id,
+			photoKey: newer,
+		});
+		await settle();
+		const older = `${folder}${first.id}/art/a/`;
+		expect(deleted.sort()).toEqual(
+			[
+				`${older}face.png`,
+				`${older}looks/clay.png`,
+				`${older}looks/felt.png`,
+				`${older}looks/wood.png`,
+			].sort()
+		);
+	});
+
 	test("photo.delete removes the face and looks too and resets the art", async () => {
 		const saved = await callerFor("u1").child.save({
 			...noah,
@@ -347,10 +401,10 @@ describe("child art", () => {
 		expect(deleted.sort()).toEqual(
 			[
 				photo,
-				`${folder}${saved.id}/face.png`,
-				`${folder}${saved.id}/looks/clay.png`,
-				`${folder}${saved.id}/looks/felt.png`,
-				`${folder}${saved.id}/looks/wood.png`,
+				`${folder}${saved.id}/art/a/face.png`,
+				`${folder}${saved.id}/art/a/looks/clay.png`,
+				`${folder}${saved.id}/art/a/looks/felt.png`,
+				`${folder}${saved.id}/art/a/looks/wood.png`,
 			].sort()
 		);
 		const [child] = await callerFor("u1").child.mine();

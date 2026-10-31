@@ -52,9 +52,10 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
 
 /**
  * Draws the child's face cutout and the three looks from the stored photo, in
- * the background. Every write is guarded by `photo_key`, so an older run never
- * overwrites the art of a newer photo. Without a model key the child stays
- * `idle` and nothing is called.
+ * the background. Every row write is guarded by `photo_key`, and the files go
+ * in a folder of their own photo, so an older run never overwrites the art of
+ * a newer photo. Without a model key the child stays `idle` and nothing is
+ * called.
  */
 export async function drawArt(
 	ctx: ArtContext,
@@ -68,7 +69,7 @@ export async function drawArt(
 		eq(childrenTable.id, childId),
 		eq(childrenTable.photoKey, photoKey)
 	);
-	const folder = `${userPrefix(ownerId)}children/${childId}/`;
+	const folder = artFolder(ownerId, childId, photoKey);
 
 	const [started] = await db
 		.update(childrenTable)
@@ -112,12 +113,13 @@ export async function drawArt(
 	}
 
 	/** A run that lost its row (photo deleted or replaced) must not leave likeness in the bucket. */
-	async function dropIfPhotoGone(keys: string[]) {
+	async function dropIfPhotoChanged(keys: string[]) {
 		const [row] = await db
 			.select({ photoKey: childrenTable.photoKey })
 			.from(childrenTable)
 			.where(eq(childrenTable.id, childId));
-		if (!row?.photoKey) {
+		// The files are this photo's own, so deleting them never touches a newer photo's art.
+		if (row?.photoKey !== photoKey) {
 			await Promise.all(keys.map((key) => storage.deleteObject(key)));
 		}
 	}
@@ -145,7 +147,7 @@ export async function drawArt(
 			.where(current)
 			.returning({ id: childrenTable.id });
 		if (saved.length === 0) {
-			await dropIfPhotoGone([key]);
+			await dropIfPhotoChanged([key]);
 		}
 		return key;
 	}
@@ -190,7 +192,10 @@ export async function drawArt(
 			.where(current)
 			.returning({ id: childrenTable.id });
 		if (saved.length === 0) {
-			await dropIfPhotoGone(Object.values(drawings));
+			await dropIfPhotoChanged([
+				...(face?.status === "fulfilled" ? [face.value] : []),
+				...Object.values(drawings),
+			]);
 		}
 	} catch (error) {
 		await db.update(childrenTable).set({ artStatus: "failed" }).where(current);
@@ -198,8 +203,16 @@ export async function drawArt(
 	}
 }
 
+/** The folder of one photo's art: a newer photo never shares a file with an older one. */
+function artFolder(ownerId: string, childId: string, photoKey: string): string {
+	const [photoId] = photoKey.slice(photoKey.lastIndexOf("/") + 1).split(".");
+	return `${userPrefix(ownerId)}children/${childId}/art/${photoId}/`;
+}
+
 /** Every object key the art of one child holds (face and looks). */
-export const artKeys = (row: typeof childrenTable.$inferSelect): string[] => [
+export const artKeys = (
+	row: Pick<typeof childrenTable.$inferSelect, "drawings" | "faceKey">
+): string[] => [
 	...(row.faceKey ? [row.faceKey] : []),
 	...Object.values(row.drawings),
 ];

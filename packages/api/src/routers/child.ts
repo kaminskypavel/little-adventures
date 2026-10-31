@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { drawArt, withArtUrls } from "../art";
+import { artKeys, drawArt, withArtUrls } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey } from "../photo-key";
 
@@ -40,7 +40,11 @@ export const childRouter = router({
 		}
 		const [before] = id
 			? await ctx.db
-					.select({ photoKey: children.photoKey })
+					.select({
+						drawings: children.drawings,
+						faceKey: children.faceKey,
+						photoKey: children.photoKey,
+					})
 					.from(children)
 					.where(and(eq(children.id, id), eq(children.ownerId, ownerId)))
 			: [];
@@ -68,6 +72,13 @@ export const childRouter = router({
 		if (!row) {
 			// An update that matched nothing: not found, or not theirs.
 			throw new TRPCError({ code: id ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR" });
+		}
+		// The old photo's art is no longer pointed at: it must not stay in the bucket.
+		const oldArt = drawsArt && before ? artKeys(before) : [];
+		if (oldArt.length > 0) {
+			ctx.waitUntil(
+				Promise.all(oldArt.map((key) => ctx.storage.deleteObject(key)))
+			);
 		}
 		if (drawsArt && row.photoKey) {
 			ctx.waitUntil(
