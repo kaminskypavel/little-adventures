@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import type { Database } from "@little-adventures/db";
 import { relations } from "@little-adventures/db/relations";
 import { waitlist } from "@little-adventures/db/schema/index";
+import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
 import { TRPCError } from "@trpc/server";
 import { drizzle } from "drizzle-orm/pglite";
@@ -35,9 +36,11 @@ describe("waitlist.join", () => {
 		db = await freshDb();
 		// The PGlite db and the Neon db share the query API but not the type.
 		caller = appRouter.createCaller({
+			art: {} as ImageEditing,
 			db: db as unknown as Database,
 			principal: null,
 			storage: {} as Storage,
+			waitUntil: () => undefined,
 		});
 	});
 

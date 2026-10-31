@@ -1,0 +1,225 @@
+import {
+	aiCalls,
+	children as childrenTable,
+	type Drawings,
+} from "@little-adventures/db/schema/index";
+import {
+	MODELS,
+	MUSE_IMAGE_COST_MICRO_USD,
+	SAM_COST_MICRO_USD,
+} from "@little-adventures/image-editing";
+import { faceCutout } from "@little-adventures/image-editing/cutout";
+import {
+	LOOKS,
+	type Look,
+	lookPrompt,
+} from "@little-adventures/image-editing/looks";
+import { and, eq } from "drizzle-orm";
+
+import type { Context } from "./context";
+import { userPrefix } from "./photo-key";
+
+type ArtContext = Pick<Context, "art" | "db" | "storage">;
+
+interface ArtRun {
+	childId: string;
+	ownerId: string;
+	photoKey: string;
+}
+
+const HEX_LENGTH = 32;
+
+/** An opaque, stable id of the grown-up for the model API's abuse checks. */
+async function safetyIdOf(ownerId: string): Promise<string> {
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(ownerId)
+	);
+	return Array.from(new Uint8Array(digest), (byte) =>
+		byte.toString(16).padStart(2, "0")
+	)
+		.join("")
+		.slice(0, HEX_LENGTH);
+}
+
+async function fetchBytes(url: string): Promise<Uint8Array> {
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Photo responded ${response.status}`);
+	}
+	return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * Draws the child's face cutout and the three looks from the stored photo, in
+ * the background. Every write is guarded by `photo_key`, so an older run never
+ * overwrites the art of a newer photo. Without a model key the child stays
+ * `idle` and nothing is called.
+ */
+export async function drawArt(
+	ctx: ArtContext,
+	{ childId, ownerId, photoKey }: ArtRun
+): Promise<void> {
+	const { art, db, storage } = ctx;
+	if (!art.isConfigured) {
+		return;
+	}
+	const current = and(
+		eq(childrenTable.id, childId),
+		eq(childrenTable.photoKey, photoKey)
+	);
+	const folder = `${userPrefix(ownerId)}children/${childId}/`;
+
+	const [started] = await db
+		.update(childrenTable)
+		.set({ artStatus: "working", drawings: {}, faceKey: null })
+		.where(current)
+		.returning({ id: childrenTable.id });
+	if (!started) {
+		return;
+	}
+
+	/** One `ai_calls` row per model call, success or failure. */
+	async function recorded<T>(
+		operation: string,
+		model: string,
+		costMicroUsd: number,
+		call: () => Promise<T>
+	): Promise<T> {
+		const began = Date.now();
+		let result: T | undefined;
+		let failure: unknown;
+		try {
+			result = await call();
+		} catch (error) {
+			failure = error;
+		}
+		const ok = failure === undefined;
+		await db.insert(aiCalls).values({
+			childId,
+			costMicroUsd: ok ? costMicroUsd : 0,
+			error: ok ? null : String(failure),
+			model,
+			ms: Date.now() - began,
+			ok,
+			operation,
+			ownerId,
+		});
+		if (!ok) {
+			throw failure;
+		}
+		return result as T;
+	}
+
+	/** A run that lost its row (photo deleted or replaced) must not leave likeness in the bucket. */
+	async function dropIfPhotoGone(keys: string[]) {
+		const [row] = await db
+			.select({ photoKey: childrenTable.photoKey })
+			.from(childrenTable)
+			.where(eq(childrenTable.id, childId));
+		if (!row?.photoKey) {
+			await Promise.all(keys.map((key) => storage.deleteObject(key)));
+		}
+	}
+
+	async function drawFace(photoUrl: string): Promise<string> {
+		const [found, photo] = await Promise.all([
+			recorded("face.segment", MODELS.segment, SAM_COST_MICRO_USD, () =>
+				art.segment(photoUrl)
+			),
+			fetchBytes(photoUrl),
+		]);
+		if (!found) {
+			throw new Error("No person found in the photo");
+		}
+		const key = `${folder}face.png`;
+		await storage.putObject({
+			body: await faceCutout(photo, found),
+			contentType: "image/png",
+			key,
+		});
+		// The client is waiting for the face: save it as soon as it is ready.
+		const saved = await db
+			.update(childrenTable)
+			.set({ faceKey: key })
+			.where(current)
+			.returning({ id: childrenTable.id });
+		if (saved.length === 0) {
+			await dropIfPhotoGone([key]);
+		}
+		return key;
+	}
+
+	async function drawLook(
+		look: Look,
+		photoUrl: string,
+		safetyId: string
+	): Promise<string> {
+		const png = await recorded(
+			`look.${look}`,
+			MODELS.redraw,
+			MUSE_IMAGE_COST_MICRO_USD,
+			() =>
+				art.redraw({ imageUrl: photoUrl, prompt: lookPrompt(look), safetyId })
+		);
+		const key = `${folder}looks/${look}.png`;
+		await storage.putObject({ body: png, contentType: "image/png", key });
+		return key;
+	}
+
+	try {
+		const photoUrl = await storage.readUrl(photoKey);
+		const safetyId = await safetyIdOf(ownerId);
+		const [face, ...looks] = await Promise.allSettled([
+			drawFace(photoUrl),
+			...LOOKS.map((look) => drawLook(look, photoUrl, safetyId)),
+		]);
+		const drawings: Drawings = {};
+		for (const [index, look] of LOOKS.entries()) {
+			const result = looks[index];
+			if (result?.status === "fulfilled") {
+				drawings[look] = result.value;
+			}
+		}
+		const ready =
+			face?.status === "fulfilled" &&
+			Object.keys(drawings).length === LOOKS.length;
+		const saved = await db
+			.update(childrenTable)
+			.set({ artStatus: ready ? "ready" : "failed", drawings })
+			.where(current)
+			.returning({ id: childrenTable.id });
+		if (saved.length === 0) {
+			await dropIfPhotoGone(Object.values(drawings));
+		}
+	} catch (error) {
+		await db.update(childrenTable).set({ artStatus: "failed" }).where(current);
+		throw error;
+	}
+}
+
+/** Every object key the art of one child holds (face and looks). */
+export const artKeys = (row: typeof childrenTable.$inferSelect): string[] => [
+	...(row.faceKey ? [row.faceKey] : []),
+	...Object.values(row.drawings),
+];
+
+/** A child row plus signed read urls for its face and looks. */
+export async function withArtUrls(
+	storage: Pick<Context["storage"], "readUrl">,
+	row: typeof childrenTable.$inferSelect
+) {
+	const [faceUrl, drawn] = await Promise.all([
+		row.faceKey ? storage.readUrl(row.faceKey) : null,
+		Promise.all(
+			Object.entries(row.drawings).map(
+				async ([look, key]) => [look, await storage.readUrl(key)] as const
+			)
+		),
+	]);
+	return {
+		...row,
+		drawingUrls: Object.fromEntries(drawn) as Drawings,
+		faceUrl,
+	};
+}

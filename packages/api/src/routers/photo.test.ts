@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { Database } from "@little-adventures/db";
+import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
 import { TRPCError } from "@trpc/server";
 
@@ -21,9 +22,11 @@ const storage = {
 
 const callerFor = (userId: string | null) =>
 	appRouter.createCaller({
+		art: {} as ImageEditing,
 		db: {} as Database,
 		principal: userId ? { user: { id: userId } } : null,
 		storage,
+		waitUntil: () => undefined,
 	} satisfies Context);
 
 describe("protectedProcedure", () => {

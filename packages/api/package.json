@@ -12,6 +12,7 @@
   "dependencies": {
     "@little-adventures/auth": "workspace:*",
     "@little-adventures/db": "workspace:*",
+    "@little-adventures/image-editing": "workspace:*",
     "@little-adventures/storage": "workspace:*",
     "@little-adventures/validation": "workspace:*",
     "@trpc/client": "catalog:",

@@ -5,9 +5,13 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import type { Database } from "@little-adventures/db";
 import { relations } from "@little-adventures/db/relations";
+import { aiCalls } from "@little-adventures/db/schema/index";
+import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
 import { drizzle } from "drizzle-orm/pglite";
 
+import { drawArt } from "../art";
+import type { Context } from "../context";
 import { appRouter } from "./index";
 
 const migrationsDir = join(import.meta.dirname, "../../../db/src/migrations");
@@ -32,9 +36,11 @@ describe("child", () => {
 	const callerFor = (userId: string) =>
 		appRouter.createCaller({
 			// The PGlite db and the Neon db share the query API but not the type.
+			art: { isConfigured: false } as ImageEditing,
 			db,
 			principal: { user: { id: userId } },
 			storage: {} as Storage,
+			waitUntil: () => undefined,
 		});
 
 	beforeEach(async () => {
@@ -45,13 +51,18 @@ describe("child", () => {
 		const row = await callerFor("u1").child.save(noah);
 		expect(row).toMatchObject({
 			...noah,
+			artStatus: "idle",
+			drawings: {},
+			faceKey: null,
 			grownUp: false,
 			look: "clay",
 			ownerId: "u1",
 			photoKey: null,
 			puppy: false,
 		});
-		expect(await callerFor("u1").child.mine()).toEqual([row]);
+		expect(await callerFor("u1").child.mine()).toEqual([
+			{ ...row, drawingUrls: {}, faceUrl: null },
+		]);
 	});
 
 	test("save with an id updates only the given fields", async () => {
@@ -72,7 +83,9 @@ describe("child", () => {
 			.child.save({ ...noah, id: theirs.id, name: "Mine now" })
 			.catch((e) => e);
 		expect(error.code).toBe("NOT_FOUND");
-		expect(await callerFor("u2").child.mine()).toEqual([theirs]);
+		expect(await callerFor("u2").child.mine()).toEqual([
+			{ ...theirs, drawingUrls: {}, faceUrl: null },
+		]);
 		expect(await callerFor("u1").child.mine()).toEqual([]);
 	});
 
@@ -110,9 +123,11 @@ describe("photo.delete", () => {
 	} as unknown as Storage;
 	const callerFor = (userId: string) =>
 		appRouter.createCaller({
+			art: { isConfigured: false } as ImageEditing,
 			db,
 			principal: { user: { id: userId } },
 			storage,
+			waitUntil: () => undefined,
 		});
 	const photo = "little-adventures/users/u1/photos/a.jpg";
 
@@ -154,5 +169,196 @@ describe("photo.delete", () => {
 			ok: true,
 		});
 		expect(deleted).toEqual([]);
+	});
+});
+
+// A 1 x 1 png: the smallest real photo the face cutout can read.
+const TINY_PNG =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+describe("child art", () => {
+	let db: Database;
+	let pending: Promise<unknown>[];
+	let put: string[];
+	let deleted: string[];
+	let segmentCalls: number;
+	let failLook: string | null;
+	let configured: boolean;
+
+	const photo = "little-adventures/users/u1/photos/a.jpg";
+	const storage = {
+		deleteObject: (key: string) => {
+			deleted.push(key);
+			return Promise.resolve();
+		},
+		putObject: (input: { key: string }) => {
+			put.push(input.key);
+			return Promise.resolve();
+		},
+		readUrl: (key: string) =>
+			Promise.resolve(
+				key === photo
+					? `data:image/png;base64,${TINY_PNG}`
+					: `https://files.test/${key}`
+			),
+	} as unknown as Storage;
+	const art = {
+		get isConfigured() {
+			return configured;
+		},
+		redraw: ({ prompt }: { prompt: string }) => {
+			if (failLook && prompt.includes(failLook)) {
+				return Promise.reject(new Error("model said no"));
+			}
+			return Promise.resolve(new Uint8Array([1, 2, 3]));
+		},
+		segment: () => {
+			segmentCalls += 1;
+			return Promise.resolve({
+				box: { x1: 0, x2: 1, y1: 0, y2: 1 },
+				mask: new Uint8Array([1]),
+				maskHeight: 1,
+				maskWidth: 1,
+			});
+		},
+	} as unknown as ImageEditing;
+	const callerFor = (userId: string) =>
+		appRouter.createCaller({
+			art,
+			db,
+			principal: { user: { id: userId } },
+			storage,
+			waitUntil: (work) => {
+				pending.push(work);
+			},
+		} satisfies Context);
+	const settle = () => Promise.all(pending);
+	const folder = "little-adventures/users/u1/children/";
+
+	beforeEach(async () => {
+		db = (await freshDb()) as unknown as Database;
+		pending = [];
+		put = [];
+		deleted = [];
+		segmentCalls = 0;
+		failLook = null;
+		configured = true;
+	});
+
+	test("a new photo draws the face and three looks after the response", async () => {
+		const saved = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		expect(saved.artStatus).toBe("working");
+		await settle();
+		const [child] = await callerFor("u1").child.mine();
+		expect(child?.artStatus).toBe("ready");
+		expect(child?.faceUrl).toBe(
+			`https://files.test/${folder}${saved.id}/face.png`
+		);
+		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([
+			"clay",
+			"felt",
+			"wood",
+		]);
+		expect(put).toHaveLength(4);
+		const calls = await db.select().from(aiCalls);
+		expect(calls.map((call) => call.operation).sort()).toEqual([
+			"face.segment",
+			"look.clay",
+			"look.felt",
+			"look.wood",
+		]);
+		expect(calls.every((call) => call.ok && call.ownerId === "u1")).toBe(true);
+	});
+
+	test("saving the same photo again draws nothing", async () => {
+		const saved = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		await callerFor("u1").child.save({
+			...noah,
+			id: saved.id,
+			photoKey: photo,
+		});
+		expect(pending).toHaveLength(1);
+		expect(segmentCalls).toBe(1);
+	});
+
+	test("without a model key the child stays idle and nothing is called", async () => {
+		configured = false;
+		const saved = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		expect(saved.artStatus).toBe("idle");
+		expect(pending).toEqual([]);
+		expect(segmentCalls).toBe(0);
+	});
+
+	test("a failed look is recorded, the rest is kept, and the child is failed", async () => {
+		failLook = "felt";
+		await callerFor("u1").child.save({ ...noah, photoKey: photo });
+		await settle();
+		const [child] = await callerFor("u1").child.mine();
+		expect(child?.artStatus).toBe("failed");
+		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([
+			"clay",
+			"wood",
+		]);
+		expect(child?.faceUrl).not.toBeNull();
+		const calls = await db.select().from(aiCalls);
+		const felt = calls.find((call) => call.operation === "look.felt");
+		expect(felt).toMatchObject({ costMicroUsd: 0, ok: false });
+		expect(felt?.error).toContain("model said no");
+	});
+
+	test("a newer photo's art is never overwritten by an older run", async () => {
+		const first = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		const newer = "little-adventures/users/u1/photos/b.jpg";
+		await callerFor("u1").child.save({
+			...noah,
+			id: first.id,
+			photoKey: newer,
+		});
+		// The older run starts late: its photo key no longer matches.
+		const before = segmentCalls;
+		await drawArt(
+			{ art, db, storage },
+			{ childId: first.id, ownerId: "u1", photoKey: photo }
+		);
+		expect(segmentCalls).toBe(before);
+	});
+
+	test("photo.delete removes the face and looks too and resets the art", async () => {
+		const saved = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		await callerFor("u1").photo.delete({ childId: saved.id });
+		expect(deleted.sort()).toEqual(
+			[
+				photo,
+				`${folder}${saved.id}/face.png`,
+				`${folder}${saved.id}/looks/clay.png`,
+				`${folder}${saved.id}/looks/felt.png`,
+				`${folder}${saved.id}/looks/wood.png`,
+			].sort()
+		);
+		const [child] = await callerFor("u1").child.mine();
+		expect(child).toMatchObject({
+			artStatus: "idle",
+			drawingUrls: {},
+			faceUrl: null,
+			photoKey: null,
+		});
 	});
 });

@@ -7,11 +7,12 @@ import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { artKeys } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey, photoKey } from "../photo-key";
 
 export const photoRouter = router({
-	/** Deletes the stored photo of one of the caller's children and clears its key. */
+	/** Deletes the stored photo, face and looks of one of the caller's children and clears them. */
 	delete: protectedProcedure
 		.input(z.object({ childId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
@@ -24,10 +25,16 @@ export const photoRouter = router({
 			if (!row) {
 				throw new TRPCError({ code: "NOT_FOUND" });
 			}
-			if (row.photoKey && ownsKey(ownerId, row.photoKey)) {
-				await ctx.storage.deleteObject(row.photoKey);
-			}
-			await ctx.db.update(children).set({ photoKey: null }).where(owned);
+			const keys = [...(row.photoKey ? [row.photoKey] : []), ...artKeys(row)];
+			await Promise.all(
+				keys
+					.filter((key) => ownsKey(ownerId, key))
+					.map((key) => ctx.storage.deleteObject(key))
+			);
+			await ctx.db
+				.update(children)
+				.set({ artStatus: "idle", drawings: {}, faceKey: null, photoKey: null })
+				.where(owned);
 			return { ok: true };
 		}),
 
