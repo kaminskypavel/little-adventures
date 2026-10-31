@@ -20,12 +20,8 @@ import type {
 	Progress,
 } from "./types";
 
-/**
- * Dev flags for the mock. isFirstHome: getHome returns empty lists (E4).
- * firstRun: the app starts on Welcome.
- */
-export const devFlags: { firstRun: boolean; isFirstHome: boolean } = {
-	firstRun: false,
+/** Dev flag for the mock. isFirstHome: getHome returns empty lists (E4). */
+export const devFlags: { isFirstHome: boolean } = {
 	isFirstHome: false,
 };
 
@@ -167,15 +163,21 @@ export const saveProfile = async (
 	return merged;
 };
 
-/** True when the grown-up has a child. The dev flag `firstRun` forces false. */
+/** True when the grown-up has a child. */
 export const isSetUp = async (): Promise<boolean> => {
-	if (devFlags.firstRun) {
-		return false;
-	}
 	try {
 		const { id } = await loadChild();
 		return id !== undefined;
 	} catch {
 		return false;
 	}
+};
+
+/** Deletes the stored photo of the current child and returns the refreshed profile. */
+export const deleteChildPhoto = async (): Promise<Profile> => {
+	const { id } = await loadChild();
+	if (id) {
+		await trpc.photo.delete.mutate({ childId: id });
+	}
+	return (await loadChild()).profile;
 };

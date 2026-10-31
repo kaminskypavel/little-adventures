@@ -12,10 +12,9 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import {
-	devFlags,
+	deleteChildPhoto,
 	getAdventures,
 	getProfile,
-	saveProfile,
 } from "@/src/data/adventure-client";
 import type { AdventureSummary, Profile } from "@/src/data/types";
 
@@ -50,12 +49,11 @@ export default function Grownups() {
 	}, []);
 
 	const deletePhoto = async () => {
-		setProfile(await saveProfile({ hasPhoto: false }));
+		setProfile(await deleteChildPhoto());
 	};
 
 	const signOut = async () => {
 		await endSession();
-		devFlags.firstRun = true;
 		router.replace("/welcome");
 	};
 

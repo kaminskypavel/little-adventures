@@ -6,7 +6,7 @@ import { colors } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { devFlags, getProfile } from "@/src/data/adventure-client";
+import { getProfile } from "@/src/data/adventure-client";
 import type { Profile } from "@/src/data/types";
 
 // Round 7 06 at 0.72 scale: star 180 px = 250 pt at top 104 px, title 34 px = 47 pt at 318 px,
@@ -27,7 +27,6 @@ export default function Handover() {
 		return null;
 	}
 	const go = () => {
-		devFlags.firstRun = false;
 		router.replace("/home");
 	};
 
