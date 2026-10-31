@@ -428,3 +428,40 @@ export const mapStone = {
 	shadowBlur: 1.5,
 	shadowOffset: 3,
 } as const;
+
+/**
+ * Story cover (Home idea shelf, Library grid): a picture with a sand plate over it, clay raised.
+ * The shelf cover is fixed width and scrolls sideways; the grid cover fills its column.
+ */
+export const storyCover = {
+	captionFont: 13,
+	captionGap: 2,
+	captionOpacity: 0.75,
+	check: {
+		disc: 40,
+		icon: 24,
+		inset: 12,
+		shadow: "0px 3px 5px rgba(0,0,0,0.4)",
+	},
+	grid: {
+		height: 250,
+		plateBottomPad: 7,
+		plateTopPad: 6,
+		titleFont: 17,
+	},
+	lineHeight: 1.1,
+	pad: 6,
+	pictureRadius: 30,
+	plate: { bottom: 15, inset: 14, padX: 8, radius: 17 },
+	radius: 36,
+	shelf: {
+		gap: 12,
+		height: 276,
+		plateBottomPad: 8,
+		plateTopPad: 7,
+		/** Room under the covers so the scroll view does not clip the clay drop shadow. */
+		shadowRoom: 24,
+		titleFont: 15.5,
+		width: 150,
+	},
+} as const;
