@@ -152,3 +152,14 @@ body {
 		transition-duration: 60ms;
 	}
 }
+
+/* Slide mode: the page never scrolls, one gesture moves one slide.
+   Reduced motion keeps the normal scrolling page. */
+@media (prefers-reduced-motion: no-preference) {
+	html,
+	body {
+		height: 100%;
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
+}

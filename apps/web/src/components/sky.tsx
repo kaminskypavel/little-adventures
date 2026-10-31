@@ -204,96 +204,98 @@ export function Sky() {
 			ref={root}
 			style={{ background: "var(--sky-puffy)" }}
 		>
-			<div
-				className="absolute left-0 will-change-transform"
-				data-sky="cloud-top"
-				style={{
-					filter: dim(0.62),
-					height: topCloud.height,
-					opacity: 0.4,
-					top: "7%",
-					width: topCloud.width,
-				}}
-			>
-				<Image
-					alt=""
-					aria-hidden="true"
-					className="size-full object-contain"
-					height={314}
-					sizes={`${topCloud.width}px`}
-					src="/sky/cloud-1.webp"
-					width={640}
-				/>
-			</div>
-
-			{sideClouds.map((c) => (
+			<div className="absolute inset-0" data-sky-clouds>
 				<div
-					className="absolute will-change-transform"
-					data-sky={c.key}
-					key={c.key}
+					className="absolute left-0 will-change-transform"
+					data-sky="cloud-top"
 					style={{
-						...c.place,
-						filter: dim(c.brightness),
-						height: c.height,
-						opacity: c.opacity,
-						top: c.top,
-						width: c.width,
+						filter: dim(0.62),
+						height: topCloud.height,
+						opacity: 0.4,
+						top: "7%",
+						width: topCloud.width,
 					}}
 				>
 					<Image
 						alt=""
 						aria-hidden="true"
 						className="size-full object-contain"
-						height={c.imageHeight}
-						sizes={`${c.width}px`}
-						src={c.image}
+						height={314}
+						sizes={`${topCloud.width}px`}
+						src="/sky/cloud-1.webp"
 						width={640}
 					/>
 				</div>
-			))}
 
-			{bands.map((b) => (
-				<div
-					className="absolute left-0 w-full"
-					key={b.key}
-					style={{
-						bottom: b.bottom,
-						height: b.height,
-						opacity: b.opacity,
-						...(b.fade
-							? { maskImage: BAND_FADE_MASK, WebkitMaskImage: BAND_FADE_MASK }
-							: null),
-					}}
-				>
+				{sideClouds.map((c) => (
 					<div
-						className="will-change-transform"
-						data-sky={b.key}
+						className="absolute will-change-transform"
+						data-sky={c.key}
+						key={c.key}
 						style={{
+							...c.place,
+							filter: dim(c.brightness),
+							height: c.height,
+							opacity: c.opacity,
+							top: c.top,
+							width: c.width,
+						}}
+					>
+						<Image
+							alt=""
+							aria-hidden="true"
+							className="size-full object-contain"
+							height={c.imageHeight}
+							sizes={`${c.width}px`}
+							src={c.image}
+							width={640}
+						/>
+					</div>
+				))}
+
+				{bands.map((b) => (
+					<div
+						className="absolute left-0 w-full"
+						key={b.key}
+						style={{
+							bottom: b.bottom,
 							height: b.height,
-							width: b.tileWidth * b.tileCount,
+							opacity: b.opacity,
+							...(b.fade
+								? { maskImage: BAND_FADE_MASK, WebkitMaskImage: BAND_FADE_MASK }
+								: null),
 						}}
 					>
 						<div
-							className="flex size-full"
-							style={{ filter: dim(b.brightness, 0.85) }}
+							className="will-change-transform"
+							data-sky={b.key}
+							style={{
+								height: b.height,
+								width: b.tileWidth * b.tileCount,
+							}}
 						>
-							{b.tileIds.map((id) => (
-								<Image
-									alt=""
-									aria-hidden="true"
-									className="shrink-0"
-									height={230}
-									key={id}
-									sizes={`${b.tileWidth}px`}
-									src="/sky/cloud-band.webp"
-									style={{ height: b.height, width: b.tileWidth }}
-									width={1298}
-								/>
-							))}
+							<div
+								className="flex size-full"
+								style={{ filter: dim(b.brightness, 0.85) }}
+							>
+								{b.tileIds.map((id) => (
+									<Image
+										alt=""
+										aria-hidden="true"
+										className="shrink-0"
+										height={230}
+										key={id}
+										sizes={`${b.tileWidth}px`}
+										src="/sky/cloud-band.webp"
+										style={{ height: b.height, width: b.tileWidth }}
+										width={1298}
+									/>
+								))}
+							</div>
 						</div>
 					</div>
-				</div>
-			))}
+				))}
+			</div>
 
 			{stars.map((s) => (
 				<div
