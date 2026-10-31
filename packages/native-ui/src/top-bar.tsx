@@ -3,6 +3,7 @@ import { Character } from "./character";
 import { ClayText } from "./clay-text";
 import { IconButton } from "./icon-button";
 import type { IconName } from "./icons";
+import { StarTake, type StarTakeName } from "./star-take";
 import { colors, radii } from "./tokens";
 
 const AVATAR = 61;
@@ -11,11 +12,15 @@ const AVATAR_STAR = 51;
 /**
  * Top bar row for Home, the map and Grown-ups: optional star avatar, a title,
  * and one icon button at the right (lock to Grown-ups, or close).
+ * With `take` the avatar star is live (one gesture, then idle); a new `takeRun` plays it again.
+ * Without it the star is still.
  * Place it in `Screen`'s `topBar` slot.
  */
 export function TopBar({
 	action,
 	avatar = false,
+	take,
+	takeRun = 0,
 	title,
 }: {
 	action?: {
@@ -24,13 +29,21 @@ export function TopBar({
 		onPress: () => void;
 	};
 	avatar?: boolean;
+	/** Makes the avatar star live: it plays this gesture when it appears, then rests on idle. */
+	take?: StarTakeName;
+	/** Change it to play `take` again. */
+	takeRun?: number;
 	title: string;
 }) {
 	return (
 		<>
 			{avatar ? (
 				<View style={styles.avatar}>
-					<Character kind="star" size={AVATAR_STAR} />
+					{take ? (
+						<StarTake key={takeRun} size={AVATAR_STAR} take={take} />
+					) : (
+						<Character kind="star" size={AVATAR_STAR} />
+					)}
 				</View>
 			) : null}
 			<ClayText
