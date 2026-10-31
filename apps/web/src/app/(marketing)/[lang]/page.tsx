@@ -11,11 +11,16 @@ export function generateStaticParams() {
 	return [{ lang: "es" }, { lang: "fr" }];
 }
 
+// Written out rather than the generated PageProps, so a fresh checkout type-checks before a build.
+interface Props {
+	params: Promise<{ lang: string }>;
+}
+
 const other = (lang: string): lang is Exclude<Locale, "en"> =>
 	lang === "es" || lang === "fr";
 
 export async function generateMetadata(
-	{ params }: PageProps<"/[lang]">,
+	{ params }: Props,
 	parent: ResolvingMetadata
 ): Promise<Metadata> {
 	const { lang } = await params;
@@ -48,7 +53,7 @@ export async function generateMetadata(
 	};
 }
 
-export default async function LanguagePage({ params }: PageProps<"/[lang]">) {
+export default async function LanguagePage({ params }: Props) {
 	const { lang } = await params;
 	if (!other(lang)) {
 		notFound();
