@@ -1,6 +1,6 @@
 import { photoUploadRequestSchema } from "@little-adventures/validation/photo";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
-import { authedFetch } from "@/src/auth/auth-client";
+import { trpc } from "./trpc";
 
 const LONG_EDGE = 1600;
 const QUALITY = 0.8;
@@ -30,21 +30,7 @@ export async function uploadChildPhoto(uri: string): Promise<string> {
 		contentType: CONTENT_TYPE,
 		size: bytes.size,
 	});
-	const res = await authedFetch("/api/photos/upload-url", {
-		body: JSON.stringify(request),
-		headers: { "content-type": "application/json" },
-		method: "POST",
-	});
-	if (!res.ok) {
-		throw new Error(`upload-url ${res.status}`);
-	}
-	const { key, uploadUrl } = (await res.json()) as {
-		key?: string;
-		uploadUrl?: string;
-	};
-	if (!(key && uploadUrl)) {
-		throw new Error("upload-url: no key or address");
-	}
+	const { key, uploadUrl } = await trpc.photo.uploadUrl.mutate(request);
 
 	const put = await fetch(uploadUrl, {
 		body: bytes,
