@@ -43,6 +43,11 @@ jobs:
       - name: Unit tests
         run: bun run test
         working-directory: apps/web
+      - name: Package tests
+        run: |
+          for pkg in llm decision image-editing transcribe api; do
+            (cd "packages/$pkg" && bun test) || exit 1
+          done
 
   e2e:
     needs: checks
