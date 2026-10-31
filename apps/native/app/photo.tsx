@@ -106,7 +106,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 		if (!done) {
 			return;
 		}
-		const timer = setTimeout(() => router.push("/look"), ADVANCE_MS);
+		const timer = setTimeout(() => router.push("/coming"), ADVANCE_MS);
 		return () => clearTimeout(timer);
 	}, [done, router]);
 
