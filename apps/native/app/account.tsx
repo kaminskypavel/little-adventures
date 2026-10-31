@@ -72,6 +72,8 @@ export default function Account() {
 	const query = new URLSearchParams(
 		Object.entries(params).map(([key, value]) => [key, String(value)])
 	).toString();
+	// While that sign-in finishes, only the sky shows, so the form never flashes before Home.
+	const [returning, setReturning] = useState(() => query.includes("verifier"));
 	useEffect(() => {
 		if (!query.includes("verifier") || redeemed.current === query) {
 			return;
@@ -81,6 +83,7 @@ export default function Account() {
 			if (ok) {
 				goNext(router);
 			} else {
+				setReturning(false);
 				setNote(GOOGLE_FAILED);
 			}
 		});
@@ -142,6 +145,10 @@ export default function Account() {
 		setNote(null);
 		setStep("email");
 	};
+
+	if (returning) {
+		return null;
+	}
 
 	if (step === "email") {
 		return (
