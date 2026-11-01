@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
-import { faceCutout, faceSquare, objectCutout } from "./cutout";
+import { faceCutout, faceSquare, fillHoles, objectCutout } from "./cutout";
 import { type Candidate, createImageEditing, pickPerson } from "./index";
 import { eventData, splitEvents } from "./sse";
 
@@ -76,6 +76,20 @@ describe("faceCutout", () => {
 			data[(y * info.width + x) * info.channels + 3];
 		expect(alphaAt(100, 256)).toBe(255);
 		expect(alphaAt(400, 256)).toBe(0);
+	});
+});
+
+describe("fillHoles", () => {
+	test("fills a hole inside the shape and keeps the outside clear", () => {
+		// 5x5: a ring of 255 with a clear center, clear outside the ring.
+		const a = new Uint8Array(25);
+		for (const i of [6, 7, 8, 11, 13, 16, 17, 18]) {
+			a[i] = 255;
+		}
+		const filled = fillHoles(a, 5, 5);
+		expect(filled[12]).toBe(255);
+		expect(filled[0]).toBe(0);
+		expect(filled[24]).toBe(0);
 	});
 });
 

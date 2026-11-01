@@ -44,8 +44,60 @@ export function faceSquare(
 	return { left, side, top };
 }
 
+/**
+ * Makes every clear pixel that the box edge cannot reach solid: SAM can leave
+ * holes inside one object (a cat on a roof), and a cut-out must not.
+ */
+export function fillHoles(alpha: Uint8Array, width: number, height: number) {
+	const outside = new Uint8Array(width * height);
+	const stack: number[] = [];
+	const visit = (x: number, y: number) => {
+		const i = y * width + x;
+		if (alpha[i] === 0 && outside[i] === 0) {
+			outside[i] = 1;
+			stack.push(i);
+		}
+	};
+	for (let x = 0; x < width; x += 1) {
+		visit(x, 0);
+		visit(x, height - 1);
+	}
+	for (let y = 0; y < height; y += 1) {
+		visit(0, y);
+		visit(width - 1, y);
+	}
+	while (stack.length > 0) {
+		const i = stack.pop() as number;
+		const x = i % width;
+		const y = (i - x) / width;
+		if (x > 0) {
+			visit(x - 1, y);
+		}
+		if (x < width - 1) {
+			visit(x + 1, y);
+		}
+		if (y > 0) {
+			visit(x, y - 1);
+		}
+		if (y < height - 1) {
+			visit(x, y + 1);
+		}
+	}
+	const filled = new Uint8Array(alpha);
+	for (let i = 0; i < filled.length; i += 1) {
+		if (outside[i] === 0) {
+			filled[i] = 255;
+		}
+	}
+	return filled;
+}
+
 /** The image with everything outside the mask made transparent, plus the clamped box. */
-async function maskOut(image: Uint8Array, found: Found) {
+async function maskOut(
+	image: Uint8Array,
+	found: Found,
+	options: { fill?: boolean } = {}
+) {
 	const { box, mask, maskHeight, maskWidth } = found;
 	if (mask.length !== maskWidth * maskHeight) {
 		throw new Error(
@@ -72,7 +124,7 @@ async function maskOut(image: Uint8Array, found: Found) {
 
 	// 0/1 to 0/255 so a nearest resize keeps a hard edge.
 	const alphaSource = Buffer.from(mask.map((v) => (v ? 255 : 0)));
-	const alpha =
+	const stretched =
 		boxWidth === maskWidth && boxHeight === maskHeight
 			? alphaSource
 			: await sharp(alphaSource, {
@@ -82,6 +134,9 @@ async function maskOut(image: Uint8Array, found: Found) {
 					.extractChannel(0)
 					.raw()
 					.toBuffer();
+	const alpha = options.fill
+		? fillHoles(new Uint8Array(stretched), boxWidth, boxHeight)
+		: stretched;
 
 	for (let i = 3; i < data.length; i += 4) {
 		data[i] = 0;
@@ -116,14 +171,17 @@ export async function faceCutout(
 const OBJECT_MARGIN = 0.04;
 
 /**
- * The masked object on a transparent background, cropped to its box with a
- * small margin, at its own size: a picture with no background.
+ * The masked object on a transparent background, holes inside it filled,
+ * cropped to its box with a small margin, at its own size: a picture with no
+ * background.
  */
 export async function objectCutout(
 	image: Uint8Array,
 	found: Found
 ): Promise<Uint8Array> {
-	const { box, data, height, width } = await maskOut(image, found);
+	const { box, data, height, width } = await maskOut(image, found, {
+		fill: true,
+	});
 	const pad = Math.round(
 		Math.max(box.x2 - box.x1, box.y2 - box.y1) * OBJECT_MARGIN
 	);
