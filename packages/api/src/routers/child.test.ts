@@ -185,7 +185,6 @@ describe("child art", () => {
 	let pending: Promise<unknown>[];
 	let put: string[];
 	let deleted: string[];
-	// Every key in the bucket: what was put and not yet deleted.
 	let stored: Set<string>;
 	let segmentCalls: number;
 	let failLook: string | null;
@@ -409,14 +408,14 @@ describe("child art", () => {
 		);
 	});
 
-	test("a new photo removes every object in the old photo's art folder, engine drawings too", async () => {
+	test("a new photo removes every object in the old photo's art folder", async () => {
 		const first = await callerFor("u1").child.save({
 			...noah,
 			photoKey: photo,
 		});
 		await settle();
 		const older = `${folder}${first.id}/art/a/`;
-		stored.add(`${older}cast/extra.png`);
+		stored.add(`${older}extra/file.png`);
 		await callerFor("u1").child.save({
 			...noah,
 			id: first.id,
@@ -427,13 +426,13 @@ describe("child art", () => {
 		expect(stored.has(`${folder}${first.id}/art/b/face.png`)).toBe(true);
 	});
 
-	test("photo.delete also removes an engine drawing in the photo's art folder", async () => {
+	test("photo.delete removes everything under the photo's art folder", async () => {
 		const saved = await callerFor("u1").child.save({
 			...noah,
 			photoKey: photo,
 		});
 		await settle();
-		const extra = `${folder}${saved.id}/art/a/cast/extra.png`;
+		const extra = `${folder}${saved.id}/art/a/extra/file.png`;
 		stored.add(extra);
 		await callerFor("u1").photo.delete({ childId: saved.id });
 		expect(stored.has(extra)).toBe(false);

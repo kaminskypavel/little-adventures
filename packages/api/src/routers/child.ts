@@ -80,7 +80,6 @@ export const childRouter = router({
 				Promise.all(oldArt.map((key) => ctx.storage.deleteObject(key)))
 			);
 		}
-		// Everything else in that folder (the private engine's drawings) goes with it.
 		if (newPhoto && before?.photoKey) {
 			ctx.waitUntil(
 				ctx.storage.deletePrefix(artFolder(ownerId, row.id, before.photoKey))
