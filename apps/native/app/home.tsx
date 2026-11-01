@@ -14,6 +14,8 @@ import {
 	storyCover,
 } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -58,9 +60,7 @@ const FADE_ON_SCROLL = 24;
 const IS_WEB = Platform.OS === "web";
 
 // A fixed mask over the scroll view: transparent at `gone`, solid at `gone + FADE_BAND`; `on` (0 to 1)
-// is how far the fade has turned on.
-// ponytail: web only. Native needs @react-native-masked-view/masked-view (a new dependency, so not
-// added); until then native keeps today's hard clip under the bar.
+// is how far the fade has turned on. Web uses a CSS mask.
 function fadeMask(gone: number, on: number): ViewStyle | undefined {
 	if (on <= 0) {
 		return undefined;
@@ -69,6 +69,19 @@ function fadeMask(gone: number, on: number): ViewStyle | undefined {
 	return {
 		maskImage: `linear-gradient(to bottom, ${top} ${gone}px, #000 ${gone + FADE_BAND}px)`,
 	} as ViewStyle;
+}
+
+// The same mask for iOS and Android (MaskedView reads only its alpha): `top` alpha down to the bar's
+// bottom edge, a FADE_BAND ramp to solid, then solid. Fixed-height pieces, so no layout pass.
+function NativeFadeMask({ gone, on }: { gone: number; on: number }) {
+	const top = `rgba(0,0,0,${(1 - on).toFixed(3)})` as const;
+	return (
+		<View style={styles.maskFill}>
+			<View style={{ backgroundColor: top, height: gone }} />
+			<LinearGradient colors={[top, "#000"]} style={{ height: FADE_BAND }} />
+			<View style={styles.maskSolid} />
+		</View>
+	);
 }
 
 interface HomeData {
@@ -158,97 +171,113 @@ export default function Home() {
 	const dock = dockFor(data, () => router.push("/library"));
 	const latest = data?.latest ?? null;
 
-	return (
-		<Screen dock={dock}>
-			<ScrollView
-				contentContainerStyle={[
-					styles.content,
-					{ paddingTop: IS_WEB ? barBottom + spacing.lg : spacing.lg },
-				]}
-				onScroll={(e) =>
-					setScrolled(
-						Math.round(Math.min(FADE_ON_SCROLL, e.nativeEvent.contentOffset.y))
-					)
-				}
-				scrollEventThrottle={16}
-				showsVerticalScrollIndicator={false}
-				style={[
-					styles.scroll,
-					IS_WEB
-						? fadeMask(barBottom, scrolled / FADE_ON_SCROLL)
-						: { marginTop: barBottom },
-				]}
+	const scroll = (
+		<ScrollView
+			contentContainerStyle={[
+				styles.content,
+				{ paddingTop: barBottom + spacing.lg },
+			]}
+			onScroll={(e) =>
+				setScrolled(
+					Math.round(Math.min(FADE_ON_SCROLL, e.nativeEvent.contentOffset.y))
+				)
+			}
+			scrollEventThrottle={16}
+			showsVerticalScrollIndicator={false}
+			style={[
+				styles.scroll,
+				IS_WEB
+					? fadeMask(barBottom, scrolled / FADE_ON_SCROLL)
+					: { marginTop: barBottom },
+			]}
+		>
+			<ClayText
+				accessibilityRole="header"
+				align="center"
+				color={colors.cream}
+				numberOfLines={TITLE_LINES}
+				style={styles.title}
+				variant="headline"
 			>
+				{data ? `What shall we explore, ${data.name}?` : ""}
+			</ClayText>
+			<View style={{ marginTop: HERO_GAP }}>
+				<Pulse delay={HERO_PULSE_DELAY} play={run}>
+					{micOff ? (
+						<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
+					) : (
+						<HeroCard
+							height={HERO_HEIGHT}
+							label={"Ask\nyour own"}
+							onPress={() => router.push("/listening")}
+						/>
+					)}
+				</Pulse>
+			</View>
+			{micOff ? (
 				<ClayText
-					accessibilityRole="header"
 					align="center"
 					color={colors.cream}
-					numberOfLines={TITLE_LINES}
-					style={styles.title}
-					variant="headline"
+					style={styles.micMsg}
+					variant="label"
 				>
-					{data ? `What shall we explore, ${data.name}?` : ""}
+					Ask a grown-up to turn it on.
 				</ClayText>
-				<View style={{ marginTop: HERO_GAP }}>
-					<Pulse delay={HERO_PULSE_DELAY} play={run}>
-						{micOff ? (
-							<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
-						) : (
-							<HeroCard
-								height={HERO_HEIGHT}
-								label={"Ask\nyour own"}
-								onPress={() => router.push("/listening")}
-							/>
-						)}
-					</Pulse>
-				</View>
-				{micOff ? (
-					<ClayText
-						align="center"
-						color={colors.cream}
-						style={styles.micMsg}
-						variant="label"
-					>
-						Ask a grown-up to turn it on.
-					</ClayText>
-				) : null}
-				{latest ? (
-					<>
-						<ClayText color={colors.cream} style={styles.label} variant="label">
-							Keep exploring
-						</ClayText>
-						<RowCard
-							onPress={() => router.push(`/map?id=${latest.id}`)}
-							picture={latest.picture}
-							style={styles.latest}
-							subtitle={
-								latest.finished
-									? "Finished"
-									: `${latest.partsDone} of ${latest.partsTotal} places`
-							}
-							title={latest.title}
-						/>
-					</>
-				) : null}
-				{micOff && !latest ? null : (
+			) : null}
+			{latest ? (
+				<>
 					<ClayText color={colors.cream} style={styles.label} variant="label">
-						Or try an idea
+						Keep exploring
 					</ClayText>
-				)}
-				<StoryShelf style={styles.shelf}>
-					{ideas
-						? ideas.map((idea) => (
-								<StoryCover
-									key={idea.question}
-									onPress={() => ask(idea.question)}
-									picture={idea.picture}
-									size="shelf"
-									title={idea.question}
-								/>
-							))
-						: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
-				</StoryShelf>
-			</ScrollView>
+					<RowCard
+						onPress={() => router.push(`/map?id=${latest.id}`)}
+						picture={latest.picture}
+						style={styles.latest}
+						subtitle={
+							latest.finished
+								? "Finished"
+								: `${latest.partsDone} of ${latest.partsTotal} places`
+						}
+						title={latest.title}
+					/>
+				</>
+			) : null}
+			{micOff && !latest ? null : (
+				<ClayText color={colors.cream} style={styles.label} variant="label">
+					Or try an idea
+				</ClayText>
+			)}
+			<StoryShelf style={styles.shelf}>
+				{ideas
+					? ideas.map((idea) => (
+							<StoryCover
+								key={idea.question}
+								onPress={() => ask(idea.question)}
+								picture={idea.picture}
+								size="shelf"
+								title={idea.question}
+							/>
+						))
+					: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
+			</StoryShelf>
+		</ScrollView>
+	);
+
+	return (
+		<Screen dock={dock}>
+			{IS_WEB ? (
+				scroll
+			) : (
+				<MaskedView
+					androidRenderingMode="software"
+					maskElement={
+						<NativeFadeMask gone={barBottom} on={scrolled / FADE_ON_SCROLL} />
+					}
+					style={styles.scroll}
+				>
+					{scroll}
+				</MaskedView>
+			)}
 			{/* No bar behind them: the avatar and lock float on the sky, over the scroll area. */}
 			<View
 				pointerEvents="box-none"
@@ -290,8 +319,11 @@ const styles = StyleSheet.create({
 		height: layout.secondaryHeight,
 		opacity: SKELETON_FADE,
 	},
+	fill: { flex: 1 },
 	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
 	latest: { marginTop: SHELF_GAP },
+	maskFill: { backgroundColor: "transparent", flex: 1 },
+	maskSolid: { backgroundColor: "#000", flex: 1 },
 	micMsg: {
 		fontSize: MIC_MSG_FONT,
 		lineHeight: MIC_MSG_LINE,
