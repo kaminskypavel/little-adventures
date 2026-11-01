@@ -10,6 +10,7 @@ import {
 	radii,
 	spacing,
 } from "@little-adventures/native-ui/tokens";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
@@ -17,8 +18,8 @@ import {
 	useSafeAreaFrame,
 	useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { setLive, setSteps } from "@/src/data/adventure-client";
 import type { EngineMe } from "@/src/data/engine-client";
+import { setLiveOptions, setStepsOptions } from "@/src/data/engine-queries";
 import { AdminOnly } from "./admin-only";
 import { useAdminPanel } from "./admin-panel-store";
 import { useMe } from "./use-me";
@@ -157,31 +158,22 @@ function Overlay() {
 
 function Sheet({ onClose }: { onClose: () => void }) {
 	const me = useMe();
+	const client = useQueryClient();
+	const live = useMutation(setLiveOptions(client));
+	const steps = useMutation(setStepsOptions(client));
 	const { height } = useSafeAreaFrame();
-	const [values, setValues] = useState<Values | null>(null);
-	const [saving, setSaving] = useState(false);
 	const [failed, setFailed] = useState<Key | null>(null);
-	const current = values ?? (me ? fromMe(me) : null);
+	const current = me ? fromMe(me) : null;
+	const saving = live.isPending || steps.isPending;
 
-	// Optimistic: show the new value at once, then what the engine says; roll back on error.
-	const toggle = async (key: Key, next: boolean) => {
-		if (!current) {
-			return;
-		}
-		setSaving(true);
+	// The cache is updated at once and rolled back on error (see engine-queries.ts).
+	const toggle = (key: Key, next: boolean) => {
 		setFailed(null);
-		setValues({ ...current, [key]: next });
-		try {
-			const saved =
-				key === "live"
-					? { live: (await setLive(next)).live }
-					: (await setSteps({ [key]: next })).steps;
-			setValues((v) => (v ? { ...v, ...saved } : v));
-		} catch {
-			setValues((v) => (v ? { ...v, [key]: !next } : v));
-			setFailed(key);
-		} finally {
-			setSaving(false);
+		const onError = () => setFailed(key);
+		if (key === "live") {
+			live.mutate(next, { onError });
+		} else {
+			steps.mutate({ [key]: next }, { onError });
 		}
 	};
 

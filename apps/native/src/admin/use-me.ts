@@ -1,18 +1,8 @@
-import { useEffect, useState } from "react";
-import { getMe } from "@/src/data/adventure-client";
+import { useQuery } from "@tanstack/react-query";
 import type { EngineMe } from "@/src/data/engine-client";
+import { meOptions } from "@/src/data/engine-queries";
 
-/** The engine's view of this account, read on mount. Null while loading, in sample mode or on error. */
+/** The engine's view of this account. Null while loading, in sample mode or on error. */
 export function useMe(): EngineMe | null {
-	const [me, setMe] = useState<EngineMe | null>(null);
-	useEffect(() => {
-		let live = true;
-		getMe()
-			.then((m) => live && setMe(m))
-			.catch(() => live && setMe(null));
-		return () => {
-			live = false;
-		};
-	}, []);
-	return me;
+	return useQuery(meOptions()).data ?? null;
 }
