@@ -5,8 +5,8 @@ import {
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
-import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
 	useSpokenHydrated,
@@ -32,12 +32,16 @@ export default function Verify() {
 	const short = useSpokenQuestion((spoken) => spoken.short);
 	const hydrated = useSpokenHydrated();
 
-	useEffect(() => {
-		if (hydrated && !short) {
-			// Nothing was asked yet (or it was already started): ask again.
-			router.replace("/listening");
-		}
-	}, [hydrated, short, router]);
+	// Only while this screen is on top: it stays mounted under the style and making screens,
+	// and the question is cleared once the adventure starts.
+	useFocusEffect(
+		useCallback(() => {
+			if (hydrated && !short) {
+				// Nothing was asked yet (or it was already started): ask again.
+				router.replace("/listening");
+			}
+		}, [hydrated, short, router])
+	);
 
 	return (
 		<View style={styles.root}>
