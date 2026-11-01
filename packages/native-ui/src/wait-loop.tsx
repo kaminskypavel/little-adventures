@@ -2,7 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, { cubicBezier } from "react-native-reanimated";
 import { useCalm } from "./motion-provider";
 import { motion } from "./tokens";
 
@@ -17,7 +17,8 @@ const shade = {
 	locations: [0, 0.28, 0.6, 1],
 } as const;
 const AWAY_MS = 400;
-const AWAY_EASE = `cubic-bezier(${motion.easeOut.join(",")})`;
+// Reanimated takes a cubicBezier(); the CSS string works on the web only.
+const AWAY_EASE = cubicBezier(...motion.easeOut);
 // The loop plays 2.5 times faster while the last stretch of the bar fills.
 const FAST_RATE = 2.5;
 const READY_POLL_MS = 50;
