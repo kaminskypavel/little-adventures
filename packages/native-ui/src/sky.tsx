@@ -14,10 +14,13 @@ const pt = (px: number) => px / SCALE;
 // Round 7 phone screen width in its own px; horizontal travel scales with the real width.
 const DRAW_WIDTH = layout.baseWidth * SCALE;
 
-const bandSprite = require("../assets/sky/cloud-band.webp");
-const cloudTop = require("../assets/sky/cloud-1.webp");
-const cloudRight = require("../assets/sky/cloud-2.webp");
-const cloudLeft = require("../assets/sky/cloud-4.webp");
+// Round 7 dims the sprites with CSS `brightness()` and `saturate()`. iOS draws `brightness` as a
+// box over the whole view and has no `saturate`, so the dimming is baked into the files instead.
+const bandFrontSprite = require("../assets/sky/cloud-band-front.webp"); // brightness .42, saturate .85
+const bandBackSprite = require("../assets/sky/cloud-band-back.webp"); // brightness .38, saturate .85
+const cloudTop = require("../assets/sky/cloud-1-dim.webp"); // brightness .62
+const cloudRight = require("../assets/sky/cloud-2-dim.webp");
+const cloudLeft = require("../assets/sky/cloud-4-dim.webp");
 
 type Easing = "linear" | "ease-in-out";
 interface Offset {
@@ -70,45 +73,39 @@ function driftStyle(d: Drift, calm: boolean) {
 
 // ---- Puffy clouds (round 7 `.sk .cl1 .cl2 .p .pr .pl .pt`) ----
 
-const BAND_SATURATE = 0.85; // .cl1 .cl2 saturate(.85)
-const dim = (brightness: number, saturate = 1) =>
-	`brightness(${brightness}) saturate(${saturate})`;
-
 const BAND_TILES = 3; // round 7 band is 1332 px wide = 2.3 tiles; 3 covers it and any phone width
 
 interface BandLayer {
 	bottom: number;
-	brightness: number;
 	delay: number;
 	duration: number;
 	height: number;
 	opacity: number;
+	sprite: number;
 	tileWidth: number;
 }
 
-// Round 7 dims sprites with CSS filter brightness/saturate; RN's `filter` style does the same on iOS, Android and web.
 const bandFront: BandLayer = {
 	bottom: pt(-6), // .cl1 bottom
-	brightness: 0.42,
 	delay: -18, // .cl1 --d
 	duration: 70, // .cl1 --t
 	height: pt(104),
-	opacity: 0.85, // .cl1 opacity .85, brightness .42
+	opacity: 0.85, // .cl1 opacity .85
+	sprite: bandFrontSprite,
 	tileWidth: pt(587),
 };
 const bandBack: BandLayer = {
 	bottom: pt(42), // .cl2 bottom
-	brightness: 0.38,
 	delay: -60, // .cl2 --d
 	duration: 112, // .cl2 --t
 	height: pt(90),
-	opacity: 0.45, // .cl2 opacity .45, brightness .38
+	opacity: 0.45, // .cl2 opacity .45
+	sprite: bandBackSprite,
 	tileWidth: pt(509),
 };
 
 interface Puff {
 	alternate: boolean;
-	brightness: number;
 	delay: number;
 	duration: number;
 	dx: number; // horizontal travel as a fraction of the round 7 screen width
@@ -124,7 +121,6 @@ interface Puff {
 
 const puffRight: Puff = {
 	alternate: true,
-	brightness: 0.62,
 	delay: -9,
 	duration: 34,
 	dx: -150 / DRAW_WIDTH,
@@ -132,14 +128,13 @@ const puffRight: Puff = {
 	height: pt(72),
 	horizontal: { right: pt(-34) },
 	image: cloudRight,
-	opacity: 0.55, // .p opacity .55, brightness .62
+	opacity: 0.55, // .p opacity .55
 	startX: 0,
 	top: "36%",
 	width: pt(120),
 };
 const puffLeft: Puff = {
 	alternate: true,
-	brightness: 0.62,
 	delay: -31,
 	duration: 41,
 	dx: -140 / DRAW_WIDTH,
@@ -147,14 +142,13 @@ const puffLeft: Puff = {
 	height: pt(86),
 	horizontal: { left: pt(-30) },
 	image: cloudLeft,
-	opacity: 0.38, // .pl opacity .38, brightness .62
+	opacity: 0.38, // .pl opacity .38
 	startX: 0,
 	top: "20%",
 	width: pt(104),
 };
 const puffTop: Puff = {
 	alternate: false,
-	brightness: 0.62,
 	delay: -40,
 	duration: 95,
 	dx: 460 / DRAW_WIDTH, // ptop: -130 px to 330 px
@@ -162,7 +156,7 @@ const puffTop: Puff = {
 	height: pt(62),
 	horizontal: { left: 0 },
 	image: cloudTop,
-	opacity: 0.4, // .pt opacity .4, brightness .62
+	opacity: 0.4, // .pt opacity .4
 	startX: -130 / DRAW_WIDTH,
 	top: "7%",
 	width: pt(132),
@@ -185,7 +179,6 @@ function Band({
 				styles.band,
 				{
 					bottom: layer.bottom,
-					filter: dim(layer.brightness, BAND_SATURATE),
 					height: layer.height,
 					opacity: layer.opacity,
 					width: layer.tileWidth * BAND_TILES,
@@ -197,7 +190,7 @@ function Band({
 				<Image
 					contentFit="fill"
 					key={i}
-					source={bandSprite}
+					source={layer.sprite}
 					style={{ height: layer.height, width: layer.tileWidth }}
 				/>
 			))}
@@ -310,7 +303,6 @@ function PuffCloud({
 				styles.abs,
 				puff.horizontal,
 				{
-					filter: dim(puff.brightness),
 					height: puff.height,
 					opacity: puff.opacity,
 					top: puff.top,
