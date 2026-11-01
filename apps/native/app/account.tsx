@@ -25,7 +25,7 @@ import {
 	signInWithGoogle,
 	verifyCode,
 } from "@/src/auth/auth-client";
-import { isSetUp } from "@/src/data/adventure-client";
+import { startRoute } from "@/src/data/adventure-client";
 
 type Step = "choose" | "email" | "code";
 
@@ -45,7 +45,7 @@ type Router = ReturnType<typeof useRouter>;
 
 /** Signed in: no child yet goes to the grown-up welcome, an existing one goes Home. */
 async function goNext(router: Router) {
-	router.replace((await isSetUp()) ? "/home" : "/hello");
+	router.replace(await startRoute());
 }
 
 export default function Account() {

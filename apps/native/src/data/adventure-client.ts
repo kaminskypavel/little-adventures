@@ -330,3 +330,20 @@ export const isSetUp = async (): Promise<boolean> => {
 		return false;
 	}
 };
+
+/** The app server refuses every signed-in call of a grown-up outside the private beta. */
+const isOutsideBeta = (error: unknown) =>
+	(error as { data?: { code?: string } } | null)?.data?.code === "FORBIDDEN";
+
+/**
+ * Where a signed-in grown-up starts: the private beta screen when they are not in it, else Home
+ * (a child is set up) or the first welcome.
+ */
+export const startRoute = async (): Promise<"/beta" | "/hello" | "/home"> => {
+	try {
+		const { id } = await loadChild();
+		return id === undefined ? "/hello" : "/home";
+	} catch (error) {
+		return isOutsideBeta(error) ? "/beta" : "/hello";
+	}
+};

@@ -5,9 +5,10 @@ import { Character } from "./character";
 import { ClayText } from "./clay-text";
 import { IconButton } from "./icon-button";
 import type { IconName } from "./icons";
+import { Skeleton } from "./skeleton";
 import { StarTake, type StarTakeName } from "./star-take";
 import { TitleHold } from "./title-hold";
-import { colors, radii } from "./tokens";
+import { colors, radii, type as typeScale } from "./tokens";
 
 const AVATAR = 61;
 const AVATAR_STAR = 51;
@@ -15,6 +16,42 @@ const AVATAR_STAR = 51;
 const COMPACT_AVATAR = 56;
 const COMPACT_STAR = 47;
 const RING = "0px 0px 0px 3px rgba(244,236,216,0.28)";
+const TITLE_BAR_WIDTH = 170;
+const TITLE_BAR_RATIO = 0.8;
+
+/** The title: none when compact, a skeleton bar while the name loads, else the held headline. */
+function Title({
+	compact,
+	onTitleLongPress,
+	title,
+}: {
+	compact: boolean;
+	onTitleLongPress?: () => void;
+	title?: string | null;
+}) {
+	if (compact) {
+		return <View style={styles.title} />;
+	}
+	if (title === null) {
+		return (
+			<View style={styles.titleSlot}>
+				<Skeleton style={styles.titleBar} />
+			</View>
+		);
+	}
+	return (
+		<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
+			<ClayText
+				accessibilityRole="header"
+				color={colors.cream}
+				numberOfLines={1}
+				variant="title"
+			>
+				{title}
+			</ClayText>
+		</TitleHold>
+	);
+}
 
 /**
  * Top bar row for Home, the map and Grown-ups: optional avatar (the star, or the child's drawing), a title,
@@ -49,7 +86,8 @@ export function TopBar({
 	take?: StarTakeName;
 	/** Change it to play `take` again. */
 	takeRun?: number;
-	title?: string;
+	/** Null while the name loads: a bar the size of the title line stands in. Not shown when compact. */
+	title?: string | null;
 }) {
 	// The failed url is remembered, so a new url is tried again.
 	const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -74,20 +112,11 @@ export function TopBar({
 			{avatar ? (
 				<View style={compact ? styles.compact : styles.avatar}>{art}</View>
 			) : null}
-			{compact ? (
-				<View style={styles.title} />
-			) : (
-				<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
-					<ClayText
-						accessibilityRole="header"
-						color={colors.cream}
-						numberOfLines={1}
-						variant="title"
-					>
-						{title}
-					</ClayText>
-				</TitleHold>
-			)}
+			<Title
+				compact={compact}
+				onTitleLongPress={onTitleLongPress}
+				title={title}
+			/>
 			{action ? (
 				<IconButton
 					accessibilityLabel={action.accessibilityLabel}
@@ -123,4 +152,14 @@ const styles = StyleSheet.create({
 	},
 	picture: StyleSheet.absoluteFill,
 	title: { flex: 1, justifyContent: "center" },
+	titleBar: {
+		borderRadius: radii.full,
+		height: typeScale.title.fontSize * TITLE_BAR_RATIO,
+		width: TITLE_BAR_WIDTH,
+	},
+	titleSlot: {
+		flex: 1,
+		height: typeScale.title.lineHeight,
+		justifyContent: "center",
+	},
 });

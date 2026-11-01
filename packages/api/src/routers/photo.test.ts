@@ -25,6 +25,7 @@ const callerFor = (userId: string | null) =>
 	appRouter.createCaller({
 		art: {} as ImageEditing,
 		db: {} as Database,
+		isBeta: () => true,
 		principal: userId ? { user: { id: userId } } : null,
 		storage,
 		voice: {} as Transcription,

@@ -39,6 +39,7 @@ describe("child", () => {
 			// The PGlite db and the Neon db share the query API but not the type.
 			art: { isConfigured: false } as ImageEditing,
 			db,
+			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage: {} as Storage,
 			voice: {} as Transcription,
@@ -47,6 +48,24 @@ describe("child", () => {
 
 	beforeEach(async () => {
 		db = (await freshDb()) as unknown as Database;
+	});
+
+	test("a signed-in grown-up outside the beta is refused before anything runs", async () => {
+		const outsider = appRouter.createCaller({
+			art: { isConfigured: false } as ImageEditing,
+			db,
+			isBeta: () => false,
+			principal: { user: { email: "someone@else.test", id: "u9" } },
+			storage: {} as Storage,
+			voice: {} as Transcription,
+			waitUntil: () => undefined,
+		});
+		await expect(outsider.child.mine()).rejects.toThrow(
+			"Little Adventures is in private beta"
+		);
+		await expect(outsider.child.save(noah)).rejects.toThrow(
+			"Little Adventures is in private beta"
+		);
 	});
 
 	test("save adds a child with the defaults; mine lists it", async () => {
@@ -128,6 +147,7 @@ describe("photo.delete", () => {
 		appRouter.createCaller({
 			art: { isConfigured: false } as ImageEditing,
 			db,
+			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage,
 			voice: {} as Transcription,
@@ -254,6 +274,7 @@ describe("child art", () => {
 		appRouter.createCaller({
 			art,
 			db,
+			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage,
 			voice: {} as Transcription,

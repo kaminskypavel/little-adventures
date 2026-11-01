@@ -39,6 +39,7 @@ describe("waitlist.join", () => {
 		caller = appRouter.createCaller({
 			art: {} as ImageEditing,
 			db: db as unknown as Database,
+			isBeta: () => true,
 			principal: null,
 			storage: {} as Storage,
 			voice: {} as Transcription,

@@ -41,6 +41,7 @@
     }
   },
   "globalEnv": [
+    "BETA_EMAILS",
     "CI",
     "DATABASE_URL",
     "EXPO_PUBLIC_ENGINE_URL",

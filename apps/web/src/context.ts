@@ -1,5 +1,6 @@
 import type { Context as ApiContext } from "@little-adventures/api/context";
 import { resolvePrincipal } from "@little-adventures/auth/bearer";
+import { betaEmails, inBeta } from "@little-adventures/auth/beta";
 import { createImageEditing } from "@little-adventures/image-editing";
 import { createTranscription } from "@little-adventures/transcribe";
 import { after } from "next/server";
@@ -11,6 +12,7 @@ import { db } from "./services";
 
 const art = createImageEditing({ apiKey: ENV.META_API_KEY });
 const voice = createTranscription({ apiKey: ENV.META_API_KEY });
+const beta = betaEmails(ENV.BETA_EMAILS);
 
 export async function createContext(req: Request): Promise<ApiContext> {
 	const principal = await resolvePrincipal({
@@ -34,6 +36,7 @@ export async function createContext(req: Request): Promise<ApiContext> {
 	return {
 		art,
 		db,
+		isBeta: ({ user }) => inBeta(beta, user.email),
 		principal,
 		storage,
 		voice,
