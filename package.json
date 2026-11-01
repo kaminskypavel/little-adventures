@@ -17,8 +17,8 @@
       "@tailwindcss/postcss": "^4.3.3",
       "@types/react-dom": "^19.2.7",
       "tailwindcss": "^4.3.3",
-      "@trpc/server": "^11.19.0",
-      "@trpc/client": "^11.19.0"
+      "@trpc/server": "^11.22.1",
+      "@trpc/client": "^11.22.1"
     }
   },
   "scripts": {

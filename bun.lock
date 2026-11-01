@@ -324,8 +324,8 @@
   },
   "catalog": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@trpc/client": "^11.19.0",
-    "@trpc/server": "^11.19.0",
+    "@trpc/client": "^11.22.1",
+    "@trpc/server": "^11.22.1",
     "@types/node": "^26.4.1",
     "@types/react-dom": "^19.2.7",
     "lucide-react": "^1.41.0",
