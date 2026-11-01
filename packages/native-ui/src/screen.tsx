@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BackButton, useBackAction } from "./back-button";
 import { ClayText } from "./clay-text";
 import { useCalm } from "./motion-provider";
 import { colors, layout, motion, spacing } from "./tokens";
@@ -62,6 +63,10 @@ export function Screen({
 }) {
 	const insets = useSafeAreaInsets();
 	const calm = useCalm();
+	const onBack = useBackAction();
+	// Without a top bar the back button gets a row of its own; the headline then sits where it
+	// always did (titleTop below the top of the screen, plus the inset).
+	const backRow = onBack && !topBar;
 
 	return (
 		<View style={styles.root}>
@@ -71,13 +76,14 @@ export function Screen({
 					style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]}
 				/>
 			) : null}
-			{topBar ? (
+			{topBar || backRow ? (
 				<View
 					style={[
 						styles.topBar,
 						{ marginTop: insets.top + layout.topBarOffset },
 					]}
 				>
+					{onBack ? <BackButton onPress={onBack} /> : null}
 					{topBar}
 				</View>
 			) : null}
@@ -85,7 +91,9 @@ export function Screen({
 				<Animated.View
 					style={[
 						styles.title,
-						{ marginTop: topBar ? spacing.lg : titleTop },
+						{
+							marginTop: titleGap(Boolean(topBar), Boolean(backRow), titleTop),
+						},
 						enter(0, calm),
 					]}
 				>
@@ -116,6 +124,20 @@ export function Screen({
 			) : null}
 		</View>
 	);
+}
+
+/** Space above the headline: under a top bar, under the back row, or from the screen top. */
+function titleGap(hasTopBar: boolean, hasBackRow: boolean, titleTop: number) {
+	if (hasTopBar) {
+		return spacing.lg;
+	}
+	if (hasBackRow) {
+		return Math.max(
+			spacing.sm,
+			titleTop - layout.topBarOffset - layout.topBarHeight
+		);
+	}
+	return titleTop;
 }
 
 const styles = StyleSheet.create({

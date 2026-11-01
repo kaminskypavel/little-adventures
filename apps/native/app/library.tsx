@@ -1,5 +1,4 @@
 import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StoryCover } from "@little-adventures/native-ui/story-cover";
 import {
@@ -56,22 +55,15 @@ export default function Library() {
 	return (
 		<Screen
 			topBar={
-				<>
-					<IconButton
-						accessibilityLabel="Back"
-						icon="back"
-						onPress={() => router.back()}
-					/>
-					<ClayText
-						accessibilityRole="header"
-						color={colors.cream}
-						numberOfLines={1}
-						style={styles.title}
-						variant="title"
-					>
-						Your stories
-					</ClayText>
-				</>
+				<ClayText
+					accessibilityRole="header"
+					color={colors.cream}
+					numberOfLines={1}
+					style={styles.title}
+					variant="title"
+				>
+					Your stories
+				</ClayText>
 			}
 		>
 			<ScrollView

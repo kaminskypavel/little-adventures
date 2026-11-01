@@ -6,6 +6,7 @@ import {
 	Nunito_900Black,
 	useFonts,
 } from "@expo-google-fonts/nunito";
+import { BackProvider } from "@little-adventures/native-ui/back-button";
 import { FallbackArtProvider } from "@little-adventures/native-ui/fallback-image";
 import { MotionProvider } from "@little-adventures/native-ui/motion-provider";
 import { Sky } from "@little-adventures/native-ui/sky";
@@ -18,6 +19,7 @@ import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PhoneFrame } from "@/components/phone-frame";
 import { fallbackArt } from "@/src/data/fallback-art";
+import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
 
@@ -54,18 +56,20 @@ export default function Layout() {
 			<PhoneFrame>
 				<MotionProvider>
 					<FallbackArtProvider art={fallbackArt}>
-						<View style={styles.field}>
-							<Sky />
-							<ThemeProvider value={clearTheme}>
-								<Stack
-									screenOptions={{
-										animation: "fade",
-										contentStyle: { backgroundColor: "transparent" },
-										headerShown: false,
-									}}
-								/>
-							</ThemeProvider>
-						</View>
+						<BackProvider useBack={useBack}>
+							<View style={styles.field}>
+								<Sky />
+								<ThemeProvider value={clearTheme}>
+									<Stack
+										screenOptions={{
+											animation: "fade",
+											contentStyle: { backgroundColor: "transparent" },
+											headerShown: false,
+										}}
+									/>
+								</ThemeProvider>
+							</View>
+						</BackProvider>
 					</FallbackArtProvider>
 					<StatusBar style="light" />
 				</MotionProvider>

@@ -2,6 +2,7 @@ import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HeroCard } from "@little-adventures/native-ui/hero-card";
 import { Pulse } from "@little-adventures/native-ui/pulse";
+import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StoryCover } from "@little-adventures/native-ui/story-cover";
 import { StoryShelf } from "@little-adventures/native-ui/story-shelf";
@@ -9,20 +10,22 @@ import {
 	colors,
 	layout,
 	motion,
+	spacing,
 	storyCover,
 } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import {
 	devFlags,
-	getHome,
+	getAvatarUrl,
 	getIdeas,
+	getLatestAdventure,
 	getProfile,
 } from "@/src/data/adventure-client";
 import { micPermission } from "@/src/data/mic-permission";
-import type { Idea } from "@/src/data/types";
+import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
 // Mockup B2 (390 x 844 phone, px = pt), measured as gaps between pieces.
@@ -42,7 +45,9 @@ const HERO_PULSE_DELAY = motion.pulseOffset + 200;
 const SKELETON_FADE = 0.15;
 
 interface HomeData {
-	hasStories: boolean;
+	avatarUrl: string | null;
+	/** The adventure made last; null when the child has none yet. */
+	latest: AdventureSummary | null;
 	name: string;
 }
 
@@ -92,18 +97,16 @@ export default function Home() {
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
-			// A story list that cannot be read shows as no stories, never as a skeleton for ever.
-			const noStories = { finished: [], keepGoing: [] };
-			Promise.all([getHome().catch(() => noStories), getProfile()]).then(
-				([home, profile]) => {
-					if (live) {
-						setData({
-							hasStories: home.keepGoing.length + home.finished.length > 0,
-							name: profile.childName,
-						});
-					}
+			// A story list or picture that cannot be read shows as none, never as a skeleton for ever.
+			Promise.all([
+				getLatestAdventure().catch(() => null),
+				getAvatarUrl().catch(() => null),
+				getProfile(),
+			]).then(([newest, avatarUrl, profile]) => {
+				if (live) {
+					setData({ avatarUrl, latest: newest, name: profile.childName });
 				}
-			);
+			});
 			return () => {
 				live = false;
 			};
@@ -122,6 +125,7 @@ export default function Home() {
 		router.push({ params: { question }, pathname: "/making" });
 
 	const dock = dockFor(data, () => router.push("/library"));
+	const latest = data?.latest ?? null;
 
 	return (
 		<Screen
@@ -133,63 +137,89 @@ export default function Home() {
 						icon: "lock",
 						onPress: () => router.push("/gate"),
 					}}
-					avatar
+					avatar={data !== null}
+					avatarUrl={data?.avatarUrl}
 					take="wave"
 					takeRun={run}
 					title={data ? `Hi ${data.name}!` : ""}
 				/>
 			}
 		>
-			<ClayText
-				accessibilityRole="header"
-				align="center"
-				color={colors.cream}
-				numberOfLines={TITLE_LINES}
-				style={styles.title}
-				variant="headline"
+			<ScrollView
+				contentContainerStyle={styles.content}
+				showsVerticalScrollIndicator={false}
+				style={styles.scroll}
 			>
-				{data ? `What shall we explore, ${data.name}?` : ""}
-			</ClayText>
-			<View style={{ marginTop: HERO_GAP }}>
-				<Pulse delay={HERO_PULSE_DELAY} play={run}>
-					{micOff ? (
-						<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
-					) : (
-						<HeroCard
-							height={HERO_HEIGHT}
-							label={"Ask\nyour own"}
-							onPress={() => router.push("/listening")}
-						/>
-					)}
-				</Pulse>
-			</View>
-			{micOff ? (
 				<ClayText
+					accessibilityRole="header"
 					align="center"
 					color={colors.cream}
-					style={styles.micMsg}
-					variant="label"
+					numberOfLines={TITLE_LINES}
+					style={styles.title}
+					variant="headline"
 				>
-					Ask a grown-up to turn it on.
+					{data ? `What shall we explore, ${data.name}?` : ""}
 				</ClayText>
-			) : (
-				<ClayText color={colors.cream} style={styles.label} variant="label">
-					Or try an idea
-				</ClayText>
-			)}
-			<StoryShelf style={styles.shelf}>
-				{ideas
-					? ideas.map((idea) => (
-							<StoryCover
-								key={idea.question}
-								onPress={() => ask(idea.question)}
-								picture={idea.picture}
-								size="shelf"
-								title={idea.question}
+				<View style={{ marginTop: HERO_GAP }}>
+					<Pulse delay={HERO_PULSE_DELAY} play={run}>
+						{micOff ? (
+							<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
+						) : (
+							<HeroCard
+								height={HERO_HEIGHT}
+								label={"Ask\nyour own"}
+								onPress={() => router.push("/listening")}
 							/>
-						))
-					: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
-			</StoryShelf>
+						)}
+					</Pulse>
+				</View>
+				{micOff ? (
+					<ClayText
+						align="center"
+						color={colors.cream}
+						style={styles.micMsg}
+						variant="label"
+					>
+						Ask a grown-up to turn it on.
+					</ClayText>
+				) : null}
+				{latest ? (
+					<>
+						<ClayText color={colors.cream} style={styles.label} variant="label">
+							Keep exploring
+						</ClayText>
+						<RowCard
+							onPress={() => router.push(`/map?id=${latest.id}`)}
+							picture={latest.picture}
+							style={styles.latest}
+							subtitle={
+								latest.finished
+									? "Finished"
+									: `${latest.partsDone} of ${latest.partsTotal} places`
+							}
+							title={latest.title}
+						/>
+					</>
+				) : null}
+				{micOff && !latest ? null : (
+					<ClayText color={colors.cream} style={styles.label} variant="label">
+						Or try an idea
+					</ClayText>
+				)}
+				<StoryShelf style={styles.shelf}>
+					{ideas
+						? ideas.map((idea) => (
+								<StoryCover
+									key={idea.question}
+									onPress={() => ask(idea.question)}
+									picture={idea.picture}
+									size="shelf"
+									title={idea.question}
+								/>
+							))
+						: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
+				</StoryShelf>
+			</ScrollView>
 		</Screen>
 	);
 }
@@ -199,12 +229,14 @@ function dockFor(data: HomeData | null, onPress: () => void) {
 	if (data === null) {
 		return <View style={styles.dockSkeleton} />;
 	}
-	return data.hasStories ? (
+	return data.latest ? (
 		<SecondaryButton label="Continue past stories" onPress={onPress} />
 	) : undefined;
 }
 
 const styles = StyleSheet.create({
+	// The body has side padding; the scroll view undoes it so the shelf can bleed to the edge.
+	content: { paddingBottom: spacing.sm, paddingHorizontal: layout.sideMargin },
 	dockSkeleton: {
 		backgroundColor: colors.sand,
 		borderRadius: layout.secondaryHeight / 2,
@@ -212,11 +244,13 @@ const styles = StyleSheet.create({
 		opacity: SKELETON_FADE,
 	},
 	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
+	latest: { marginTop: SHELF_GAP },
 	micMsg: {
 		fontSize: MIC_MSG_FONT,
 		lineHeight: MIC_MSG_LINE,
 		marginTop: LABEL_GAP,
 	},
+	scroll: { flex: 1, marginHorizontal: -layout.sideMargin },
 	shelf: { marginTop: SHELF_GAP },
 	skeleton: {
 		backgroundColor: colors.sand,
