@@ -65,10 +65,19 @@ function Portrait({ faceUrl, name }: { faceUrl?: string; name: string }) {
 	);
 }
 
+type Who = "grownUp" | "puppy" | null;
+
+function saved({ grownUp, puppy }: Profile): Who {
+	if (grownUp) {
+		return "grownUp";
+	}
+	return puppy ? "puppy" : null;
+}
+
 function Coming({ profile }: { profile: Profile }) {
 	const router = useRouter();
-	const [grownUp, setGrownUp] = useState(profile.grownUp);
-	const [puppy, setPuppy] = useState(profile.puppy);
+	// One companion: the grown-up or the puppy. Nothing is picked on a first run.
+	const [who, setWho] = useState<Who>(saved(profile));
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
 
 	// Read again each time the screen shows, so a photo just replaced appears on return.
@@ -76,7 +85,11 @@ function Coming({ profile }: { profile: Profile }) {
 		useCallback(() => {
 			let alive = true;
 			getGrownUpPhoto()
-				.then((saved) => alive && setPhotoUri(saved?.photoUrl ?? null))
+				.then(
+					(saved) =>
+						alive &&
+						setPhotoUri(saved ? (saved.faceUrl ?? saved.photoUrl) : null)
+				)
 				.catch(() => undefined);
 			return () => {
 				alive = false;
@@ -88,16 +101,24 @@ function Coming({ profile }: { profile: Profile }) {
 		router.push({ params: { replace: "1" }, pathname: "/grownup-photo" });
 
 	const next = async () => {
-		await saveProfile({ grownUp, puppy });
-		router.push(
-			grownUp && !(await getGrownUpPhoto()) ? "/grownup-photo" : "/handover"
-		);
+		if (who === "puppy") {
+			await saveProfile({ grownUp: false, puppy: true });
+			router.push("/handover");
+		} else if (who === "grownUp") {
+			// The photo is mandatory for You: without one, the photo step saves the choice.
+			if (await getGrownUpPhoto()) {
+				await saveProfile({ grownUp: true, puppy: false });
+				router.push("/handover");
+			} else {
+				router.push("/grownup-photo");
+			}
+		}
 	};
 
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={<PrimaryButton label="Next" onPress={next} />}
+			dock={<PrimaryButton disabled={!who} label="Next" onPress={next} />}
 			title={"Who's\ncoming along?"}
 		>
 			<Portrait faceUrl={profile.faceUrl} name={profile.childName} />
@@ -112,12 +133,12 @@ function Coming({ profile }: { profile: Profile }) {
 				style={[styles.line, LINE]}
 				variant="fieldError"
 			>
-				Pick none, one or both
+				Pick one to come along
 			</ClayText>
 			<ToggleCard
 				avatar="you"
-				on={grownUp}
-				onPress={() => setGrownUp((on) => !on)}
+				on={who === "grownUp"}
+				onPress={() => setWho("grownUp")}
 				photo={{
 					label: photoUri ? "Change your photo" : "Add your photo",
 					onPress: openPhoto,
@@ -133,8 +154,8 @@ function Coming({ profile }: { profile: Profile }) {
 			/>
 			<ToggleCard
 				avatar="puppy"
-				on={puppy}
-				onPress={() => setPuppy((on) => !on)}
+				on={who === "puppy"}
+				onPress={() => setWho("puppy")}
 				style={styles.puppy}
 				subtitle="Best friend"
 				title="Puppy"

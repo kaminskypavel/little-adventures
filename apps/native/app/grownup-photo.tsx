@@ -33,6 +33,9 @@ export default function GrownUpPhoto() {
 	const [done, setDone] = useState(false);
 	// The photo just picked, or the saved one when the grown-up comes back.
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
+	// A photo picked but not yet approved; nothing is uploaded until "Use this photo".
+	const [pending, setPending] = useState<string | null>(null);
+	const lastSource = useRef<Source>("library");
 	const [note, setNote] = useState<string | null>(null);
 	const busy = useRef<boolean>(false);
 
@@ -67,16 +70,13 @@ export default function GrownUpPhoto() {
 		}
 		busy.current = true;
 		setNote(null);
+		lastSource.current = source;
 		try {
 			const uri = await pick(source);
 			if (uri === "denied") {
 				setNote(CAMERA_OFF);
 			} else if (uri) {
-				await saveGrownUpPhoto(await uploadChildPhoto(uri));
-				setPhotoUri(uri);
-				notificationAsync(NotificationFeedbackType.Success);
-				setDone(true);
-				return;
+				setPending(uri);
 			}
 		} catch {
 			setNote(UPLOAD_FAILED);
@@ -84,16 +84,31 @@ export default function GrownUpPhoto() {
 		busy.current = false;
 	};
 
-	const skip = async () => {
-		if (busy.current) {
+	const approvePhoto = async () => {
+		if (busy.current || !pending) {
 			return;
 		}
 		busy.current = true;
+		setNote(null);
 		try {
-			await saveProfile({ grownUp: false });
-			router.push("/handover");
+			await saveGrownUpPhoto(await uploadChildPhoto(pending));
+			// The photo is what makes You the companion, so the choice is saved with it.
+			await saveProfile({ grownUp: true, puppy: false });
+			setPhotoUri(pending);
+			setPending(null);
+			notificationAsync(NotificationFeedbackType.Success);
+			setDone(true);
+			return;
 		} catch {
-			busy.current = false;
+			setNote(UPLOAD_FAILED);
+		}
+		busy.current = false;
+	};
+
+	// You needs a photo: without one, go back to pick again.
+	const skip = () => {
+		if (!busy.current) {
+			router.back();
 		}
 	};
 
@@ -101,23 +116,38 @@ export default function GrownUpPhoto() {
 		<Screen
 			bodyStyle={styles.body}
 			dock={
-				<>
-					<PrimaryButton
-						icon="camera"
-						label="Take a photo"
-						onPress={() => choose("camera")}
-					/>
-					<SecondaryButton
-						icon="image"
-						label="Choose a photo"
-						onPress={() => choose("library")}
-					/>
-					{replacing ? null : <QuietLink label="Not now" onPress={skip} />}
-				</>
+				pending ? (
+					<>
+						<PrimaryButton
+							icon="check"
+							label="Use this photo"
+							onPress={approvePhoto}
+						/>
+						<SecondaryButton
+							icon="image"
+							label="Pick another"
+							onPress={() => choose(lastSource.current)}
+						/>
+					</>
+				) : (
+					<>
+						<PrimaryButton
+							icon="camera"
+							label="Take a photo"
+							onPress={() => choose("camera")}
+						/>
+						<SecondaryButton
+							icon="image"
+							label="Choose a photo"
+							onPress={() => choose("library")}
+						/>
+						{replacing ? null : <QuietLink label="Not now" onPress={skip} />}
+					</>
+				)
 			}
 			title={"Add a\nphoto of you"}
 		>
-			<PhotoRing done={done} photoUri={photoUri} />
+			<PhotoRing done={done} photoUri={pending ?? photoUri} />
 			<ClayText
 				align="center"
 				color={colors.cream}

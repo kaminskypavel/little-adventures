@@ -383,12 +383,18 @@ export const deleteChildPhoto = async (): Promise<Profile> => {
 	return (await loadChild()).profile;
 };
 
-/** The grown-up's own photo (signed url), or null when none is saved. */
+/**
+ * The grown-up's own photo (signed url), or null when none is saved. faceUrl is the
+ * face cut-out: null while it is being cut out or when no face was found.
+ */
 export const getGrownUpPhoto = async (): Promise<{
+	faceUrl: string | null;
 	photoUrl: string;
 } | null> => {
-	const row = await trpc.grownUp.mine.query();
-	return row ? { photoUrl: row.photoUrl } : null;
+	// faceUrl is optional until the app server's router type carries it.
+	const row: { faceUrl?: string | null; photoUrl: string } | null =
+		await trpc.grownUp.mine.query();
+	return row ? { faceUrl: row.faceUrl ?? null, photoUrl: row.photoUrl } : null;
 };
 
 export const saveGrownUpPhoto = async (photoKey: string): Promise<void> => {
