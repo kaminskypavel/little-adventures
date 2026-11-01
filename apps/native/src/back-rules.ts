@@ -2,6 +2,16 @@
 // (Home is also reached by replacing the screens that came before it).
 const NO_BACK = new Set(["index", "welcome", "hello", "home"]);
 
-/** Whether a screen shows the back button. */
-export const showsBack = (routeName: string, canGoBack: boolean): boolean =>
-	canGoBack && !NO_BACK.has(routeName);
+/**
+ * What the back button does: go back when there is a screen behind, go Home when there is none
+ * (a reload or a link opened the screen directly), or nothing on the first screens.
+ */
+export const backTarget = (
+	routeName: string,
+	canGoBack: boolean
+): "back" | "home" | null => {
+	if (NO_BACK.has(routeName)) {
+		return null;
+	}
+	return canGoBack ? "back" : "home";
+};
