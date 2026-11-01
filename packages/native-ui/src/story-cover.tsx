@@ -1,8 +1,16 @@
 import { Image } from "expo-image";
-import { type StyleProp, Text, View, type ViewStyle } from "react-native";
+import { useState } from "react";
+import {
+	type StyleProp,
+	StyleSheet,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { Icon } from "./icons";
 import { Placeholder } from "./placeholder";
+import { Skeleton } from "./skeleton";
 import { colors, fonts, radii, storyCover } from "./tokens";
 
 const {
@@ -40,6 +48,8 @@ export function StoryCover({
 	title: string;
 }) {
 	const dims = storyCover[size];
+	// The picture box is reserved from the first frame; a skeleton fills it until the image paints.
+	const [loaded, setLoaded] = useState(false);
 	const width = size === "shelf" ? storyCover.shelf.width : undefined;
 	return (
 		<ClayPressable
@@ -53,14 +63,21 @@ export function StoryCover({
 				<Placeholder style={{ borderRadius: pictureRadius, flex: 1 }} />
 			) : (
 				<View
-					style={{ borderRadius: pictureRadius, flex: 1, overflow: "hidden" }}
+					style={{
+						backgroundColor: loaded ? undefined : colors.deepNavy,
+						borderRadius: pictureRadius,
+						flex: 1,
+						overflow: "hidden",
+					}}
 				>
 					<Image
 						accessible={false}
 						contentFit="cover"
+						onLoad={() => setLoaded(true)}
 						source={picture}
 						style={{ height: "100%", width: "100%" }}
 					/>
+					{loaded ? null : <Skeleton style={StyleSheet.absoluteFill} />}
 				</View>
 			)}
 			{done ? (

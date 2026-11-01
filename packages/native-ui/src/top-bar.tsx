@@ -3,11 +3,14 @@ import { Character } from "./character";
 import { ClayText } from "./clay-text";
 import { IconButton } from "./icon-button";
 import type { IconName } from "./icons";
+import { Skeleton } from "./skeleton";
 import { StarTake, type StarTakeName } from "./star-take";
-import { colors, radii } from "./tokens";
+import { colors, radii, type as typeScale } from "./tokens";
 
 const AVATAR = 61;
 const AVATAR_STAR = 51;
+const TITLE_BAR_WIDTH = 170;
+const TITLE_BAR_RATIO = 0.8;
 
 /**
  * Top bar row for Home, the map and Grown-ups: optional star avatar, a title,
@@ -33,7 +36,8 @@ export function TopBar({
 	take?: StarTakeName;
 	/** Change it to play `take` again. */
 	takeRun?: number;
-	title: string;
+	/** Null while the name loads: a bar the size of the title line stands in. */
+	title: string | null;
 }) {
 	return (
 		<>
@@ -46,15 +50,21 @@ export function TopBar({
 					)}
 				</View>
 			) : null}
-			<ClayText
-				accessibilityRole="header"
-				color={colors.cream}
-				numberOfLines={1}
-				style={styles.title}
-				variant="title"
-			>
-				{title}
-			</ClayText>
+			{title === null ? (
+				<View style={styles.titleSlot}>
+					<Skeleton style={styles.titleBar} />
+				</View>
+			) : (
+				<ClayText
+					accessibilityRole="header"
+					color={colors.cream}
+					numberOfLines={1}
+					style={styles.title}
+					variant="title"
+				>
+					{title}
+				</ClayText>
+			)}
 			{action ? (
 				<IconButton
 					accessibilityLabel={action.accessibilityLabel}
@@ -78,4 +88,14 @@ const styles = StyleSheet.create({
 		width: AVATAR,
 	},
 	title: { flex: 1 },
+	titleBar: {
+		borderRadius: radii.full,
+		height: typeScale.title.fontSize * TITLE_BAR_RATIO,
+		width: TITLE_BAR_WIDTH,
+	},
+	titleSlot: {
+		flex: 1,
+		height: typeScale.title.lineHeight,
+		justifyContent: "center",
+	},
 });
