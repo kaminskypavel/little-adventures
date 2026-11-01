@@ -1,5 +1,6 @@
 import { BODY_SCROLL_START } from "@little-adventures/native-ui/body-fade";
 import { SecondaryButton } from "@little-adventures/native-ui/button";
+import { CalledChips } from "@little-adventures/native-ui/called-chips";
 import { Chip } from "@little-adventures/native-ui/chip";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -32,6 +33,7 @@ import {
 	useDeleteChildPhoto,
 	useDeleteGrownUpPhoto,
 	useGrownUpPhoto,
+	useSetCalled,
 } from "@/src/data/profile-queries";
 import type { AdventureSummary } from "@/src/data/types";
 
@@ -128,6 +130,7 @@ export default function Grownups() {
 	const [adventures, setAdventures] = useState<AdventureSummary[] | null>(null);
 	const { data: grownUpPhoto } = useGrownUpPhoto();
 	const deleteOwnPhoto = useDeleteGrownUpPhoto();
+	const setCalled = useSetCalled();
 	const deletePhoto = useDeleteChildPhoto();
 
 	useEffect(() => {
@@ -276,6 +279,19 @@ export default function Grownups() {
 										/>
 									</View>
 								</View>
+								<ClayText
+									color={colors.cream}
+									style={styles.heading}
+									variant="label"
+								>
+									{`What ${profile.childName} calls you`}
+								</ClayText>
+								<View style={styles.called}>
+									<CalledChips
+										onChange={setCalled}
+										value={grownUpPhoto.called}
+									/>
+								</View>
 							</>
 						) : null}
 						<ClayText
@@ -310,6 +326,7 @@ export default function Grownups() {
 const styles = StyleSheet.create({
 	add: { alignSelf: "auto", paddingHorizontal: 18 },
 	age: { fontSize: SUB_FONT, lineHeight: SUB_FONT * 1.25, opacity: 0.8 },
+	called: { marginTop: spacing.sm, paddingHorizontal: PROFILE_INSET },
 	childrenLabel: { opacity: 0.85 },
 	childrenRow: {
 		alignItems: "center",

@@ -17,7 +17,7 @@ import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
 import type { Style } from "@/src/data/engine-client";
 import { setStepsOptions } from "@/src/data/engine-queries";
-import { grownUpPicture } from "@/src/data/profile-map";
+import { type GrownUpPhoto, grownUpPicture } from "@/src/data/profile-map";
 import {
 	grownUpOptions,
 	useChild,
@@ -48,6 +48,16 @@ const looks: { label: string; picture: number; style: Style }[] = [
 		style: "wood",
 	},
 ];
+
+const subtitle = (
+	photo: GrownUpPhoto | null | undefined,
+	photoUri: string | null
+) => {
+	if (!photoUri) {
+		return "Tap the circle to add a photo";
+	}
+	return photo?.called?.name ?? "Tap your photo to change";
+};
 
 /** Who comes along: the grown-up or the puppy, exactly one (as on the coming screen). */
 function Companion({ profile }: { profile: Profile }) {
@@ -82,11 +92,7 @@ function Companion({ profile }: { profile: Profile }) {
 						}),
 					uri: photoUri,
 				}}
-				subtitle={
-					photoUri
-						? "Tap your photo to change"
-						: "Tap the circle to add a photo"
-				}
+				subtitle={subtitle(photo, photoUri)}
 				title="You"
 			/>
 			<ToggleCard

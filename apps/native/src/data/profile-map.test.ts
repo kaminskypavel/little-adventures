@@ -62,10 +62,24 @@ describe("profile map", () => {
 	test("the grown-up photo maps a missing face and cut-out to null", () => {
 		expect(toGrownUpPhoto(null)).toBe(null);
 		expect(toGrownUpPhoto({ photoUrl: "p" })).toEqual({
+			called: null,
 			cutUrl: null,
 			faceUrl: null,
 			lookUrl: null,
 			photoUrl: "p",
 		});
+	});
+
+	test("the grown-up photo carries what the child calls them, only when all three are set", () => {
+		const photo = { photoUrl: "p" };
+		expect(
+			toGrownUpPhoto({
+				...photo,
+				calledName: "Abba",
+				calledPronoun: "he",
+				calledRelation: "other",
+			})?.called
+		).toEqual({ name: "Abba", pronoun: "he", relation: "other" });
+		expect(toGrownUpPhoto({ ...photo, calledName: "Abba" })?.called).toBe(null);
 	});
 });

@@ -65,9 +65,12 @@ export async function pick(source: Source): Promise<string | "denied" | null> {
 export function PhotoRing({
 	done,
 	photoUri,
+	size = RING,
 }: {
 	done: boolean;
 	photoUri?: string | null;
+	/** Width and height; the question under the grown-up's photo shrinks it. */
+	size?: number;
 }) {
 	const calm = useCalm();
 	const pop = calm
@@ -92,7 +95,7 @@ export function PhotoRing({
 					accessibilityLabel="Your photo"
 					contentFit="cover"
 					source={{ uri: photoUri }}
-					style={styles.photo}
+					style={{ borderRadius: size / 2, height: size, width: size }}
 				/>
 				{done ? (
 					<Animated.View style={[styles.badge, pop]}>
@@ -110,8 +113,19 @@ export function PhotoRing({
 	}
 
 	return (
-		<View style={styles.ring}>
-			<View style={[StyleSheet.absoluteFill, styles.fill]} />
+		<View
+			style={[
+				styles.ring,
+				{ borderRadius: size / 2, height: size, width: size },
+			]}
+		>
+			<View
+				style={[
+					StyleSheet.absoluteFill,
+					styles.fill,
+					{ borderRadius: size / 2 },
+				]}
+			/>
 			{content}
 		</View>
 	);
@@ -131,15 +145,7 @@ const styles = StyleSheet.create({
 	},
 	fill: {
 		backgroundColor: colors.cream,
-		borderRadius: RING / 2,
 		opacity: RING_FILL,
 	},
-	photo: { borderRadius: RING / 2, height: RING, width: RING },
-	ring: {
-		alignItems: "center",
-		borderRadius: RING / 2,
-		height: RING,
-		justifyContent: "center",
-		width: RING,
-	},
+	ring: { alignItems: "center", justifyContent: "center" },
 });

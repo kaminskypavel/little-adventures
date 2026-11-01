@@ -1,23 +1,26 @@
+import { BODY_SCROLL_END } from "@little-adventures/native-ui/body-fade";
 import {
 	PrimaryButton,
 	SecondaryButton,
 } from "@little-adventures/native-ui/button";
+import { CalledChips } from "@little-adventures/native-ui/called-chips";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { colors, spacing } from "@little-adventures/native-ui/tokens";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
 import { grownUpPicture } from "@/src/data/profile-map";
 import {
+	useChild,
 	useGrownUpPhoto,
 	useSaveGrownUpPhoto,
 	useSaveProfile,
+	useSetCalled,
 } from "@/src/data/profile-queries";
 import {
-	ADVANCE_MS,
 	CAMERA_OFF,
 	LINE,
 	PhotoRing,
@@ -26,13 +29,19 @@ import {
 	UPLOAD_FAILED,
 } from "@/src/photo/photo-step";
 
+// With the question under it the ring shrinks from 236 to 150 pt to make room.
+const SMALL_RING = 150;
+
 export default function GrownUpPhoto() {
 	const router = useRouter();
 	const { replace } = useLocalSearchParams<{ replace?: string }>();
 	const replacing = replace === "1";
 	const saveGrownUpPhoto = useSaveGrownUpPhoto();
 	const saveProfile = useSaveProfile();
+	const setCalled = useSetCalled();
 	const { data: saved } = useGrownUpPhoto();
+	const { data: child } = useChild();
+	const childName = child?.profile.childName;
 	const [done, setDone] = useState(false);
 	// The photo just picked, or the saved one when the grown-up comes back.
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -48,17 +57,6 @@ export default function GrownUpPhoto() {
 			setPhotoUri(grownUpPicture(saved));
 		}
 	}, [saved]);
-
-	useEffect(() => {
-		if (!done) {
-			return;
-		}
-		const timer = setTimeout(
-			() => (replacing ? router.back() : router.push("/handover")),
-			ADVANCE_MS
-		);
-		return () => clearTimeout(timer);
-	}, [done, replacing, router]);
 
 	const choose = async (source: Source) => {
 		if (busy.current) {
@@ -101,6 +99,47 @@ export default function GrownUpPhoto() {
 		busy.current = false;
 	};
 
+	const next = () => (replacing ? router.back() : router.push("/handover"));
+
+	if (done) {
+		return (
+			<Screen
+				dock={
+					<PrimaryButton
+						disabled={!saved?.called}
+						label="Next"
+						onPress={next}
+					/>
+				}
+				scrolls
+				title={"Add a\nphoto of you"}
+			>
+				<ScrollView
+					automaticallyAdjustKeyboardInsets
+					contentContainerStyle={styles.question}
+					keyboardShouldPersistTaps="handled"
+					showsVerticalScrollIndicator={false}
+				>
+					<View style={styles.center}>
+						<PhotoRing done photoUri={photoUri} size={SMALL_RING} />
+					</View>
+					<ClayText color={colors.cream} style={styles.ask} variant="label">
+						{`What does ${childName} call you?`}
+					</ClayText>
+					<CalledChips onChange={setCalled} value={saved?.called ?? null} />
+					<ClayText
+						align="center"
+						color={colors.cream}
+						style={[styles.line, LINE]}
+						variant="body"
+					>
+						{`${childName} hears this word in every story.`}
+					</ClayText>
+				</ScrollView>
+			</Screen>
+		);
+	}
+
 	return (
 		<Screen
 			bodyStyle={styles.body}
@@ -121,7 +160,7 @@ export default function GrownUpPhoto() {
 			}
 			title={"Add a\nphoto of you"}
 		>
-			<PhotoRing done={done} photoUri={pending ?? photoUri} />
+			<PhotoRing done={false} photoUri={pending ?? photoUri} />
 			<SecondaryButton
 				icon="image"
 				label={pending ? "Pick another" : "Choose a photo"}
@@ -153,8 +192,16 @@ export default function GrownUpPhoto() {
 }
 
 const styles = StyleSheet.create({
+	ask: {
+		marginTop: spacing.lg,
+		opacity: 0.85,
+		paddingBottom: spacing.sm,
+		paddingLeft: spacing.sm,
+	},
 	body: { alignItems: "center", paddingTop: 44 },
+	center: { alignItems: "center" },
 	chip: { alignSelf: "center", marginTop: spacing.lg, paddingHorizontal: 22 },
 	line: { marginTop: spacing.lg, paddingHorizontal: 14 },
 	note: { marginTop: spacing.md, paddingHorizontal: spacing.md },
+	question: { paddingBottom: BODY_SCROLL_END, paddingTop: 44 },
 });

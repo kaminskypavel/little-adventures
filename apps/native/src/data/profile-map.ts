@@ -1,5 +1,6 @@
 // Pure helpers between the app server's child row and the screens' Profile. No imports of the
 // network layer, so they run in tests.
+import type { Called } from "@little-adventures/native-ui/called-chips";
 import type { ArtStatus, Profile } from "./types";
 
 /** The fields of the server's child row that the app reads (the real row has more). */
@@ -115,6 +116,8 @@ export const clearChildPhoto = <R extends ChildRow>(
 	);
 
 export interface GrownUpPhoto {
+	/** What the child calls the grown-up; null until asked. */
+	called: Called | null;
 	/** The drawn look cut out of its backdrop; the server adds it after the look. */
 	cutUrl?: string | null;
 	faceUrl: string | null;
@@ -130,6 +133,9 @@ export const grownUpPicture = (photo: GrownUpPhoto) =>
 /** The grown-up's own photo (signed url), or null when none is saved. */
 export const toGrownUpPhoto = (
 	row: {
+		calledName?: string | null;
+		calledPronoun?: Called["pronoun"] | null;
+		calledRelation?: Called["relation"] | null;
 		cutUrl?: string | null;
 		faceUrl?: string | null;
 		lookUrl?: string | null;
@@ -138,6 +144,14 @@ export const toGrownUpPhoto = (
 ): GrownUpPhoto | null =>
 	row
 		? {
+				called:
+					row.calledName && row.calledPronoun && row.calledRelation
+						? {
+								name: row.calledName,
+								pronoun: row.calledPronoun,
+								relation: row.calledRelation,
+							}
+						: null,
 				cutUrl: row.cutUrl ?? null,
 				faceUrl: row.faceUrl ?? null,
 				lookUrl: row.lookUrl ?? null,

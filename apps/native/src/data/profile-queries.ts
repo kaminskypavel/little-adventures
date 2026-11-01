@@ -1,6 +1,7 @@
 // The child profile and the grown-up photo as React Query hooks over the app server's tRPC
 // router. Writes update the cache at once (see optimistic.ts), roll back on error, and read the
 // server's answer again when they settle. Screens never track "saving" or copies of the data.
+import type { Called } from "@little-adventures/native-ui/called-chips";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { optimisticSet, rollback, type Snapshot } from "./optimistic";
 import {
@@ -135,4 +136,25 @@ export function useDeleteGrownUpPhoto() {
 		})
 	);
 	return () => remove.mutateAsync();
+}
+
+/** Saves what the child calls the grown-up; the cache shows it at once. */
+export function useSetCalled() {
+	const client = useQueryClient();
+	const set = useMutation(
+		trpc.grownUp.setCalled.mutationOptions<Snapshot<GrownUp>>({
+			onError: (_error, _input, snapshot) =>
+				rollback(client, grownUpKey(), snapshot),
+			onMutate: (input) =>
+				optimisticSet<GrownUp>(client, grownUpKey(), (row) => ({
+					...row,
+					calledName: input.name,
+					calledPronoun: input.pronoun,
+					calledRelation: input.relation,
+				})),
+			onSettled: () =>
+				client.invalidateQueries(trpc.grownUp.mine.queryFilter()),
+		})
+	);
+	return (called: Called) => set.mutateAsync(called);
 }
