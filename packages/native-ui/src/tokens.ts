@@ -441,6 +441,9 @@ export const mapStone = {
 	shadowOffset: 3,
 } as const;
 
+/** Skeleton: a flat sand block that breathes between `fade` and `peak` opacity. */
+export const skeleton = { fade: 0.15, peak: 0.28 } as const;
+
 /**
  * Story cover (Home idea shelf, Library grid): a picture with a sand plate over it, clay raised.
  * The shelf cover is fixed width and scrolls sideways; the grid cover fills its column.
