@@ -23,6 +23,7 @@
     "@little-adventures/native-ui": "workspace:*",
     "@little-adventures/validation": "workspace:*",
     "@react-native-masked-view/masked-view": "0.3.2",
+    "@tanstack/react-query": "^5.105.1",
     "@trpc/client": "catalog:",
     "@varlock/expo-integration": "1.2.2",
     "expo": "~58.0.12",
@@ -62,7 +63,8 @@
     "tailwindcss": "catalog:",
     "uniwind": "^1.12.2",
     "varlock": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@little-adventures/api": "workspace:*",
