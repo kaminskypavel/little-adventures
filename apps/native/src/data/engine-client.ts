@@ -51,6 +51,14 @@ export interface EngineSummary {
 	status: string;
 	title: string | null;
 }
+/** The signed-in account as the engine knows it. `live` is the admin switch for real adventures. */
+export interface EngineMe {
+	email?: string;
+	id: string;
+	isAdmin: boolean;
+	live: boolean;
+	name?: string;
+}
 export interface VisitResult {
 	outroLocked: boolean;
 	placesDone: number;
@@ -101,8 +109,16 @@ export function createEngineClient(engineFetch: EngineFetch) {
 			}),
 		getAdventure: (id: string) =>
 			call<EngineAdventure>(`/adventures/${encodeURIComponent(id)}`),
+		getMe: () => call<EngineMe>("/me"),
 		listAdventures: async () =>
 			(await call<{ items: EngineSummary[] }>("/adventures")).items,
+		/** Admins only: the engine answers 403 for anyone else. */
+		setLive: (on: boolean) =>
+			call<{ live: boolean }>("/me/live", {
+				body: JSON.stringify({ on }),
+				headers: { "content-type": "application/json" },
+				method: "PUT",
+			}),
 		visitNode: (id: string, node: string) =>
 			call<VisitResult>(
 				`/adventures/${encodeURIComponent(id)}/nodes/${encodeURIComponent(node)}/visit`,

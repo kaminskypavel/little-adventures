@@ -60,6 +60,30 @@ describe("engine client", () => {
 		expect(requests[2].init?.method).toBe("POST");
 	});
 
+	test("getMe reads the account and setLive puts the switch", async () => {
+		const me = { email: "a@b.c", id: "u1", isAdmin: true, live: false };
+		const { client, requests } = engine(json(me), json({ live: true }));
+		expect(await client.getMe()).toEqual(me);
+		expect(await client.setLive(true)).toEqual({ live: true });
+		expect(requests.map((r) => r.path)).toEqual(["/me", "/me/live"]);
+		expect(requests[1].init?.method).toBe("PUT");
+		expect(JSON.parse(String(requests[1].init?.body))).toEqual({ on: true });
+	});
+
+	test("setLive by a non-admin is an EngineError 403", async () => {
+		const { client } = engine(
+			json({ code: "FORBIDDEN", message: "Admins only" }, 403)
+		);
+		let caught: unknown;
+		try {
+			await client.setLive(true);
+		} catch (error) {
+			caught = error;
+		}
+		expect((caught as EngineError).status).toBe(403);
+		expect((caught as EngineError).code).toBe("FORBIDDEN");
+	});
+
 	test("an error body becomes an EngineError with its code and status", async () => {
 		const { client } = engine(
 			json({ code: "PRECONDITION_FAILED", message: "Goodnight is locked" }, 412)

@@ -11,6 +11,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdminOnly } from "@/src/admin/admin-only";
+import { LiveRow } from "@/src/admin/live-row";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import {
 	deleteChildPhoto,
@@ -199,6 +201,9 @@ export default function Grownups() {
 								/>
 							))}
 						</View>
+						<AdminOnly>
+							<LiveRow />
+						</AdminOnly>
 						<View style={styles.actions}>
 							<SecondaryButton
 								icon="plus"
