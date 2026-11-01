@@ -15,6 +15,11 @@ const LEAVES = [
 	require("../assets/map/leaf-1.png"),
 	require("../assets/map/leaf-2.png"),
 ] as const;
+// The same leaves 60% grey, baked into the files because iOS has no grayscale filter.
+const LEAVES_OFF = [
+	require("../assets/map/leaf-1-off.png"),
+	require("../assets/map/leaf-2-off.png"),
+] as const;
 
 // The arch: round on top, nearly square at the bottom.
 const arch = cornerStyle(radius);
@@ -31,7 +36,7 @@ function Leaves({ done, total }: { done: number; total: number }) {
 					accessible={false}
 					contentFit="contain"
 					key={key}
-					source={LEAVES[n % LEAVES.length]}
+					source={(n < done ? LEAVES : LEAVES_OFF)[n % LEAVES.length]}
 					style={n < done ? styles.leaf : styles.leafOff}
 				/>
 			))}
@@ -115,7 +120,6 @@ const styles = StyleSheet.create({
 	fill: { height: "100%", width: "100%" },
 	leaf: { height: chip.leaf, width: chip.leaf },
 	leafOff: {
-		filter: "grayscale(0.6)",
 		height: chip.leaf,
 		opacity: offLeaf,
 		width: chip.leaf,
