@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
+import { grownUpPicture } from "@/src/data/profile-map";
 import {
 	grownUpOptions,
 	useChild,
@@ -81,7 +82,7 @@ function Coming({ profile }: { profile: Profile }) {
 	const saveProfile = useSaveProfile();
 	// A photo just replaced shows on return: saving it reads the cache again.
 	const { data: photo } = useGrownUpPhoto();
-	const photoUri = photo ? (photo.faceUrl ?? photo.photoUrl) : null;
+	const photoUri = photo ? grownUpPicture(photo) : null;
 
 	const openPhoto = () =>
 		router.push({ params: { replace: "1" }, pathname: "/grownup-photo" });

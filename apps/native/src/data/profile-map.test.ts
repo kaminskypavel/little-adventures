@@ -62,6 +62,7 @@ describe("profile map", () => {
 		expect(toGrownUpPhoto(null)).toBe(null);
 		expect(toGrownUpPhoto({ photoUrl: "p" })).toEqual({
 			faceUrl: null,
+			lookUrl: null,
 			photoUrl: "p",
 		});
 	});

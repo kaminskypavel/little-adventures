@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
+import { grownUpPicture } from "@/src/data/profile-map";
 import {
 	useGrownUpPhoto,
 	useSaveGrownUpPhoto,
@@ -44,7 +45,7 @@ export default function GrownUpPhoto() {
 	// The saved photo shows as its face cut-out, like the child's, once it is cut out.
 	useEffect(() => {
 		if (saved) {
-			setPhotoUri(saved.faceUrl ?? saved.photoUrl);
+			setPhotoUri(grownUpPicture(saved));
 		}
 	}, [saved]);
 

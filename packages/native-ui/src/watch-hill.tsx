@@ -1,7 +1,9 @@
 import { Image } from "expo-image";
+import type { ReactNode } from "react";
 import { View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
+import { Character } from "./character";
 import { useCalm } from "./motion-provider";
 import { Placeholder } from "./placeholder";
 import { colors, iconSizes, motion } from "./tokens";
@@ -45,6 +47,9 @@ const shadow = [
 ];
 
 const picture = { bottom: 117, left: 61, size: 133 } as const;
+// The companion: a smaller circle in front of the child's, overlapping its right edge.
+const companionCircle = { bottom: 100, left: 156, size: 104 } as const;
+const PUPPY_FILL = 0.84;
 const pictureFilter = "drop-shadow(0px 7px 7px rgba(0,0,0,0.4))";
 
 // Round 7 gave the group `transition: transform .8s cubic-bezier(.2,.8,.2,1)`. Away it slides down.
@@ -52,15 +57,68 @@ const SLIDE_MS = 800;
 const SLIDE_AWAY = 300;
 const slideEase = cubicBezier(0.2, 0.8, 0.2, 1);
 
+/** A round picture slot standing on the hill. */
+function Circle({
+	bottom,
+	children,
+	left,
+	size,
+}: {
+	bottom: number;
+	children: ReactNode;
+	left: number;
+	size: number;
+}) {
+	return (
+		<View
+			style={{
+				bottom,
+				filter: pictureFilter,
+				height: size,
+				left,
+				position: "absolute",
+				width: size,
+			}}
+		>
+			{children}
+		</View>
+	);
+}
+
+/** A person's round picture, or the neutral round placeholder without one. */
+function Face({ icon, url }: { icon: number; url: string | null }) {
+	return url ? (
+		<Image
+			accessibilityIgnoresInvertColors
+			contentFit="cover"
+			source={{ uri: url }}
+			style={{ borderRadius: 999, flex: 1 }}
+		/>
+	) : (
+		<Placeholder
+			icon="user"
+			iconSize={icon}
+			style={{ borderRadius: 999, flex: 1 }}
+		/>
+	);
+}
+
 /**
- * 10a: the child's picture on a clay hill at the bottom left of the wait screen. Absolute, so
+ * 10a: the child's picture on a clay hill at the bottom left of the wait screen, with the
+ * companion (the grown-up's picture or the puppy) in a smaller circle beside it. Absolute, so
  * the parent must fill the screen. `away` slides it off the bottom (a 200 ms fade under reduced motion).
  */
 export function WatchHill({
 	away = false,
+	companion = null,
 	picture: url = null,
 }: {
 	away?: boolean;
+	/** Who comes along: the grown-up's picture (null shows the placeholder) or the puppy. */
+	companion?:
+		| { kind: "grownUp"; picture: string | null }
+		| { kind: "puppy" }
+		| null;
 	/** The child's drawn look; null shows the neutral placeholder. */
 	picture?: string | null;
 }) {
@@ -87,31 +145,31 @@ export function WatchHill({
 						},
 			]}
 		>
-			<View
-				style={{
-					bottom: picture.bottom,
-					filter: pictureFilter,
-					height: picture.size,
-					left: picture.left,
-					position: "absolute",
-					width: picture.size,
-				}}
-			>
-				{url ? (
-					<Image
-						accessibilityIgnoresInvertColors
-						contentFit="cover"
-						source={{ uri: url }}
-						style={{ borderRadius: picture.size / 2, flex: 1 }}
-					/>
-				) : (
-					<Placeholder
-						icon="user"
-						iconSize={iconSizes.hero}
-						style={{ borderRadius: picture.size / 2, flex: 1 }}
-					/>
-				)}
-			</View>
+			<Circle {...picture}>
+				<Face icon={iconSizes.hero} url={url} />
+			</Circle>
+			{companion ? (
+				<Circle {...companionCircle}>
+					{companion.kind === "puppy" ? (
+						<View
+							style={{
+								alignItems: "center",
+								backgroundColor: colors.puppyDisc,
+								borderRadius: companionCircle.size / 2,
+								flex: 1,
+								justifyContent: "center",
+							}}
+						>
+							<Character
+								kind="puppy"
+								size={companionCircle.size * PUPPY_FILL}
+							/>
+						</View>
+					) : (
+						<Face icon={iconSizes.hero} url={companion.picture} />
+					)}
+				</Circle>
+			) : null}
 			<View
 				style={{
 					borderRadius: "50%",

@@ -17,7 +17,13 @@ import { WaitLoop } from "@little-adventures/native-ui/wait-loop";
 import { WatchHill } from "@little-adventures/native-ui/watch-hill";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import {
+	type ComponentProps,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
 import {
 	type StyleProp,
 	StyleSheet,
@@ -39,7 +45,8 @@ import {
 	watchMaking,
 } from "@/src/data/adventure-client";
 import type { Style } from "@/src/data/engine-client";
-import { useChild } from "@/src/data/profile-queries";
+import { grownUpPicture } from "@/src/data/profile-map";
+import { useChild, useGrownUpPhoto } from "@/src/data/profile-queries";
 import {
 	clearSpokenQuestion,
 	getSpokenFacts,
@@ -251,6 +258,19 @@ function FactTicker({ calm, facts }: { calm: boolean; facts: string[] }) {
 	);
 }
 
+/** Who comes along with the child on the hill: the grown-up's picture or the puppy. */
+function useCompanion(): ComponentProps<typeof WatchHill>["companion"] {
+	const { data: grownUpPhoto } = useGrownUpPhoto();
+	const profile = useChild().data?.profile;
+	if (profile?.grownUp) {
+		return {
+			kind: "grownUp",
+			picture: grownUpPhoto ? grownUpPicture(grownUpPhoto) : null,
+		};
+	}
+	return profile?.puppy ? { kind: "puppy" } : null;
+}
+
 /** 10a Making your adventure, then 10b Ready in place. */
 export default function Making() {
 	const router = useRouter();
@@ -274,6 +294,7 @@ export default function Making() {
 	}>();
 	const style = toStyle(pickedStyle);
 	const child = useChild();
+	const companion = useCompanion();
 	// Read once: the id this screen writes into the address must not start it again.
 	const [resumeId] = useState(madeId);
 	// A picked idea arrives in the address; the child's own spoken question never does (it waits
@@ -405,7 +426,11 @@ export default function Making() {
 	return (
 		<View style={styles.root}>
 			<WaitLoop away={revealed} fast={serverReady && !full} source={LOADER} />
-			<WatchHill away={revealed} picture={child.data?.avatarUrl ?? null} />
+			<WatchHill
+				away={revealed}
+				companion={companion}
+				picture={child.data?.avatarUrl ?? null}
+			/>
 			<Screen
 				bodyStyle={styles.body}
 				dock={

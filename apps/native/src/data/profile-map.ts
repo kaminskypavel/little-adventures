@@ -110,11 +110,27 @@ export const clearChildPhoto = <R extends ChildRow>(
 
 export interface GrownUpPhoto {
 	faceUrl: string | null;
+	/** The drawn look of the grown-up; the server adds it, so it may be missing for now. */
+	lookUrl?: string | null;
 	photoUrl: string;
 }
 
+/** The picture to show for the grown-up: the drawn look, else the face cut-out, else the photo. */
+export const grownUpPicture = (photo: GrownUpPhoto) =>
+	photo.lookUrl ?? photo.faceUrl ?? photo.photoUrl;
+
 /** The grown-up's own photo (signed url), or null when none is saved. */
 export const toGrownUpPhoto = (
-	row: { faceUrl?: string | null; photoUrl: string } | null
+	row: {
+		faceUrl?: string | null;
+		lookUrl?: string | null;
+		photoUrl: string;
+	} | null
 ): GrownUpPhoto | null =>
-	row ? { faceUrl: row.faceUrl ?? null, photoUrl: row.photoUrl } : null;
+	row
+		? {
+				faceUrl: row.faceUrl ?? null,
+				lookUrl: row.lookUrl ?? null,
+				photoUrl: row.photoUrl,
+			}
+		: null;
