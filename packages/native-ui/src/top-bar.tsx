@@ -6,6 +6,7 @@ import { ClayText } from "./clay-text";
 import { IconButton } from "./icon-button";
 import type { IconName } from "./icons";
 import { StarTake, type StarTakeName } from "./star-take";
+import { TitleHold } from "./title-hold";
 import { colors, radii } from "./tokens";
 
 const AVATAR = 61;
@@ -22,6 +23,7 @@ export function TopBar({
 	action,
 	avatar = false,
 	avatarUrl,
+	onTitleLongPress,
 	take,
 	takeRun = 0,
 	title,
@@ -34,6 +36,8 @@ export function TopBar({
 	avatar?: boolean;
 	/** The child's drawn picture. Shown instead of the star; the star stays when it is missing or fails to load. */
 	avatarUrl?: string | null;
+	/** A 1 s hold on the title. Defaults to the app's `TitleHoldProvider` action. */
+	onTitleLongPress?: () => void;
 	/** Makes the avatar star live: it plays this gesture when it appears, then rests on idle. */
 	take?: StarTakeName;
 	/** Change it to play `take` again. */
@@ -60,15 +64,16 @@ export function TopBar({
 	return (
 		<>
 			{avatar ? <View style={styles.avatar}>{art}</View> : null}
-			<ClayText
-				accessibilityRole="header"
-				color={colors.cream}
-				numberOfLines={1}
-				style={styles.title}
-				variant="title"
-			>
-				{title}
-			</ClayText>
+			<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
+				<ClayText
+					accessibilityRole="header"
+					color={colors.cream}
+					numberOfLines={1}
+					variant="title"
+				>
+					{title}
+				</ClayText>
+			</TitleHold>
 			{action ? (
 				<IconButton
 					accessibilityLabel={action.accessibilityLabel}
@@ -92,5 +97,5 @@ const styles = StyleSheet.create({
 		width: AVATAR,
 	},
 	picture: StyleSheet.absoluteFill,
-	title: { flex: 1 },
+	title: { flex: 1, justifyContent: "center" },
 });

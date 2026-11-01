@@ -1,7 +1,6 @@
 import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClaySurface } from "@little-adventures/native-ui/clay-surface";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import {
 	colors,
@@ -27,10 +26,6 @@ import { useMe } from "./use-me";
 type Key = "pictures" | "story" | "video" | "voice";
 type Values = Record<Key, boolean>;
 
-const BUTTON = 40;
-/** Under the dock in the home indicator's band, inset so the phone's rounded corner never clips it. */
-const EDGE_SIDE = 22;
-const EDGE_BOTTOM = 8;
 const easeOut = cubicBezier(...motion.easeOut);
 
 const ROWS: { key: Key; note: string; title: string }[] = [
@@ -49,31 +44,6 @@ const ROWS: { key: Key; note: string; title: string }[] = [
 ];
 
 const fromMe = (me: EngineMe): Values => me.steps;
-
-/** Floating round admin button, mounted once in the root layout inside the app field. Admins only. */
-export function AdminButton() {
-	const setOpen = useAdminPanel((s) => s.setOpen);
-	return (
-		<View
-			pointerEvents="box-none"
-			// In the strip under the dock buttons (the home indicator's band), clear of content.
-			style={{
-				bottom: EDGE_BOTTOM,
-				position: "absolute",
-				right: EDGE_SIDE,
-			}}
-		>
-			<AdminOnly>
-				<IconButton
-					accessibilityLabel="Admin switches"
-					icon="sliders"
-					onPress={() => setOpen(true)}
-					style={{ height: BUTTON, width: BUTTON }}
-				/>
-			</AdminOnly>
-		</View>
-	);
-}
 
 /**
  * The switches as a bottom sheet over the app field (inside the phone frame, not a window

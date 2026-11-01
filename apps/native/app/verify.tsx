@@ -1,7 +1,5 @@
-import {
-	PrimaryButton,
-	SecondaryButton,
-} from "@little-adventures/native-ui/button";
+import { PrimaryButton } from "@little-adventures/native-ui/button";
+import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
@@ -47,40 +45,48 @@ export default function Verify() {
 		<View style={styles.root}>
 			<Screen
 				dock={
-					<>
-						<PrimaryButton
-							label="Yes, let's go!"
-							// The adventure starts from the full transcript, not the short one.
-							onPress={() => router.push("/style")}
-						/>
-						<SecondaryButton
-							label="Say it again"
-							// 09a replaced itself with this screen, so back would land on the pick screen.
-							onPress={() => router.replace("/listening")}
-						/>
-					</>
+					<PrimaryButton
+						label="Yes, let's go!"
+						// The adventure starts from the full transcript, not the short one.
+						onPress={() => router.push("/style")}
+					/>
 				}
 				title={"Did I hear\nyou right?"}
 			>
 				<View style={styles.reader}>
 					<StarTake size={STAR_SIZE} take="idle" />
 				</View>
-				<View style={styles.card}>
-					<Text
-						adjustsFontSizeToFit
-						minimumFontScale={0.6}
-						numberOfLines={CARD_LINES}
-						style={styles.text}
-					>
-						{short}
-					</Text>
+				<View style={styles.cardWrap}>
+					<View style={styles.card}>
+						<Text
+							adjustsFontSizeToFit
+							minimumFontScale={0.6}
+							numberOfLines={CARD_LINES}
+							style={styles.text}
+						>
+							{short}
+						</Text>
+					</View>
+					<IconButton
+						accessibilityLabel="Say it again"
+						icon="mic"
+						// 09a replaced itself with this screen, so back would land on the pick screen.
+						onPress={() => router.replace("/listening")}
+						style={styles.badge}
+					/>
 				</View>
 			</Screen>
 		</View>
 	);
 }
 
+// The 64 pt mic badge sits on the card's bottom right corner (Round 1 C: 4 pt in from the right
+// edge, 18 pt below the bottom).
+const BADGE_RIGHT = 4;
+const BADGE_BELOW = 18;
+
 const styles = StyleSheet.create({
+	badge: { bottom: -BADGE_BELOW, position: "absolute", right: BADGE_RIGHT },
 	card: {
 		alignItems: "center",
 		alignSelf: "stretch",
@@ -89,11 +95,11 @@ const styles = StyleSheet.create({
 		flexShrink: 1,
 		height: card.minHeight,
 		justifyContent: "center",
-		marginTop: CARD_GAP,
 		overflow: "hidden",
 		paddingHorizontal: card.padX,
 		paddingVertical: card.padY,
 	},
+	cardWrap: { alignSelf: "stretch", flexShrink: 1, marginTop: CARD_GAP },
 	reader: {
 		alignItems: "flex-start",
 		alignSelf: "center",

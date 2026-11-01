@@ -176,7 +176,6 @@ export default function Home() {
 	const ask = (question: string) =>
 		router.push({ params: { question }, pathname: "/style" });
 
-	const dock = dockFor(data, () => router.push("/library"));
 	const latest = data?.latest ?? null;
 
 	const scroll = (
@@ -184,12 +183,8 @@ export default function Home() {
 			contentContainerStyle={[
 				styles.content,
 				{
-					// The dock floats over the shelf: room to scroll the last row above it.
-					paddingBottom:
-						insets.bottom +
-						layout.dockBottom +
-						layout.secondaryHeight +
-						spacing.lg,
+					// No dock: the shelf scrolls clear of the home indicator.
+					paddingBottom: insets.bottom + spacing.lg,
 					paddingTop: barBottom + spacing.lg,
 				},
 			]}
@@ -242,9 +237,22 @@ export default function Home() {
 			) : null}
 			{latest ? (
 				<>
-					<ClayText color={colors.cream} style={styles.label} variant="label">
-						Keep exploring
-					</ClayText>
+					<View style={styles.keepRow}>
+						<ClayText
+							color={colors.cream}
+							style={styles.keepLabel}
+							variant="label"
+						>
+							Keep exploring
+						</ClayText>
+						<SecondaryButton
+							icon="map"
+							label="Past stories"
+							onPress={() => router.push("/library")}
+							size="md"
+							style={styles.past}
+						/>
+					</View>
 					<RowCard
 						onPress={() => router.push(`/map?id=${latest.id}`)}
 						picture={latest.picture}
@@ -280,7 +288,7 @@ export default function Home() {
 	);
 
 	return (
-		<Screen dock={dock} floatDock>
+		<Screen>
 			{IS_WEB ? (
 				scroll
 			) : (
@@ -316,26 +324,18 @@ export default function Home() {
 	);
 }
 
-// The dock button shows once we know the child has stories. Same-size flat bar while loading.
-function dockFor(data: HomeData | null, onPress: () => void) {
-	if (data === null) {
-		return <View style={styles.dockSkeleton} />;
-	}
-	return data.latest ? (
-		<SecondaryButton label="Continue past stories" onPress={onPress} />
-	) : undefined;
-}
-
 const styles = StyleSheet.create({
 	// The body has side padding; the scroll view undoes it so the shelf can bleed to the edge.
 	content: { paddingHorizontal: layout.sideMargin },
-	dockSkeleton: {
-		backgroundColor: colors.sand,
-		borderRadius: layout.secondaryHeight / 2,
-		height: layout.secondaryHeight,
-		opacity: SKELETON_FADE,
-	},
 	fill: { flex: 1 },
+	// Keep exploring on the left, the Past stories button (64 pt) on the right.
+	keepLabel: { marginLeft: LABEL_INSET },
+	keepRow: {
+		alignItems: "center",
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginTop: LABEL_GAP,
+	},
 	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
 	latest: { marginTop: SHELF_GAP },
 	maskFill: { backgroundColor: "transparent", flex: 1 },
@@ -345,6 +345,7 @@ const styles = StyleSheet.create({
 		lineHeight: MIC_MSG_LINE,
 		marginTop: LABEL_GAP,
 	},
+	past: { alignSelf: "auto", paddingHorizontal: 22 },
 	scroll: { flex: 1, marginHorizontal: -layout.sideMargin },
 	shelf: { marginTop: SHELF_GAP },
 	skeleton: {
