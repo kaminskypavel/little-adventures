@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
-import { faceCutout, faceSquare, fillHoles, objectCutout } from "./cutout";
+import { backgroundCutout, faceCutout, faceSquare } from "./cutout";
 import { type Candidate, createImageEditing, pickPerson } from "./index";
 import { eventData, splitEvents } from "./sse";
 
@@ -79,53 +79,45 @@ describe("faceCutout", () => {
 	});
 });
 
-describe("fillHoles", () => {
-	test("fills a hole inside the shape and keeps the outside clear", () => {
-		// 5x5: a ring of 255 with a clear center, clear outside the ring.
-		const a = new Uint8Array(25);
-		for (const i of [6, 7, 8, 11, 13, 16, 17, 18]) {
-			a[i] = 255;
-		}
-		const filled = fillHoles(a, 5, 5);
-		expect(filled[12]).toBe(255);
-		expect(filled[0]).toBe(0);
-		expect(filled[24]).toBe(0);
-	});
-});
-
-describe("objectCutout", () => {
-	test("crops to the box with a small margin, transparent outside the mask", async () => {
+describe("backgroundCutout", () => {
+	test("clears the light backdrop, keeps the object, crops with a margin", async () => {
+		// 200x200 white backdrop with a 100x100 red square in the middle.
 		const image = await sharp({
 			create: {
-				background: { b: 40, g: 120, r: 200 },
+				background: { b: 255, g: 255, r: 255 },
 				channels: 3,
-				height: 400,
-				width: 400,
+				height: 200,
+				width: 200,
 			},
 		})
+			.composite([
+				{
+					input: await sharp({
+						create: {
+							background: { b: 30, g: 30, r: 220 },
+							channels: 3,
+							height: 100,
+							width: 100,
+						},
+					})
+						.png()
+						.toBuffer(),
+					left: 50,
+					top: 50,
+				},
+			])
 			.png()
 			.toBuffer();
-		// Mask: the top half of the box set, the bottom half clear.
-		const mask = new Uint8Array(10 * 10);
-		for (let i = 0; i < 50; i += 1) {
-			mask[i] = 1;
-		}
-		const png = await objectCutout(image, {
-			box: { x1: 100, x2: 300, y1: 100, y2: 300 },
-			mask,
-			maskHeight: 10,
-			maskWidth: 10,
-		});
+		const png = await backgroundCutout(new Uint8Array(image));
 		const { data, info } = await sharp(png)
 			.raw()
 			.toBuffer({ resolveWithObject: true });
-		// 200 px box plus 4% (8 px) on each side.
-		expect([info.width, info.height, info.channels]).toEqual([216, 216, 4]);
+		// The 100 px square plus 4% (4 px) on each side.
+		expect([info.width, info.height, info.channels]).toEqual([108, 108, 4]);
 		const alphaAt = (x: number, y: number) =>
 			data[(y * info.width + x) * info.channels + 3];
-		expect(alphaAt(108, 50)).toBe(255);
-		expect(alphaAt(108, 170)).toBe(0);
-		expect(alphaAt(2, 2)).toBe(0);
+		expect(alphaAt(54, 54)).toBe(255);
+		expect(alphaAt(1, 1)).toBe(0);
 	});
 });
 
