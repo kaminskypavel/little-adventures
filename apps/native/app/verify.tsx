@@ -8,6 +8,9 @@ import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { LiveConfirm } from "@/src/admin/live-confirm";
+import { isAdminMe } from "@/src/admin/use-is-admin";
+import { useMe } from "@/src/admin/use-me";
 import { getShortSpokenQuestion } from "@/src/data/spoken-question";
 
 // Round 7 09b at 0.72 scale (px / 0.72). The star is centered.
@@ -27,6 +30,12 @@ export default function Verify() {
 	// The words stay in memory, never in the address. Listening opens this screen only once the
 	// short version is back, so the card has its words at once.
 	const [short] = useState(getShortSpokenQuestion);
+	const me = useMe();
+	const [confirming, setConfirming] = useState(false);
+	// A live adventure spends real credits: an admin with live on chooses first.
+	const asksFirst = isAdminMe(me) && me?.live === true;
+	const start = () =>
+		asksFirst ? setConfirming(true) : router.replace("/making");
 
 	useEffect(() => {
 		if (!short) {
@@ -36,37 +45,49 @@ export default function Verify() {
 	}, [short, router]);
 
 	return (
-		<Screen
-			dock={
-				<>
-					<PrimaryButton
-						label="Yes, let's go!"
-						// The adventure starts from the full transcript, not the short one.
-						onPress={() => router.replace("/making")}
-					/>
-					<SecondaryButton
-						label="Say it again"
-						// 09a replaced itself with this screen, so back would land on the pick screen.
-						onPress={() => router.replace("/listening")}
-					/>
-				</>
-			}
-			title={"Did I hear\nyou right?"}
-		>
-			<View style={styles.reader}>
-				<StarTake size={STAR_SIZE} take="idle" />
-			</View>
-			<View style={styles.card}>
-				<Text
-					adjustsFontSizeToFit
-					minimumFontScale={0.6}
-					numberOfLines={CARD_LINES}
-					style={styles.text}
-				>
-					{short}
-				</Text>
-			</View>
-		</Screen>
+		<View style={styles.root}>
+			<Screen
+				dock={
+					<>
+						<PrimaryButton
+							label="Yes, let's go!"
+							// The adventure starts from the full transcript, not the short one.
+							onPress={start}
+						/>
+						<SecondaryButton
+							label="Say it again"
+							// 09a replaced itself with this screen, so back would land on the pick screen.
+							onPress={() => router.replace("/listening")}
+						/>
+					</>
+				}
+				title={"Did I hear\nyou right?"}
+			>
+				<View style={styles.reader}>
+					<StarTake size={STAR_SIZE} take="idle" />
+				</View>
+				<View style={styles.card}>
+					<Text
+						adjustsFontSizeToFit
+						minimumFontScale={0.6}
+						numberOfLines={CARD_LINES}
+						style={styles.text}
+					>
+						{short}
+					</Text>
+				</View>
+			</Screen>
+			{confirming && me ? (
+				<LiveConfirm
+					onCancel={() => setConfirming(false)}
+					onLive={() => router.replace("/making")}
+					onRecorded={() =>
+						router.replace({ params: { recorded: "1" }, pathname: "/making" })
+					}
+					steps={me.steps}
+				/>
+			) : null}
+		</View>
 	);
 }
 
@@ -91,6 +112,7 @@ const styles = StyleSheet.create({
 		height: STAR_SIZE,
 		marginTop: STAR_TOP,
 	},
+	root: { flex: 1 },
 	text: {
 		color: colors.inkNavy,
 		fontFamily: fonts.heavy,

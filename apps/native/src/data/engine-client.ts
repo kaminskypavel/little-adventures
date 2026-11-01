@@ -112,9 +112,15 @@ export function createEngineClient(engineFetch: EngineFetch) {
 	}
 
 	return {
-		createAdventure: (childId: string, question: string) =>
+		/** `recorded` asks for the recorded adventure even on a live account (an admin's choice). */
+		createAdventure: (childId: string, question: string, recorded = false) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
-				body: JSON.stringify({ childId, question, style: STYLE }),
+				body: JSON.stringify({
+					childId,
+					question,
+					style: STYLE,
+					...(recorded ? { recorded } : {}),
+				}),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),

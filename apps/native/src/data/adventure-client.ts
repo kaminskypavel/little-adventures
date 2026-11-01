@@ -221,7 +221,8 @@ export const shortQuestion = async (
 };
 
 export const startAdventure = async (
-	question: string
+	question: string,
+	recorded = false
 ): Promise<{ id: string }> => {
 	if (!engine) {
 		return wait({ id: mockAdventure.id });
@@ -230,7 +231,7 @@ export const startAdventure = async (
 	if (!childId) {
 		throw new Error("No child is set up yet");
 	}
-	const made = await engine.createAdventure(childId, question);
+	const made = await engine.createAdventure(childId, question, recorded);
 	return { id: made.id };
 };
 

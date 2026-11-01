@@ -195,9 +195,15 @@ export default function Making() {
 		fontSize: narrow ? NARROW_SIZE : HEADLINE_SIZE,
 		lineHeight: narrow ? NARROW_LINE : HEADLINE_LINE,
 	};
-	const { fail, question: picked = "" } = useLocalSearchParams<{
+	const {
+		fail,
+		question: picked = "",
+		recorded,
+	} = useLocalSearchParams<{
 		fail?: string;
 		question?: string;
+		/** "1" when an admin with live on chose the recorded adventure for this one. */
+		recorded?: string;
 	}>();
 	// A picked idea arrives in the address; the child's own spoken question never does.
 	const question = picked || getSpokenQuestion();
@@ -240,7 +246,7 @@ export default function Making() {
 		const run = async () => {
 			let id: string;
 			try {
-				({ id } = await startAdventure(question));
+				({ id } = await startAdventure(question, recorded === "1"));
 			} catch {
 				if (live) {
 					router.replace("/oops");
