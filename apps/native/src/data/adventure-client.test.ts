@@ -37,6 +37,8 @@ describe("without an engine url (AE5)", () => {
 
 	test("startAdventure hands back the bundled adventure's id", async () => {
 		const { startAdventure } = await import("./adventure-client");
-		expect((await startAdventure("Why do whales sing?")).id).toBe("box");
+		expect((await startAdventure("Why do whales sing?", "clay")).id).toBe(
+			"box"
+		);
 	});
 });

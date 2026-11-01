@@ -5,14 +5,9 @@ import {
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { VideoConfirm } from "@/src/admin/live-confirm";
-import { isAdminMe } from "@/src/admin/use-is-admin";
-import { useMe } from "@/src/admin/use-me";
-import { setStepsOptions } from "@/src/data/engine-queries";
 import {
 	useSpokenHydrated,
 	useSpokenQuestion,
@@ -36,14 +31,6 @@ export default function Verify() {
 	// short version is back, so the card has its words at once.
 	const short = useSpokenQuestion((spoken) => spoken.short);
 	const hydrated = useSpokenHydrated();
-	const me = useMe();
-	const client = useQueryClient();
-	const steps = useMutation(setStepsOptions(client));
-	const [confirming, setConfirming] = useState(false);
-	// Video is the costly step: an admin with video clips on chooses first.
-	const asksFirst = isAdminMe(me) && me?.steps.video === true;
-	const go = () => router.replace("/making");
-	const start = () => (asksFirst ? setConfirming(true) : go());
 
 	useEffect(() => {
 		if (hydrated && !short) {
@@ -60,7 +47,7 @@ export default function Verify() {
 						<PrimaryButton
 							label="Yes, let's go!"
 							// The adventure starts from the full transcript, not the short one.
-							onPress={start}
+							onPress={() => router.push("/style")}
 						/>
 						<SecondaryButton
 							label="Say it again"
@@ -85,14 +72,6 @@ export default function Verify() {
 					</Text>
 				</View>
 			</Screen>
-			{confirming ? (
-				<VideoConfirm
-					onCancel={() => setConfirming(false)}
-					// The engine reads the switches when the adventure starts, so wait for the save.
-					onNoVideo={() => steps.mutate({ video: false }, { onSuccess: go })}
-					onVideo={go}
-				/>
-			) : null}
 		</View>
 	);
 }

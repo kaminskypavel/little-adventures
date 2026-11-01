@@ -42,6 +42,7 @@ import {
 	getSpokenQuestion,
 	useSpokenHydrated,
 } from "@/src/data/spoken-question";
+import { toStyle } from "@/src/data/styles";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -203,12 +204,15 @@ export default function Making() {
 		fail,
 		id: madeId,
 		question: picked = "",
+		style: pickedStyle,
 	} = useLocalSearchParams<{
 		fail?: string;
 		/** The adventure already started for this screen: a refresh picks it up from the database. */
 		id?: string;
 		question?: string;
+		style?: string;
 	}>();
+	const style = toStyle(pickedStyle);
 	// Read once: the id this screen writes into the address must not start it again.
 	const [resumeId] = useState(madeId);
 	// A picked idea arrives in the address; the child's own spoken question never does (it waits
@@ -264,7 +268,7 @@ export default function Making() {
 			let id = resumeId ?? "";
 			if (!id) {
 				try {
-					({ id } = await startAdventure(question));
+					({ id } = await startAdventure(question, style));
 				} catch {
 					if (live) {
 						router.replace("/oops");
@@ -306,7 +310,7 @@ export default function Making() {
 			live = false;
 			stop?.();
 		};
-	}, [fail, finish, question, resumeId, router]);
+	}, [fail, finish, question, resumeId, router, style]);
 
 	useEffect(() => {
 		if (revealed) {

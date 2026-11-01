@@ -31,14 +31,18 @@ describe("engine client", () => {
 		const { client, requests } = engine(
 			json({ id: "a1", source: "recorded", status: "ready" })
 		);
-		const made = await client.createAdventure("child-1", "Why do whales sing?");
+		const made = await client.createAdventure(
+			"child-1",
+			"Why do whales sing?",
+			"felt"
+		);
 		expect(made.id).toBe("a1");
 		expect(requests[0].path).toBe("/adventures");
 		expect(requests[0].init?.method).toBe("POST");
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
 			childId: "child-1",
 			question: "Why do whales sing?",
-			style: "clay",
+			style: "felt",
 		});
 	});
 

@@ -7,6 +7,7 @@ import {
 	createEngineClient,
 	type EngineAdventure,
 	type EngineSteps,
+	type Style,
 	sleep,
 } from "./engine-client";
 import {
@@ -213,7 +214,8 @@ export const shortQuestion = async (
 };
 
 export const startAdventure = async (
-	question: string
+	question: string,
+	style: Style
 ): Promise<{ id: string }> => {
 	if (!engine) {
 		return wait({ id: mockAdventure.id });
@@ -222,7 +224,7 @@ export const startAdventure = async (
 	if (!childId) {
 		throw new Error("No child is set up yet");
 	}
-	const made = await engine.createAdventure(childId, question);
+	const made = await engine.createAdventure(childId, question, style);
 	return { id: made.id };
 };
 

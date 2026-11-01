@@ -174,7 +174,7 @@ export default function Home() {
 	}, []);
 
 	const ask = (question: string) =>
-		router.push({ params: { question }, pathname: "/making" });
+		router.push({ params: { question }, pathname: "/style" });
 
 	const dock = dockFor(data, () => router.push("/library"));
 	const latest = data?.latest ?? null;
