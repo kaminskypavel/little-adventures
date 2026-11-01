@@ -55,7 +55,8 @@
         {
           "microphonePermission": "Little Adventures listens only while your child says a question."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
