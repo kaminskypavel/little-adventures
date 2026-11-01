@@ -3,7 +3,13 @@ import type { StyleProp, ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
 import { Icon, type IconName } from "./icons";
-import { type ClayTone, colors, iconSizes, layout, spacing } from "./tokens";
+import {
+	type ButtonSize,
+	buttonSizes,
+	type ClayTone,
+	colors,
+	spacing,
+} from "./tokens";
 
 interface ButtonProps {
 	/** Defaults to the label. */
@@ -12,6 +18,8 @@ interface ButtonProps {
 	label: string;
 	onPress?: () => void;
 	selected?: boolean;
+	/** sm / md / lg, like Tailwind: lg (the default) is the child-sized button. */
+	size?: ButtonSize;
 	style?: StyleProp<ViewStyle>;
 	testID?: string;
 	/** Override for states: "off", "locked". */
@@ -32,6 +40,14 @@ function ink(tone: ClayTone) {
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }
 
+/** The label's text style per size: lg keeps each button's own, md and sm step down. */
+const labelVariant = (size: ButtonSize, lg: "buttonSecondary" | "title") => {
+	if (size === "sm") {
+		return "label";
+	}
+	return size === "md" ? "buttonSecondary" : lg;
+};
+
 /**
  * 88 high, pill, sun clay. One per screen. Full width inside the margins.
  * With a `leading` mark the label drops to the secondary size and stays on one line, so it
@@ -42,21 +58,23 @@ export function PrimaryButton({
 	icon,
 	label,
 	leading,
+	size = "lg",
 	style,
 	tone = "sun",
 	...rest
 }: PrimaryButtonProps) {
+	const dims = buttonSizes[size];
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
-			radius={layout.primaryHeight / 2}
+			radius={dims.primary / 2}
 			style={[
 				{
 					alignItems: "center",
 					alignSelf: "stretch",
 					flexDirection: "row",
-					gap: leading ? spacing.sm : spacing.md,
-					height: layout.primaryHeight,
+					gap: leading ? spacing.sm : dims.gap,
+					height: dims.primary,
 					justifyContent: "center",
 				},
 				style,
@@ -65,13 +83,11 @@ export function PrimaryButton({
 			{...rest}
 		>
 			{leading ??
-				(icon ? (
-					<Icon color={ink(tone)} name={icon} size={iconSizes.button} />
-				) : null)}
+				(icon ? <Icon color={ink(tone)} name={icon} size={dims.icon} /> : null)}
 			<ClayText
 				color={ink(tone)}
-				numberOfLines={leading ? 1 : undefined}
-				variant={leading ? "buttonSecondary" : "title"}
+				numberOfLines={leading || size !== "lg" ? 1 : undefined}
+				variant={labelVariant(size, leading ? "buttonSecondary" : "title")}
 			>
 				{label}
 			</ClayText>
@@ -84,21 +100,23 @@ export function SecondaryButton({
 	accessibilityLabel,
 	icon,
 	label,
+	size = "lg",
 	style,
 	tone = "sage",
 	...rest
 }: IconButtonProps) {
+	const dims = buttonSizes[size];
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
-			radius={layout.secondaryHeight / 2}
+			radius={dims.secondary / 2}
 			style={[
 				{
 					alignItems: "center",
 					alignSelf: "stretch",
 					flexDirection: "row",
-					gap: spacing.md,
-					height: layout.secondaryHeight,
+					gap: dims.gap,
+					height: dims.secondary,
 					justifyContent: "center",
 				},
 				style,
@@ -106,10 +124,12 @@ export function SecondaryButton({
 			tone={tone}
 			{...rest}
 		>
-			{icon ? (
-				<Icon color={ink(tone)} name={icon} size={iconSizes.button} />
-			) : null}
-			<ClayText color={ink(tone)} variant="buttonSecondary">
+			{icon ? <Icon color={ink(tone)} name={icon} size={dims.icon} /> : null}
+			<ClayText
+				color={ink(tone)}
+				numberOfLines={size === "lg" ? undefined : 1}
+				variant={labelVariant(size, "buttonSecondary")}
+			>
 				{label}
 			</ClayText>
 		</ClayPressable>

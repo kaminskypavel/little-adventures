@@ -210,6 +210,17 @@ export const focusRing = { offset: 3, width: 3 } as const;
 
 export const iconSizes = { button: 30, hero: 50 } as const;
 
+/**
+ * Button sizes, like Tailwind's sm / md / lg. lg is the child-sized default (88 primary, 80
+ * secondary); md suits grown-up screens; sm is for compact tools such as the admin sheet.
+ */
+export const buttonSizes = {
+	lg: { gap: 14, icon: 30, primary: 88, secondary: 80 },
+	md: { gap: 12, icon: 24, primary: 64, secondary: 64 },
+	sm: { gap: 8, icon: 18, primary: 44, secondary: 44 },
+} as const;
+export type ButtonSize = keyof typeof buttonSizes;
+
 /** New adventure / Ask your own card. */
 export const heroCard = {
 	gap: 20,
