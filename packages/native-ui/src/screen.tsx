@@ -9,7 +9,12 @@ import {
 import Animated, { cubicBezier } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton, useBackAction } from "./back-button";
-import { useBodyMask } from "./body-fade";
+import {
+	BODY_FADE,
+	BODY_FADE_TOP,
+	bodyMaskImage,
+	useBodyMask,
+} from "./body-fade";
 import { ClayText } from "./clay-text";
 import { useCalm } from "./motion-provider";
 import { TitleHold } from "./title-hold";
@@ -22,11 +27,6 @@ const riseIn = {
 	from: { opacity: 0, transform: [{ translateY: motion.enterRise }] },
 	to: { opacity: 1, transform: [{ translateY: 0 }] },
 };
-/** The body melts into the sky over this many pt above the dock. */
-const BODY_FADE = 80;
-const BODY_FADE_WEB = {
-	maskImage: `linear-gradient(to bottom, #000 calc(100% - ${BODY_FADE}px), transparent)`,
-} as ViewStyle;
 const fadeIn = { from: { opacity: 0 }, to: { opacity: 1 } };
 
 /**
@@ -49,11 +49,46 @@ function enter(index: number, calm: boolean) {
 	} as const;
 }
 
+/** The body with its fade: a CSS mask on web, the app-supplied mask on native. */
+function FadedBody({
+	bottom,
+	children,
+	top,
+}: {
+	bottom: number;
+	children: ReactNode;
+	top: number;
+}) {
+	const BodyMask = useBodyMask();
+	if (bottom === 0 && top === 0) {
+		return <View style={styles.bodyWrap}>{children}</View>;
+	}
+	if (Platform.OS !== "web" && BodyMask) {
+		return (
+			<BodyMask height={bottom} top={top}>
+				{children}
+			</BodyMask>
+		);
+	}
+	return (
+		<View
+			style={[
+				styles.bodyWrap,
+				{ maskImage: bodyMaskImage(top, bottom) } as ViewStyle,
+			]}
+		>
+			{children}
+		</View>
+	);
+}
+
 /**
  * One kid or grown-up screen: optional top bar, a centered headline about 80 pt
  * below the screen top, the hero band, and the docked actions at the bottom.
  * The sky is mounted once in the root layout and shows through. With a (non floating) dock the
  * body fades out over its last 80 pt, so scrolling content melts into the sky above the dock.
+ * A scrolling body (`scrolls`) also fades in over its first 40 pt, under the headline. Its
+ * scroll view needs `BODY_SCROLL_END` bottom padding above a faded dock.
  */
 export function Screen({
 	bodyStyle,
@@ -63,6 +98,7 @@ export function Screen({
 	dock,
 	floatDock = false,
 	onTitleLongPress,
+	scrolls = false,
 	title,
 	titleTop = layout.titleTop,
 	topBar,
@@ -79,6 +115,8 @@ export function Screen({
 	floatDock?: boolean;
 	/** A 1 s hold on the title. Defaults to the app's `TitleHoldProvider` action. */
 	onTitleLongPress?: () => void;
+	/** The body holds a scroll view: content fades out under the headline instead of a flat cut. */
+	scrolls?: boolean;
 	title?: string;
 	/** Distance of the headline from the screen top. */
 	titleTop?: number;
@@ -90,8 +128,8 @@ export function Screen({
 	// Without a top bar the back button floats in the top left corner over the content, so the
 	// headline sits where it always did (titleTop below the top of the screen).
 	const floatBack = topBar ? null : onBack;
-	const BodyMask = useBodyMask();
-	const fade = Boolean(dock) && !floatDock;
+	const fadeBottom = dock && !floatDock ? BODY_FADE : 0;
+	const fadeTop = scrolls ? BODY_FADE_TOP : 0;
 	const body = (
 		<Animated.View style={[styles.body, bodyStyle, enter(1, calm)]}>
 			{children}
@@ -140,11 +178,9 @@ export function Screen({
 					</TitleHold>
 				</Animated.View>
 			) : null}
-			{fade && Platform.OS !== "web" && BodyMask ? (
-				<BodyMask height={BODY_FADE}>{body}</BodyMask>
-			) : (
-				<View style={[styles.bodyWrap, fade && BODY_FADE_WEB]}>{body}</View>
-			)}
+			<FadedBody bottom={fadeBottom} top={fadeTop}>
+				{body}
+			</FadedBody>
 			{dock ? (
 				<Animated.View
 					pointerEvents={floatDock ? "box-none" : "auto"}

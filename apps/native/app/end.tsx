@@ -1,3 +1,7 @@
+import {
+	BODY_SCROLL_END,
+	BODY_SCROLL_START,
+} from "@little-adventures/native-ui/body-fade";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { FoundPanel } from "@little-adventures/native-ui/found-panel";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -41,6 +45,7 @@ export default function End() {
 			dock={
 				<PrimaryButton label="Home" onPress={() => router.replace("/home")} />
 			}
+			scrolls
 			// A blank line keeps the headline's room while the name loads.
 			title={childName ? `Goodnight,\n${childName}!` : " "}
 		>
@@ -52,7 +57,13 @@ export default function End() {
 					style={{ flex: 1, marginTop: spacing.sm }}
 				>
 					{/* Bounded by the body, so the panel never runs under the Home button: it scrolls instead. */}
-					<ScrollView showsVerticalScrollIndicator={false}>
+					<ScrollView
+						contentContainerStyle={{
+							paddingBottom: BODY_SCROLL_END,
+							paddingTop: BODY_SCROLL_START,
+						}}
+						showsVerticalScrollIndicator={false}
+					>
 						<EndMap goal={adventure.endGoal.open} places={adventure.places} />
 						<FoundPanel
 							items={PLACES.map((node) => adventure.places[node].fact).filter(

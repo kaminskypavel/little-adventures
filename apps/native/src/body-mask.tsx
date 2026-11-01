@@ -8,15 +8,20 @@ const CLEAR = "rgba(0,0,0,0)";
 
 /**
  * The native body fade (iOS and Android): MaskedView reads only the alpha of its mask, so the
- * last `height` pt of the content fade to nothing. Web uses a CSS mask inside `Screen`.
+ * first `top` pt fade in and the last `height` pt fade to nothing. Web uses a CSS mask inside `Screen`.
  */
-export const FadeBottom: BodyMask = ({ children, height }) => (
+export const FadeBottom: BodyMask = ({ children, height, top }) => (
 	<MaskedView
 		androidRenderingMode="software"
 		maskElement={
 			<View style={styles.fill}>
+				{top > 0 ? (
+					<LinearGradient colors={[CLEAR, SOLID]} style={{ height: top }} />
+				) : null}
 				<View style={styles.solid} />
-				<LinearGradient colors={[SOLID, CLEAR]} style={{ height }} />
+				{height > 0 ? (
+					<LinearGradient colors={[SOLID, CLEAR]} style={{ height }} />
+				) : null}
 			</View>
 		}
 		style={styles.fill}

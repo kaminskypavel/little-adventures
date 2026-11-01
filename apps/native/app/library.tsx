@@ -1,3 +1,4 @@
+import { BODY_SCROLL_START } from "@little-adventures/native-ui/body-fade";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StoryCover } from "@little-adventures/native-ui/story-cover";
@@ -13,8 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getHome } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
 
-// Mockup 07b (390 x 844 phone, px = pt): the grid starts 18 below the top bar.
-const GRID_GAP = 18;
 const COLUMNS = 2;
 const SKELETON_FADE = 0.15;
 const SKELETON_COUNT = 4;
@@ -54,6 +53,7 @@ export default function Library() {
 
 	return (
 		<Screen
+			scrolls
 			topBar={
 				<ClayText
 					accessibilityRole="header"
@@ -70,7 +70,7 @@ export default function Library() {
 				contentContainerStyle={{
 					gap: layout.gap,
 					paddingBottom: insets.bottom + layout.dockBottom,
-					paddingTop: GRID_GAP,
+					paddingTop: BODY_SCROLL_START,
 				}}
 				showsVerticalScrollIndicator={false}
 			>

@@ -1,3 +1,4 @@
+import { BODY_SCROLL_START } from "@little-adventures/native-ui/body-fade";
 import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { Chip } from "@little-adventures/native-ui/chip";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
@@ -25,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import { useSession } from "@/src/auth/use-session";
 import { getAdventures } from "@/src/data/adventure-client";
+import { grownUpPicture } from "@/src/data/profile-map";
 import {
 	useChild,
 	useDeleteChildPhoto,
@@ -145,6 +147,7 @@ export default function Grownups() {
 
 	return (
 		<Screen
+			scrolls
 			topBar={
 				<TopBar
 					action={{
@@ -159,7 +162,7 @@ export default function Grownups() {
 			<ScrollView
 				contentContainerStyle={{
 					paddingBottom: insets.bottom + layout.dockBottom,
-					paddingTop: spacing.lg,
+					paddingTop: BODY_SCROLL_START,
 				}}
 				showsVerticalScrollIndicator={false}
 			>
@@ -255,7 +258,7 @@ export default function Grownups() {
 									<Image
 										accessibilityLabel="Your photo"
 										contentFit="cover"
-										source={grownUpPhoto.faceUrl ?? grownUpPhoto.photoUrl}
+										source={grownUpPicture(grownUpPhoto)}
 										style={styles.portrait}
 									/>
 									<View style={styles.ownChips}>

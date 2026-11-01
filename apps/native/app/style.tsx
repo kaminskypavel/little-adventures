@@ -1,3 +1,7 @@
+import {
+	BODY_SCROLL_END,
+	BODY_SCROLL_START,
+} from "@little-adventures/native-ui/body-fade";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { LookTile } from "@little-adventures/native-ui/look-tile";
@@ -13,6 +17,7 @@ import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
 import type { Style } from "@/src/data/engine-client";
 import { setStepsOptions } from "@/src/data/engine-queries";
+import { grownUpPicture } from "@/src/data/profile-map";
 import {
 	grownUpOptions,
 	useChild,
@@ -51,7 +56,7 @@ function Companion({ profile }: { profile: Profile }) {
 	const saveProfile = useSaveProfile();
 	// A photo just replaced shows on return.
 	const { data: photo } = useGrownUpPhoto();
-	const photoUri = photo ? (photo.faceUrl ?? photo.photoUrl) : null;
+	const photoUri = photo ? grownUpPicture(photo) : null;
 
 	const pickYou = async () => {
 		// The photo is mandatory for You: without one, the photo step saves the choice.
@@ -118,8 +123,8 @@ export default function StylePicker() {
 	return (
 		<View style={styles.root}>
 			<Screen
-				bodyStyle={styles.body}
 				dock={<PrimaryButton label="Start" onPress={start} />}
+				scrolls
 				title={"Get\nready"}
 			>
 				<ScrollView
@@ -160,8 +165,12 @@ export default function StylePicker() {
 }
 
 const styles = StyleSheet.create({
-	body: { paddingTop: 20 },
-	content: { gap: 12, paddingBottom: 12 },
+	// Bottom padding lets the last card scroll clear of the dock fade.
+	content: {
+		gap: 12,
+		paddingBottom: BODY_SCROLL_END,
+		paddingTop: BODY_SCROLL_START,
+	},
 	label: { marginTop: 6, opacity: 0.92 },
 	root: { flex: 1 },
 	row: { flexDirection: "row", flexWrap: "wrap", gap: select.lookRowGap },
