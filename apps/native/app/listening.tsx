@@ -20,7 +20,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { transcribe } from "@/src/data/adventure-client";
+import { shortQuestion, transcribe } from "@/src/data/adventure-client";
 import { askMicPermission } from "@/src/data/mic-permission";
 import { useRecorder } from "@/src/data/recorder";
 import { setSpokenQuestion } from "@/src/data/spoken-question";
@@ -35,7 +35,7 @@ const LINE = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
 const MISSED_TILT = -8;
 const easeOut = Easing.bezier(...motion.easeOut);
 
-type Hint = "ask" | "missed" | "short";
+type Hint = "ask" | "missed" | "notQuestion" | "short";
 
 /** 09a Listening: hold the big mic and ask, let go to send. It never records without a press. */
 export default function Listening() {
@@ -53,20 +53,6 @@ export default function Listening() {
 	const [pressing, setPressing] = useState(false);
 	const [thinking, setThinking] = useState(false);
 	const [hint, setHint] = useState<Hint>("ask");
-	// The listen take plays once. Dropping to idle for one render and asking for listen again
-	// queues it behind the one that is playing, so the star never stops listening.
-	const [rest, setRest] = useState(false);
-	const queueAgain = useCallback(() => setRest(true), []);
-
-	useEffect(() => {
-		setRest(true);
-	}, []);
-	useEffect(() => {
-		if (rest) {
-			setRest(false);
-		}
-	}, [rest]);
-
 	// Ask for the microphone once, up front, so the first hold is not cut by the system dialog.
 	// Leaving the screen lets go of the microphone and drops whatever was in flight.
 	useFocusEffect(
@@ -109,21 +95,27 @@ export default function Listening() {
 		busy.current = true;
 		setThinking(true);
 		let question = "";
+		let short = "";
+		let isQuestion = true;
 		try {
 			question = (await transcribe(await stop())).trim();
+			if (question) {
+				({ isQuestion, short } = await shortQuestion(question));
+			}
 		} catch {
 			// Counts as not heard: the same line as an empty recording.
 		}
 		if (session.current !== sid) {
 			return;
 		}
-		if (question) {
-			setSpokenQuestion(question);
+		// Stay here, thinking, until both the words and the short question are in.
+		if (question && isQuestion) {
+			setSpokenQuestion(question, short);
 			router.replace("/verify");
 			return;
 		}
 		// Never record again by itself: the child presses when ready.
-		setHint("missed");
+		setHint(question ? "notQuestion" : "missed");
 		setThinking(false);
 		busy.current = false;
 	}, [router, stop]);
@@ -196,11 +188,7 @@ export default function Listening() {
 		<Screen bodyStyle={styles.body}>
 			<View style={{ height: insets.top + STAR_TOP }} />
 			<Animated.View pointerEvents="none" style={[styles.star, tiltStyle]}>
-				<StarTake
-					onTakeEnd={queueAgain}
-					size={STAR_SIZE}
-					take={takeFor(rest, pressing, thinking)}
-				/>
+				<StarTake hold size={STAR_SIZE} take={takeFor(pressing, thinking)} />
 			</Animated.View>
 			<View style={styles.space} />
 			<VoiceHalo
@@ -216,7 +204,7 @@ export default function Listening() {
 				color={colors.cream}
 				variant="headline"
 			>
-				{titleFor(state)}
+				{titleFor(state, hint)}
 			</ClayText>
 			<View style={styles.line}>
 				<ClayText
@@ -243,31 +231,26 @@ function haloState(
 	if (pressing) {
 		return "recording";
 	}
-	return hint === "missed" ? "missed" : "ready";
+	return hint === "missed" || hint === "notQuestion" ? "missed" : "ready";
 }
 
-function takeFor(
-	rest: boolean,
-	pressing: boolean,
-	thinking: boolean
-): StarTakeName {
-	if (rest) {
-		return "idle";
-	}
+function takeFor(pressing: boolean, thinking: boolean): StarTakeName {
 	if (thinking) {
 		return "think";
 	}
 	return pressing ? "listen" : "idle";
 }
 
-function titleFor(state: VoiceHaloState): string {
+function titleFor(state: VoiceHaloState, hint: Hint): string {
 	switch (state) {
 		case "recording":
 			return "I'm listening...";
 		case "thinking":
 			return "Let me think...";
 		case "missed":
-			return "I missed that";
+			return hint === "notQuestion"
+				? "That wasn't a question"
+				: "I missed that";
 		default:
 			return "Ask me anything";
 	}
@@ -281,7 +264,9 @@ function lineFor(state: VoiceHaloState, hint: Hint): string {
 		case "thinking":
 			return "";
 		case "missed":
-			return "Hold the button and ask again";
+			return hint === "notQuestion"
+				? "Hold the button and ask a question"
+				: "Hold the button and ask again";
 		default:
 			return hint === "short"
 				? "Hold a little longer"

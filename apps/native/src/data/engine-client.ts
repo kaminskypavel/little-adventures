@@ -137,9 +137,12 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				headers: { "content-type": "application/json" },
 				method: "PUT",
 			}),
-		/** One very short, clear sentence that restates the question, for the screen. */
+		/**
+		 * One very short, clear sentence that restates the question, for the screen, and whether
+		 * the words were a question at all ("Hello, hello" is not).
+		 */
 		shortQuestion: (question: string) =>
-			call<{ short: string }>("/questions/short", {
+			call<{ isQuestion: boolean; short: string }>("/questions/short", {
 				body: JSON.stringify({ question }),
 				headers: { "content-type": "application/json" },
 				method: "POST",

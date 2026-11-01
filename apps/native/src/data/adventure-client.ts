@@ -205,18 +205,26 @@ export const transcribe = async (wav: Uint8Array): Promise<string> => {
 };
 
 /**
- * One very short, clear question for the check screen. The engine writes it; the bundled sample
- * mode, and any engine miss, uses the transcript trimmed to about 60 characters.
+ * One very short, clear question for the check screen, and whether the words were a question at
+ * all. The engine decides both; the bundled sample mode, and any engine miss, uses the transcript
+ * trimmed to about 60 characters and counts it as a question.
  */
-export const shortQuestion = async (question: string): Promise<string> => {
+export const shortQuestion = async (
+	question: string
+): Promise<{ isQuestion: boolean; short: string }> => {
+	const fallback = { isQuestion: true, short: trimQuestion(question) };
 	if (!engine) {
-		return trimQuestion(question);
+		return fallback;
 	}
 	try {
-		const { short } = await engine.shortQuestion(question);
-		return short.trim() || trimQuestion(question);
+		const { isQuestion, short } = await engine.shortQuestion(question);
+		// An older engine sends no flag: treat that as a question.
+		return {
+			isQuestion: isQuestion !== false,
+			short: short.trim() || fallback.short,
+		};
 	} catch {
-		return trimQuestion(question);
+		return fallback;
 	}
 };
 

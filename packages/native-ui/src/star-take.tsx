@@ -44,6 +44,8 @@ interface Chain {
 	/** The last gesture that ran to its end. `n` makes repeats of the same take distinct. */
 	finished: { n: number; take: StarTakeName } | null;
 	front: SlotIndex;
+	/** Hold mode: a new take cuts the current one, and the requested take repeats. */
+	hold: boolean;
 	nextId: number;
 	/** A gesture waiting for the visible take to end. Never cuts a take short. */
 	queued: StarTakeName | null;
@@ -53,7 +55,7 @@ interface Chain {
 }
 
 type ChainEvent =
-	| { type: "take"; take: StarTakeName }
+	| { hold: boolean; type: "take"; take: StarTakeName }
 	| { type: "ready"; id: number }
 	| { type: "end"; slot: SlotIndex };
 
@@ -102,7 +104,8 @@ function swap(chain: Chain): Chain {
 				? chain.finished
 				: { n: (chain.finished?.n ?? 0) + 1, take: done },
 		front: hidden,
-		queued: chain.queued === next.take ? null : chain.queued,
+		// A held take stays queued so it plays again when it ends.
+		queued: chain.queued === next.take && !chain.hold ? null : chain.queued,
 	});
 }
 
@@ -112,10 +115,16 @@ function reduce(chain: Chain, event: ChainEvent): Chain {
 	switch (event.type) {
 		case "take":
 			if (event.take === chain.requested) {
-				return chain;
+				return event.hold === chain.hold
+					? chain
+					: { ...chain, hold: event.hold };
 			}
 			return settle({
 				...chain,
+				// Hold mode does not wait for the visible take: it hands over as soon as the
+				// next one has a frame.
+				ended: event.hold ? true : chain.ended,
+				hold: event.hold,
 				queued: event.take === "idle" ? null : event.take,
 				requested: event.take,
 			});
@@ -140,6 +149,7 @@ function startChain(take: StarTakeName): Chain {
 		ended: false,
 		finished: null,
 		front: 0,
+		hold: false,
 		nextId: 2,
 		queued: null,
 		requested: take,
@@ -202,6 +212,11 @@ function StarSlot({ active, id, onEnd, onReady, take }: StarSlotProps) {
 }
 
 interface StarTakeProps {
+	/**
+	 * Follow `take` live: a new take starts at once instead of waiting for the current one to end,
+	 * and the take repeats for as long as it is asked for. For a take tied to a held button.
+	 */
+	hold?: boolean;
 	/** Called when a gesture has played to its end and the star is back on idle. */
 	onTakeEnd?: (take: StarTakeName) => void;
 	/** Width of the star. The star lands where a still star of this width would. */
@@ -214,13 +229,18 @@ interface StarTakeProps {
  * The animated star: transparent video takes that chain without a flash. Two slots stay mounted,
  * the hidden one already holds the next take, and a handover only swaps their opacity.
  */
-export function StarTake({ onTakeEnd, size, take = "idle" }: StarTakeProps) {
+export function StarTake({
+	hold = false,
+	onTakeEnd,
+	size,
+	take = "idle",
+}: StarTakeProps) {
 	const calm = useCalm();
 	const [chain, dispatch] = useReducer(reduce, take, startChain);
 
 	useEffect(() => {
-		dispatch({ take, type: "take" });
-	}, [take]);
+		dispatch({ hold, take, type: "take" });
+	}, [hold, take]);
 
 	const reported = useRef(0);
 	useEffect(() => {
