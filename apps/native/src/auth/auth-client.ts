@@ -163,8 +163,9 @@ export async function signInWithGoogle(): Promise<
 	try {
 		const web = Platform.OS === "web";
 		const res = await post("/api/auth/sign-in/social", {
+			// The web build may live under a base path (www.littleadventures.app/web): come back inside it.
 			callbackURL: web
-				? `${globalThis.location.origin}/account`
+				? `${globalThis.location.origin}${process.env.EXPO_BASE_URL ?? ""}/account`
 				: `${SERVER}/auth/native/callback`,
 			disableRedirect: true,
 			provider: "google",
