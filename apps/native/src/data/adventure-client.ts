@@ -213,6 +213,26 @@ export const shortQuestion = async (
 	}
 };
 
+/**
+ * Fun facts about the question for the wait, fitted to the child's age. Empty without an engine
+ * and on any miss: the loader simply shows none.
+ */
+export const loaderFacts = async (question: string): Promise<string[]> => {
+	if (!engine) {
+		return [];
+	}
+	try {
+		const { profile } = await loadChild();
+		const { facts } = await engine.loaderFacts(
+			question,
+			profile.childAge ?? undefined
+		);
+		return Array.isArray(facts) ? facts : [];
+	} catch {
+		return [];
+	}
+};
+
 export const startAdventure = async (
 	question: string,
 	style: Style

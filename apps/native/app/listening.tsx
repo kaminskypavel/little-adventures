@@ -20,10 +20,14 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { shortQuestion, transcribe } from "@/src/data/adventure-client";
+import {
+	loaderFacts,
+	shortQuestion,
+	transcribe,
+} from "@/src/data/adventure-client";
 import { askMicPermission } from "@/src/data/mic-permission";
 import { useRecorder } from "@/src/data/recorder";
-import { setSpokenQuestion } from "@/src/data/spoken-question";
+import { setSpokenFacts, setSpokenQuestion } from "@/src/data/spoken-question";
 import { canRecord, heldLongEnough } from "@/src/data/voice-rules";
 
 // Round 2 item 16A, measured on the 390 x 844 design: star on top, the hold button in the
@@ -111,6 +115,8 @@ export default function Listening() {
 		// Stay here, thinking, until both the words and the short question are in.
 		if (question && isQuestion) {
 			setSpokenQuestion(question, short);
+			// In the background: never awaited, never blocks the check. A newer question wins.
+			loaderFacts(question).then((facts) => setSpokenFacts(question, facts));
 			router.replace("/verify");
 			return;
 		}

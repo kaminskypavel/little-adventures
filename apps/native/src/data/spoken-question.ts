@@ -9,13 +9,15 @@ import { createJSONStorage, persist } from "zustand/middleware";
 // browser history). It is cleared once the adventure is started: the adventure's id takes over.
 
 interface Spoken {
+	/** Fun facts about the question, shown while the adventure is made. */
+	facts: string[];
 	/** The raw transcript the adventure is made from. */
 	question: string;
 	/** The one short line the grown-up confirms. */
 	short: string;
 }
 
-const EMPTY: Spoken = { question: "", short: "" };
+const EMPTY: Spoken = { facts: [], question: "", short: "" };
 
 export const useSpokenQuestion = create<Spoken>()(
 	persist(() => EMPTY, {
@@ -25,7 +27,17 @@ export const useSpokenQuestion = create<Spoken>()(
 );
 
 export const setSpokenQuestion = (question: string, short = "") =>
-	useSpokenQuestion.setState({ question, short });
+	useSpokenQuestion.setState({ facts: [], question, short });
+
+/** Only while the question it was made for is still the stored one: a newer question wins. */
+export const setSpokenFacts = (question: string, facts: string[]) => {
+	if (useSpokenQuestion.getState().question === question) {
+		useSpokenQuestion.setState({ facts });
+	}
+};
+
+export const getSpokenFacts = (): string[] =>
+	useSpokenQuestion.getState().facts ?? [];
 
 export const getSpokenQuestion = (): string =>
 	useSpokenQuestion.getState().question;

@@ -34,6 +34,7 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import {
 	getAdventure,
+	loaderFacts,
 	startAdventure,
 	watchMaking,
 } from "@/src/data/adventure-client";
@@ -41,6 +42,7 @@ import type { Style } from "@/src/data/engine-client";
 import { useChild } from "@/src/data/profile-queries";
 import {
 	clearSpokenQuestion,
+	getSpokenFacts,
 	getSpokenQuestion,
 	useSpokenHydrated,
 } from "@/src/data/spoken-question";
@@ -64,6 +66,9 @@ const SECOND_STATUS_END = 0.7;
 // status sit over the loop; the ready state below is one flowing column.
 const BAR_TOP = 508;
 const STATUS_TOP = 539;
+const FACTS_TOP = STATUS_TOP + 54; // under the pill (about 40 tall) with a small gap
+const FACTS_LINE = 24;
+const FACT_EVERY_MS = 5000;
 
 // Ready column: headline, question, goal picture, then Start in the dock. Only the
 // goal picture flexes: 319 x 328 at most, about 150 tall at the least.
@@ -200,6 +205,49 @@ function Fade({
 	);
 }
 
+/**
+ * One fun fact at a time, two lines at most, changing every 5 s. The box keeps its two-line
+ * height so nothing moves. Reduced motion switches the fact without the fade.
+ */
+function FactTicker({ calm, facts }: { calm: boolean; facts: string[] }) {
+	const [index, setIndex] = useState(0);
+	const [shown, setShown] = useState(true);
+	useEffect(() => {
+		if (facts.length < 2) {
+			return;
+		}
+		let swap: ReturnType<typeof setTimeout> | undefined;
+		const timer = setInterval(() => {
+			if (calm) {
+				setIndex((i) => (i + 1) % facts.length);
+				return;
+			}
+			setShown(false);
+			swap = setTimeout(() => {
+				setIndex((i) => (i + 1) % facts.length);
+				setShown(true);
+			}, motion.exit);
+		}, FACT_EVERY_MS);
+		return () => {
+			clearInterval(timer);
+			clearTimeout(swap);
+		};
+	}, [calm, facts.length]);
+	return (
+		<Fade ms={calm ? 0 : motion.enter} show={shown} style={styles.fact}>
+			<ClayText
+				align="center"
+				color={colors.cream}
+				numberOfLines={2}
+				style={styles.factText}
+				variant="label"
+			>
+				{facts[index % facts.length]}
+			</ClayText>
+		</Fade>
+	);
+}
+
 /** 10a Making your adventure, then 10b Ready in place. */
 export default function Making() {
 	const router = useRouter();
@@ -232,9 +280,20 @@ export default function Making() {
 	const [question, setQuestion] = useState<string | null>(null);
 	useEffect(() => {
 		if (hydrated && question === null) {
-			setQuestion(picked || getSpokenQuestion());
+			const asked = picked || getSpokenQuestion();
+			setQuestion(asked);
+			// Listening asks for the facts early; when they are not in yet (or the question is a
+			// picked idea), ask here: the wait is long, so a few seconds still leave plenty to show.
+			const ready = picked ? [] : getSpokenFacts();
+			if (ready.length > 0) {
+				setFacts(ready);
+			} else if (asked) {
+				loaderFacts(asked).then(setFacts);
+			}
 		}
 	}, [hydrated, picked, question]);
+	// Read with the question, for the same reason: the store is cleared when the adventure starts.
+	const [facts, setFacts] = useState<string[]>([]);
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);
@@ -401,6 +460,15 @@ export default function Making() {
 						text={statusText(engineStage ?? stage, full, noun, style)}
 					/>
 				</Fade>
+				{facts.length > 0 ? (
+					<Fade
+						ms={fadeMs}
+						show={!revealed}
+						style={[styles.row, { top: FACTS_TOP }]}
+					>
+						<FactTicker calm={calm} facts={facts} />
+					</Fade>
+				) : null}
 				<Fade ms={fadeMs} show={revealed}>
 					<Plate label={shownQuestion} variant="question" />
 				</Fade>
@@ -429,6 +497,8 @@ const styles = StyleSheet.create({
 		paddingHorizontal: layout.sideMargin,
 		paddingTop: layout.titleTop,
 	},
+	fact: { height: FACTS_LINE * 2 + 2, justifyContent: "flex-start" },
+	factText: { lineHeight: FACTS_LINE },
 	goal: { height: "100%", width: "100%" },
 	goalBox: {
 		alignItems: "center",

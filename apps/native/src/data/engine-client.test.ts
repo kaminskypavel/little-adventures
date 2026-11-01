@@ -61,6 +61,18 @@ describe("engine client", () => {
 		});
 	});
 
+	test("loaderFacts posts the question and age and returns the facts", async () => {
+		const { client, requests } = engine(json({ facts: ["Whales hum."] }));
+		const out = await client.loaderFacts("Why do whales sing?", 6);
+		expect(out.facts).toEqual(["Whales hum."]);
+		expect(requests[0].path).toBe("/questions/facts");
+		expect(requests[0].init?.method).toBe("POST");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			age: 6,
+			question: "Why do whales sing?",
+		});
+	});
+
 	test("getAdventure, listAdventures and visitNode use their routes", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", nodes: [], pollAfterSec: null }),

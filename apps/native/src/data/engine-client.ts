@@ -123,6 +123,13 @@ export function createEngineClient(engineFetch: EngineFetch) {
 		getMe: () => call<EngineMe>("/me"),
 		listAdventures: async () =>
 			(await call<{ items: EngineSummary[] }>("/adventures")).items,
+		/** Up to 10 one-sentence fun facts about the question, for the wait. Empty when none. */
+		loaderFacts: (question: string, age?: number) =>
+			call<{ facts: string[] }>("/questions/facts", {
+				body: JSON.stringify({ age, question }),
+				headers: { "content-type": "application/json" },
+				method: "POST",
+			}),
 		/** Admins only: sets some of the steps; the engine answers all four. */
 		setSteps: (steps: Partial<EngineSteps>) =>
 			call<{ steps: EngineSteps }>("/me/steps", {
