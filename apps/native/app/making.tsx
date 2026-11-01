@@ -11,7 +11,7 @@ import {
 	colors,
 	layout,
 	motion,
-	type,
+	spacing,
 } from "@little-adventures/native-ui/tokens";
 import { WaitLoop } from "@little-adventures/native-ui/wait-loop";
 import { WatchHill } from "@little-adventures/native-ui/watch-hill";
@@ -21,7 +21,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
 	type StyleProp,
 	StyleSheet,
-	Text,
+	useWindowDimensions,
 	View,
 	type ViewStyle,
 } from "react-native";
@@ -53,18 +53,22 @@ const MAX_DT = 0.1; // a stalled frame must not make the bar jump
 const FIRST_STATUS_END = 0.35;
 const SECOND_STATUS_END = 0.7;
 
-// Round 7 10a and 10b at 0.72 scale (px / 0.72), measured from the screen top.
+// Round 7 10a at 0.72 scale (px / 0.72), measured from the screen top. The wait bar and its
+// status sit over the loop; the ready state below is one flowing column.
 const BAR_TOP = 508;
 const STATUS_TOP = 539;
-const QUESTION_TOP = 172;
-const GOAL_TOP = 244;
+
+// Ready column: headline, question, goal picture, name plate, then Start in the dock. Only the
+// goal picture flexes: 319 x 328 at most, about 150 tall at the least.
 const GOAL_WIDTH = 319;
 const GOAL_HEIGHT = 328;
-const BIG_PLATE_TOP = 583;
-const NOTE_TOP = 641; // under the big plate (44 high) with a gap
-const NOTE_WIDTH = 300;
-const NOTE_OPACITY = 0.8;
-const NOTE_TEXT = "Here is a story to explore while we learn more.";
+const GOAL_MIN_HEIGHT = 150;
+const COLUMN_GAP = 12;
+const HEADLINE_SIZE = 37; // DESIGN.md size for two long lines
+const HEADLINE_LINE = 40;
+const NARROW_WIDTH = 390; // windows narrower than this (iPhone SE, 375) get the smaller headline
+const NARROW_SIZE = 35;
+const NARROW_LINE = 38;
 
 const REVEAL_MS = 500; // progress, status, title, plates and Start
 const POP_MS = 1100;
@@ -186,6 +190,11 @@ function Fade({
 export default function Making() {
 	const router = useRouter();
 	const calm = useCalm();
+	const narrow = useWindowDimensions().width < NARROW_WIDTH;
+	const headline = {
+		fontSize: narrow ? NARROW_SIZE : HEADLINE_SIZE,
+		lineHeight: narrow ? NARROW_LINE : HEADLINE_LINE,
+	};
 	const { fail, question: picked = "" } = useLocalSearchParams<{
 		fail?: string;
 		question?: string;
@@ -201,9 +210,8 @@ export default function Making() {
 
 	const revealed = full && adventure !== null;
 	// The child's own question stays on screen. A recorded adventure answers a fixed question, so
-	// its question is only the fallback, and a calm line says it is a sample.
+	// its question is only the fallback.
 	const shownQuestion = question || (adventure?.question ?? "");
-	const sample = adventure?.source === "recorded";
 	const fadeMs = calm ? motion.reducedReveal : REVEAL_MS;
 
 	useEffect(() => {
@@ -305,26 +313,30 @@ export default function Making() {
 					</Fade>
 				}
 			>
-				<Fade ms={fadeMs} show={!revealed} style={styles.title}>
-					<ClayText
-						accessibilityRole="header"
-						align="center"
-						color={colors.cream}
-						variant="headline"
-					>
-						{"Making your\nadventure"}
-					</ClayText>
-				</Fade>
-				<Fade ms={fadeMs} show={revealed} style={styles.title}>
-					<ClayText
-						accessibilityRole="header"
-						align="center"
-						color={colors.cream}
-						variant="headline"
-					>
-						{"Your adventure\nis ready!"}
-					</ClayText>
-				</Fade>
+				<View style={styles.headline}>
+					<Fade ms={fadeMs} show={!revealed} style={styles.headlineMaking}>
+						<ClayText
+							accessibilityRole="header"
+							align="center"
+							color={colors.cream}
+							style={headline}
+							variant="headline"
+						>
+							{"Making\nyour adventure"}
+						</ClayText>
+					</Fade>
+					<Fade ms={fadeMs} show={revealed}>
+						<ClayText
+							accessibilityRole="header"
+							align="center"
+							color={colors.cream}
+							style={headline}
+							variant="headline"
+						>
+							{"Your\nadventure is ready!"}
+						</ClayText>
+					</Fade>
+				</View>
 				<Fade
 					ms={fadeMs}
 					show={!revealed}
@@ -339,28 +351,12 @@ export default function Making() {
 				>
 					<StatusPill text={statusText(engineStage ?? stage, full, noun)} />
 				</Fade>
-				<Fade
-					ms={fadeMs}
-					show={revealed}
-					style={[styles.row, { top: QUESTION_TOP }]}
-				>
+				<Fade ms={fadeMs} show={revealed}>
 					<Plate label={shownQuestion} variant="question" />
 				</Fade>
-				{adventure ? (
-					<View
-						pointerEvents="none"
-						style={[styles.row, styles.rowCentered, { top: GOAL_TOP }]}
-					>
-						<Animated.View
-							style={[
-								{
-									filter: characterFilter,
-									height: GOAL_HEIGHT,
-									width: GOAL_WIDTH,
-								},
-								goalMotion,
-							]}
-						>
+				<View pointerEvents="none" style={styles.goalBox}>
+					{adventure ? (
+						<Animated.View style={[styles.goalFrame, goalMotion]}>
 							<FallbackImage
 								accessibilityIgnoresInvertColors
 								contentFit="contain"
@@ -369,25 +365,14 @@ export default function Making() {
 								style={styles.goal}
 							/>
 						</Animated.View>
-					</View>
-				) : null}
-				<Fade
-					ms={fadeMs}
-					show={revealed}
-					style={[styles.row, styles.rowCentered, { top: BIG_PLATE_TOP }]}
-				>
+					) : null}
+				</View>
+				<Fade ms={fadeMs} show={revealed} style={styles.rowCentered}>
 					<Plate
 						label={adventure?.endGoal.name ?? ""}
 						style={styles.bigPlate}
 						variant="big"
 					/>
-				</Fade>
-				<Fade
-					ms={fadeMs}
-					show={revealed && sample}
-					style={[styles.row, styles.rowCentered, { top: NOTE_TOP }]}
-				>
-					<Text style={styles.note}>{NOTE_TEXT}</Text>
 				</Fade>
 			</Screen>
 		</View>
@@ -396,15 +381,27 @@ export default function Making() {
 
 const styles = StyleSheet.create({
 	bigPlate: { alignSelf: "center" },
-	body: { paddingHorizontal: 0 },
-	goal: { height: "100%", width: "100%" },
-	note: {
-		...type.label,
-		color: colors.cream,
-		maxWidth: NOTE_WIDTH,
-		opacity: NOTE_OPACITY,
-		textAlign: "center",
+	body: {
+		gap: COLUMN_GAP,
+		paddingBottom: spacing.lg, // the 22 pt between the name plate and Start
+		paddingHorizontal: layout.sideMargin,
+		paddingTop: layout.titleTop,
 	},
+	goal: { height: "100%", width: "100%" },
+	goalBox: {
+		alignItems: "center",
+		flex: 1,
+		justifyContent: "center",
+		minHeight: GOAL_MIN_HEIGHT,
+	},
+	goalFrame: {
+		aspectRatio: GOAL_WIDTH / GOAL_HEIGHT,
+		filter: characterFilter,
+		height: "100%",
+		maxHeight: GOAL_HEIGHT,
+	},
+	headline: { alignItems: "stretch" },
+	headlineMaking: { left: 0, position: "absolute", right: 0, top: 0 },
 	root: { flex: 1 },
 	row: {
 		left: layout.sideMargin,
@@ -412,10 +409,4 @@ const styles = StyleSheet.create({
 		right: layout.sideMargin,
 	},
 	rowCentered: { alignItems: "center" },
-	title: {
-		left: layout.sideMargin,
-		position: "absolute",
-		right: layout.sideMargin,
-		top: layout.titleTop,
-	},
 });
