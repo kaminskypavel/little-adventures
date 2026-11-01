@@ -20,6 +20,8 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
+import { PresetQuestions } from "@/src/admin/preset-questions";
 import {
 	loaderFacts,
 	shortQuestion,
@@ -42,7 +44,11 @@ const easeOut = Easing.bezier(...motion.easeOut);
 type Hint = "ask" | "missed" | "notQuestion" | "short";
 
 /** 09a Listening: hold the big mic and ask, let go to send. It never records without a press. */
+// One element for the life of the app, so the admin sheet does not re-register it every render.
+const PRESET_TOOLS = <PresetQuestions />;
+
 export default function Listening() {
+	useScreenAdminTools("Listening", PRESET_TOOLS);
 	const router = useRouter();
 	const { level, start, stop } = useRecorder();
 	const calm = useCalm();

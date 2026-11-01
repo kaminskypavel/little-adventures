@@ -158,6 +158,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
 	const [failed, setFailed] = useState<Key | null>(null);
 	const current = me ? fromMe(me) : null;
 	const saving = steps.isPending;
+	const screen = useAdminPanel((state) => state.screen);
 
 	// The cache is updated at once and rolled back on error (see engine-queries.ts).
 	const toggle = (key: Key, next: boolean) => {
@@ -176,6 +177,14 @@ function Sheet({ onClose }: { onClose: () => void }) {
 					showsVerticalScrollIndicator={false}
 					style={{ maxHeight: height * 0.5 }}
 				>
+					{screen ? (
+						<View style={styles.screenTools}>
+							<ClayText style={styles.note} variant="body">
+								{`This screen: ${screen.title}`}
+							</ClayText>
+							{screen.tools}
+						</View>
+					) : null}
 					{ROWS.map(({ key, note, title }) => (
 						<View key={key} style={styles.row}>
 							<View style={styles.text}>
@@ -220,6 +229,7 @@ const styles = StyleSheet.create({
 	overlay: { ...StyleSheet.absoluteFill },
 	row: { alignItems: "center", flexDirection: "row", gap: layout.gap },
 	rows: { gap: spacing.md },
+	screenTools: { gap: spacing.sm },
 	scrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.scrim },
 	sheet: { gap: spacing.md, padding: spacing.lg },
 	sheetWrap: {
