@@ -66,7 +66,9 @@ const SECOND_STATUS_END = 0.7;
 // status sit over the loop; the ready state below is one flowing column.
 const BAR_TOP = 508;
 const STATUS_TOP = 539;
-const FACTS_TOP = STATUS_TOP + 54; // under the pill (about 40 tall) with a small gap
+// Above the progress bar: under the pill the child's picture on the hill would cover them.
+const FACTS_HEIGHT = 64;
+const FACTS_TOP = BAR_TOP - FACTS_HEIGHT - 10;
 const FACTS_LINE = 24;
 const FACT_EVERY_MS = 5000;
 
@@ -497,7 +499,16 @@ const styles = StyleSheet.create({
 		paddingHorizontal: layout.sideMargin,
 		paddingTop: layout.titleTop,
 	},
-	fact: { height: FACTS_LINE * 2 + 2, justifyContent: "flex-start" },
+	// On the moving loader, so on the pill's own dark backing to stay readable.
+	fact: {
+		alignItems: "center",
+		backgroundColor: colors.statusPill,
+		borderRadius: 18,
+		height: FACTS_HEIGHT,
+		justifyContent: "center",
+		maxWidth: 320,
+		paddingHorizontal: 16,
+	},
 	factText: { lineHeight: FACTS_LINE },
 	goal: { height: "100%", width: "100%" },
 	goalBox: {
