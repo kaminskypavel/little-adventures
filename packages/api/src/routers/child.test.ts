@@ -187,6 +187,7 @@ describe("child art", () => {
 	let deleted: string[];
 	let stored: Set<string>;
 	let segmentCalls: number;
+	let segmentRoles: string[];
 	let failLook: string | null;
 	let configured: boolean;
 	let beforeSegment: (() => Promise<unknown>) | null;
@@ -229,18 +230,24 @@ describe("child art", () => {
 			}
 			return Promise.resolve(new Uint8Array([1, 2, 3]));
 		},
-		segment: async () => {
-			segmentCalls += 1;
-			const hook = beforeSegment;
-			beforeSegment = null;
-			await hook?.();
-			return {
-				box: { x1: 0, x2: 1, y1: 0, y2: 1 },
-				mask: new Uint8Array([1]),
-				maskHeight: 1,
-				maskWidth: 1,
-			};
-		},
+		segment: (
+			_url: string,
+			role: string,
+			track: <T>(call: () => Promise<T>) => Promise<T>
+		) =>
+			track(async () => {
+				segmentCalls += 1;
+				segmentRoles.push(role);
+				const hook = beforeSegment;
+				beforeSegment = null;
+				await hook?.();
+				return {
+					box: { x1: 0, x2: 1, y1: 0, y2: 1 },
+					mask: new Uint8Array([1]),
+					maskHeight: 1,
+					maskWidth: 1,
+				};
+			}),
 	} as unknown as ImageEditing;
 	const callerFor = (userId: string) =>
 		appRouter.createCaller({
@@ -263,6 +270,7 @@ describe("child art", () => {
 		deleted = [];
 		stored = new Set();
 		segmentCalls = 0;
+		segmentRoles = [];
 		failLook = null;
 		configured = true;
 		beforeSegment = null;
@@ -286,6 +294,8 @@ describe("child art", () => {
 			"wood",
 		]);
 		expect(put).toHaveLength(4);
+		// The child's photo cuts out the child, whoever else is in it.
+		expect(segmentRoles).toEqual(["child"]);
 		const calls = await db.select().from(aiCalls);
 		expect(calls.map((call) => call.operation).sort()).toEqual([
 			"face.segment",

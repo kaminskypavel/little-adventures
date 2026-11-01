@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
 import { faceCutout, faceSquare } from "./cutout";
-import { createImageEditing } from "./index";
+import { type Candidate, createImageEditing, pickPerson } from "./index";
 import { eventData, splitEvents } from "./sse";
 
 describe("sse", () => {
@@ -183,5 +183,52 @@ describe("muse image calls", () => {
 			user: "grownup-1",
 		});
 		expect(Buffer.from(bytes).toString()).toBe("png");
+	});
+});
+
+describe("pickPerson", () => {
+	const person = (area: number): Candidate => ({
+		area,
+		box: { x1: 0, x2: 1, y1: 0, y2: 1 },
+		mask: new Uint8Array([1]),
+		maskHeight: 1,
+		maskWidth: 1,
+	});
+	const small = person(100);
+	const big = person(900);
+	/** Stubbed SAM: one photo with a child (small) and a grown-up (big). */
+	const family = (matches: Record<string, Candidate[]>) => (prompt: string) => {
+		prompts.push(prompt);
+		return Promise.resolve(matches[prompt] ?? []);
+	};
+	let prompts: string[] = [];
+	afterEach(() => {
+		prompts = [];
+	});
+
+	test("asks SAM for the role and takes its match, not the biggest person", async () => {
+		const find = family({ adult: [big], child: [small], person: [big, small] });
+		expect(await pickPerson("child", find)).toBe(small);
+		expect(await pickPerson("grown-up", find)).toBe(big);
+		expect(prompts).toEqual(["child", "adult"]);
+	});
+
+	test("falls back to all people: smallest is the child, largest the grown-up", async () => {
+		const find = family({ person: [big, small] });
+		expect(await pickPerson("child", find)).toBe(small);
+		expect(await pickPerson("grown-up", find)).toBe(big);
+	});
+
+	test("one person in the photo is that person, and nobody gives null", async () => {
+		expect(await pickPerson("child", family({ person: [big] }))).toBe(big);
+		expect(await pickPerson("grown-up", family({ person: [small] }))).toBe(
+			small
+		);
+		expect(await pickPerson("child", family({}))).toBeNull();
+	});
+
+	test("several matches for the role: the largest wins", async () => {
+		const find = family({ child: [small, person(300)] });
+		expect((await pickPerson("child", find))?.area).toBe(300);
 	});
 });

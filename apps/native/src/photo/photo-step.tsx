@@ -1,11 +1,13 @@
 import { Icon } from "@little-adventures/native-ui/icons";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { colors, motion } from "@little-adventures/native-ui/tokens";
+import { Image } from "expo-image";
 import {
 	launchCameraAsync,
 	launchImageLibraryAsync,
 	requestCameraPermissionsAsync,
 } from "expo-image-picker";
+import type { ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 
@@ -13,6 +15,7 @@ import Animated, { cubicBezier } from "react-native-reanimated";
 const RING = 236;
 const CAMERA = 89;
 const RING_FILL = 0.14;
+const BADGE = 56;
 export const LINE = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
 // The check pops in over one release spring, then the screen moves on.
 export const ADVANCE_MS = 600;
@@ -55,7 +58,17 @@ export async function pick(source: Source): Promise<string | "denied" | null> {
 	return chosen.canceled ? null : chosen.assets[0].uri;
 }
 
-export function PhotoRing({ done }: { done: boolean }) {
+/**
+ * The ring: a camera until a photo is picked, then the photo itself (a local
+ * uri just picked, or the saved photo's url) with a check once it is uploaded.
+ */
+export function PhotoRing({
+	done,
+	photoUri,
+}: {
+	done: boolean;
+	photoUri?: string | null;
+}) {
 	const calm = useCalm();
 	const pop = calm
 		? ({
@@ -69,26 +82,59 @@ export function PhotoRing({ done }: { done: boolean }) {
 				animationTimingFunction: overshoot,
 			} as const);
 
+	let content: ReactNode = (
+		<Icon color={colors.cream} name="camera" size={CAMERA} />
+	);
+	if (photoUri) {
+		content = (
+			<>
+				<Image
+					accessibilityLabel="Your photo"
+					contentFit="cover"
+					source={{ uri: photoUri }}
+					style={styles.photo}
+				/>
+				{done ? (
+					<Animated.View style={[styles.badge, pop]}>
+						<Icon color={colors.cream} name="check" size={BADGE / 2} />
+					</Animated.View>
+				) : null}
+			</>
+		);
+	} else if (done) {
+		content = (
+			<Animated.View style={pop}>
+				<Icon color={colors.cream} name="check" size={CAMERA} />
+			</Animated.View>
+		);
+	}
+
 	return (
 		<View style={styles.ring}>
 			<View style={[StyleSheet.absoluteFill, styles.fill]} />
-			{done ? (
-				<Animated.View style={pop}>
-					<Icon color={colors.cream} name="check" size={CAMERA} />
-				</Animated.View>
-			) : (
-				<Icon color={colors.cream} name="camera" size={CAMERA} />
-			)}
+			{content}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
+	badge: {
+		alignItems: "center",
+		backgroundColor: colors.deepNavy,
+		borderRadius: BADGE / 2,
+		bottom: 4,
+		height: BADGE,
+		justifyContent: "center",
+		position: "absolute",
+		right: 4,
+		width: BADGE,
+	},
 	fill: {
 		backgroundColor: colors.cream,
 		borderRadius: RING / 2,
 		opacity: RING_FILL,
 	},
+	photo: { borderRadius: RING / 2, height: RING, width: RING },
 	ring: {
 		alignItems: "center",
 		borderRadius: RING / 2,

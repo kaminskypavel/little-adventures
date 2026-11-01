@@ -25,6 +25,7 @@ import {
 function PhotoStep({ profile }: { profile: Profile }) {
 	const router = useRouter();
 	const [done, setDone] = useState(false);
+	const [photoUri, setPhotoUri] = useState<string | null>(null);
 	const [note, setNote] = useState<string | null>(null);
 	// Taps are ignored while a photo is on its way, and once it has gone.
 	const busy = useRef<boolean>(false);
@@ -50,6 +51,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 			} else if (uri) {
 				const photoKey = await uploadChildPhoto(uri);
 				await saveProfile({ hasPhoto: true, photoKey });
+				setPhotoUri(uri);
 				notificationAsync(NotificationFeedbackType.Success);
 				setDone(true);
 				return;
@@ -79,7 +81,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 			}
 			title={`Add a photo\nof ${profile.childName}`}
 		>
-			<PhotoRing done={done} />
+			<PhotoRing done={done} photoUri={photoUri} />
 			<ClayText
 				align="center"
 				color={colors.cream}

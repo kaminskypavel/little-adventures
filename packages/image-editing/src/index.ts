@@ -30,6 +30,42 @@ export const MODELS = { redraw: MUSE_IMAGE_MODEL, segment: SAM_MODEL } as const;
 
 const MAX_REFERENCES = 6;
 
+/** Whose photo it is: decides which person in a shared photo is cut out. */
+export type PersonRole = "child" | "grown-up";
+
+/** Wraps one SAM request, for example to record its cost. */
+export type Track = <T>(call: () => Promise<T>) => Promise<T>;
+
+export type Candidate = Found & { area: number };
+
+const PEOPLE = "person";
+const ROLES = {
+	child: { fallback: "smallest", prompt: "child" },
+	"grown-up": { fallback: "largest", prompt: "adult" },
+} as const;
+
+/**
+ * Picks the person for a role from what SAM finds. The role's own prompt
+ * ("child", "adult") goes first and the largest match wins. When SAM finds
+ * nothing for it, all people are searched and the smallest is the child, the
+ * largest the grown-up. A photo of one person gives that person either way.
+ */
+export async function pickPerson(
+	role: PersonRole,
+	find: (prompt: string) => Promise<Candidate[]>
+): Promise<Candidate | null> {
+	const { fallback, prompt } = ROLES[role];
+	const byArea = (a: Candidate, b: Candidate) => b.area - a.area;
+	const [direct] = (await find(prompt)).sort(byArea);
+	if (direct) {
+		return direct;
+	}
+	const people = (await find(PEOPLE)).sort(byArea);
+	return fallback === "smallest"
+		? (people.at(-1) ?? null)
+		: (people[0] ?? null);
+}
+
 export interface MuseImageResult {
 	bytes: Uint8Array;
 	model: string;
@@ -122,6 +158,57 @@ export function createImageEditing(config: ImageEditingConfig) {
 		});
 	}
 
+	/** Every SAM match for `prompt`, each with its mask area. */
+	async function findMasks(
+		imageUrl: string,
+		prompt: string
+	): Promise<Candidate[]> {
+		const response = await fetch(`${BASE_URL}/responses`, {
+			body: JSON.stringify({
+				input: [
+					{
+						content: [
+							{ text: prompt, type: "input_text" },
+							{ image_url: imageUrl, type: "input_image" },
+						],
+						role: "user",
+						type: "message",
+					},
+				],
+				metadata: { mask_encoding: "one_bit" },
+				model: SAM_MODEL,
+				stream: true,
+			}),
+			headers: headers(),
+			method: "POST",
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+		});
+		if (!(response.ok && response.body)) {
+			throw new Error(`SAM ${response.status}: ${await response.text()}`);
+		}
+		const { outcome, records } = await parseImageStream(
+			sseEvents(response.body) as AsyncIterable<ResponsesEvent>
+		).finalResult;
+		if (outcome.status !== "completed") {
+			throw new Error(`SAM did not complete: ${JSON.stringify(outcome)}`);
+		}
+		return recordsOfKind(records, "mask").map((record) => {
+			const mask = decodeMaskToRaster(record.mask);
+			return {
+				area: mask.reduce((sum, v) => sum + (v ? 1 : 0), 0),
+				box: {
+					x1: record.bounds.left,
+					x2: record.bounds.right,
+					y1: record.bounds.top,
+					y2: record.bounds.bottom,
+				},
+				mask,
+				maskHeight: record.mask.height,
+				maskWidth: record.mask.width,
+			};
+		});
+	}
+
 	return {
 		edit,
 		/** Plain text-to-image at the given size. */
@@ -153,57 +240,19 @@ export function createImageEditing(config: ImageEditingConfig) {
 			return bytes;
 		},
 
-		/** The largest `prompt` match in the image, or null when SAM finds none. */
-		async segment(imageUrl: string, prompt = "person"): Promise<Found | null> {
-			const response = await fetch(`${BASE_URL}/responses`, {
-				body: JSON.stringify({
-					input: [
-						{
-							content: [
-								{ text: prompt, type: "input_text" },
-								{ image_url: imageUrl, type: "input_image" },
-							],
-							role: "user",
-							type: "message",
-						},
-					],
-					metadata: { mask_encoding: "one_bit" },
-					model: SAM_MODEL,
-					stream: true,
-				}),
-				headers: headers(),
-				method: "POST",
-				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-			});
-			if (!(response.ok && response.body)) {
-				throw new Error(`SAM ${response.status}: ${await response.text()}`);
-			}
-			const { outcome, records } = await parseImageStream(
-				sseEvents(response.body) as AsyncIterable<ResponsesEvent>
-			).finalResult;
-			if (outcome.status !== "completed") {
-				throw new Error(`SAM did not complete: ${JSON.stringify(outcome)}`);
-			}
-			let best: (Found & { area: number }) | null = null;
-			for (const record of recordsOfKind(records, "mask")) {
-				const mask = decodeMaskToRaster(record.mask);
-				const area = mask.reduce((sum, v) => sum + (v ? 1 : 0), 0);
-				if (!best || area > best.area) {
-					best = {
-						area,
-						box: {
-							x1: record.bounds.left,
-							x2: record.bounds.right,
-							y1: record.bounds.top,
-							y2: record.bounds.bottom,
-						},
-						mask,
-						maskHeight: record.mask.height,
-						maskWidth: record.mask.width,
-					};
-				}
-			}
-			return best;
+		/**
+		 * The person for `role` in the image, or null when SAM finds none. A photo
+		 * may show a child and a grown-up together: see `pickPerson`. It can take
+		 * two SAM requests, so `track` wraps each one (the caller records its cost).
+		 */
+		segment(
+			imageUrl: string,
+			role: PersonRole,
+			track: Track = (call) => call()
+		): Promise<Found | null> {
+			return pickPerson(role, (prompt) =>
+				track(() => findMasks(imageUrl, prompt))
+			);
 		},
 	};
 }

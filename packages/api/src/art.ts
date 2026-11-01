@@ -92,8 +92,9 @@ export async function drawArt(
 
 	async function drawFace(photoUrl: string): Promise<string> {
 		const [found, photo] = await Promise.all([
-			recorded("face.segment", MODELS.segment, SAM_COST_MICRO_USD, () =>
-				art.segment(photoUrl)
+			// A photo may show the child with a grown-up: cut out the child.
+			art.segment(photoUrl, "child", (call) =>
+				recorded("face.segment", MODELS.segment, SAM_COST_MICRO_USD, call)
 			),
 			fetchBytes(photoUrl),
 		]);
