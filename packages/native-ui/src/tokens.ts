@@ -477,3 +477,29 @@ export const storyCover = {
 		width: 150,
 	},
 } as const;
+
+/** Home's two shelves: arched doors for the child's adventures, round pictures for ideas. */
+export const homeShelf = {
+	door: {
+		chip: { bottom: -10, height: 24, leaf: 15, leafGap: 3, padX: 7 },
+		gap: 14,
+		height: 96,
+		innerRadius: { bottom: 13, top: 35 },
+		offLeaf: 0.3,
+		pad: 5,
+		radius: { bottom: 18, top: 40 },
+		slot: { border: 3, color: "rgba(244,236,216,0.32)", icon: 30 },
+		width: 80,
+	},
+	idea: { gap: 12, pad: 5, size: 88 },
+} as const;
+
+/** The star's speech plate on Home: sand, a tail pointing down at the star. */
+export const speechPlate = {
+	maxWidth: 300,
+	padX: 22,
+	padY: 14,
+	radius: 28,
+	tail: 14,
+	type: { fontFamily: fonts.heavy, fontSize: 26, lineHeight: 30 },
+} as const;

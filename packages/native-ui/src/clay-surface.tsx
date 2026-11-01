@@ -18,11 +18,27 @@ import {
 	reducedPressDarken,
 } from "./tokens";
 
+/** One radius for every corner, or the top pair and the bottom pair apart (an arch). */
+export type ClayRadius = number | { bottom: number; top: number };
+
+/** The border radius style for a `ClayRadius`. */
+export function cornerStyle(radius: ClayRadius): ViewStyle {
+	if (typeof radius === "number") {
+		return { borderRadius: radius };
+	}
+	return {
+		borderBottomLeftRadius: radius.bottom,
+		borderBottomRightRadius: radius.bottom,
+		borderTopLeftRadius: radius.top,
+		borderTopRightRadius: radius.top,
+	};
+}
+
 interface ClaySurfaceProps {
 	children?: ReactNode;
 	/** 0 at rest, 1 while the finger is down. May overshoot below 0 on release. */
 	pressed?: SharedValue<number>;
-	radius: number;
+	radius: ClayRadius;
 	/** Cross-fades to the sun face. */
 	selected?: boolean;
 	style?: StyleProp<ViewStyle>;
@@ -87,11 +103,12 @@ export function ClaySurface({
 			: 0,
 	}));
 
-	const fill = [StyleSheet.absoluteFill, { borderRadius: radius }];
+	const corners = cornerStyle(radius);
+	const fill = [StyleSheet.absoluteFill, corners];
 	const showSun = tone !== "sun" && tone !== "sunReady";
 
 	return (
-		<View style={[{ borderRadius: radius }, style]}>
+		<View style={[corners, style]}>
 			<View pointerEvents="none" style={[fill, styles.clip]}>
 				<LinearGradient
 					colors={clayFaces[tone]}

@@ -20,7 +20,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { ClaySurface } from "./clay-surface";
+import { type ClayRadius, ClaySurface, cornerStyle } from "./clay-surface";
 import { useCalm } from "./motion-provider";
 import {
 	type ClayTone,
@@ -41,7 +41,7 @@ interface ClayPressableProps {
 	/** Overrides the automatic slop that grows the target to 64 pt. */
 	hitSlop?: number | Insets;
 	onPress?: () => void;
-	radius?: number;
+	radius?: ClayRadius;
 	selected?: boolean;
 	style?: StyleProp<ViewStyle>;
 	testID?: string;
@@ -149,7 +149,7 @@ export function ClayPressable({
 				onAccessibilityTap={fire}
 				onLayout={onLayout}
 				style={[
-					{ borderRadius: radius, cursor: "pointer" },
+					{ ...cornerStyle(radius), cursor: "pointer" },
 					focused
 						? {
 								outlineColor: colors.sun,

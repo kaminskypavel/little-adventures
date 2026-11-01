@@ -11,6 +11,10 @@ import { colors, radii } from "./tokens";
 
 const AVATAR = 61;
 const AVATAR_STAR = 51;
+// Compact (Home): a 56 pt avatar in a faint cream ring, and no title.
+const COMPACT_AVATAR = 56;
+const COMPACT_STAR = 47;
+const RING = "0px 0px 0px 3px rgba(244,236,216,0.28)";
 
 /**
  * Top bar row for Home, the map and Grown-ups: optional avatar (the star, or the child's drawing), a title,
@@ -23,6 +27,7 @@ export function TopBar({
 	action,
 	avatar = false,
 	avatarUrl,
+	compact = false,
 	onTitleLongPress,
 	take,
 	takeRun = 0,
@@ -36,18 +41,21 @@ export function TopBar({
 	avatar?: boolean;
 	/** The child's drawn picture. Shown instead of the star; the star stays when it is missing or fails to load. */
 	avatarUrl?: string | null;
+	/** A 56 pt avatar with a cream ring, and no title: the lock stays at the right. */
+	compact?: boolean;
 	/** A 1 s hold on the title. Defaults to the app's `TitleHoldProvider` action. */
 	onTitleLongPress?: () => void;
 	/** Makes the avatar star live: it plays this gesture when it appears, then rests on idle. */
 	take?: StarTakeName;
 	/** Change it to play `take` again. */
 	takeRun?: number;
-	title: string;
+	title?: string;
 }) {
 	// The failed url is remembered, so a new url is tried again.
 	const [failedUrl, setFailedUrl] = useState<string | null>(null);
+	const starSize = compact ? COMPACT_STAR : AVATAR_STAR;
 	const picture = avatarUrl && avatarUrl !== failedUrl ? avatarUrl : null;
-	let art: ReactNode = <Character kind="star" size={AVATAR_STAR} />;
+	let art: ReactNode = <Character kind="star" size={starSize} />;
 	if (picture) {
 		art = (
 			<Image
@@ -59,21 +67,27 @@ export function TopBar({
 			/>
 		);
 	} else if (take) {
-		art = <StarTake key={takeRun} size={AVATAR_STAR} take={take} />;
+		art = <StarTake key={takeRun} size={starSize} take={take} />;
 	}
 	return (
 		<>
-			{avatar ? <View style={styles.avatar}>{art}</View> : null}
-			<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
-				<ClayText
-					accessibilityRole="header"
-					color={colors.cream}
-					numberOfLines={1}
-					variant="title"
-				>
-					{title}
-				</ClayText>
-			</TitleHold>
+			{avatar ? (
+				<View style={compact ? styles.compact : styles.avatar}>{art}</View>
+			) : null}
+			{compact ? (
+				<View style={styles.title} />
+			) : (
+				<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
+					<ClayText
+						accessibilityRole="header"
+						color={colors.cream}
+						numberOfLines={1}
+						variant="title"
+					>
+						{title}
+					</ClayText>
+				</TitleHold>
+			)}
 			{action ? (
 				<IconButton
 					accessibilityLabel={action.accessibilityLabel}
@@ -95,6 +109,17 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		paddingBottom: 3,
 		width: AVATAR,
+	},
+	compact: {
+		alignItems: "center",
+		backgroundColor: colors.sun,
+		borderRadius: radii.full,
+		boxShadow: RING,
+		height: COMPACT_AVATAR,
+		justifyContent: "flex-end",
+		overflow: "hidden",
+		paddingBottom: 3,
+		width: COMPACT_AVATAR,
 	},
 	picture: StyleSheet.absoluteFill,
 	title: { flex: 1, justifyContent: "center" },
