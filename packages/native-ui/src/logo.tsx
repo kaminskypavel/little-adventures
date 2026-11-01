@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
+import { iosTextNudge } from "./clay-text";
 import { useCalm } from "./motion-provider";
 import { fonts } from "./tokens";
 
@@ -70,12 +71,15 @@ const bob = {
 	"100%": { transform: [{ translateY: 0 }] },
 };
 
-const glyph = {
-	fontFamily: fonts.heavy,
-	fontSize: SIZE,
-	letterSpacing: SPACING,
-	lineHeight: SIZE,
-} as const;
+const glyph = [
+	{
+		fontFamily: fonts.heavy,
+		fontSize: SIZE,
+		letterSpacing: SPACING,
+		lineHeight: SIZE,
+	},
+	iosTextNudge({ fontSize: SIZE, lineHeight: SIZE }),
+];
 
 function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 	const { color } = letter;
@@ -96,7 +100,7 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 			<View style={{ transform: [{ rotate: `${letter.tilt}deg` }] }}>
 				<Text
 					style={[
-						glyph,
+						...glyph,
 						{
 							color,
 							textShadowColor: DROP.color,
@@ -109,7 +113,7 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 				</Text>
 				<Text
 					style={[
-						glyph,
+						...glyph,
 						StyleSheet.absoluteFill,
 						{
 							color,
