@@ -38,13 +38,13 @@ The story is generated from the child's own question and stars the child's own c
 
 ## Capabilities and Constraints
 
-From the backend's player API:
+From the app server (`apps/web`) and the engine's player API:
 
-- Parent auth (bearer token or cookie), `GET /me`.
-- Characters: create (name, role, age, notes), upload photos (presigned PUT), the server cuts the person out and draws an identity sheet, the parent approves it.
-- Art styles list for a picker (`GET /styles`).
-- Start a story from the child's question (`POST /stories`), list stories, get a story with its chapters.
-- Chapter playback document, polled while it renders (`GET /chapters/{id}`); choice cards lead to the next chapter (`POST /chapters/{id}/choice`).
+- Grown-up sign-in. The same token works on the app server and the engine.
+- Child profile on the app server: name, age, boy or girl, and a photo uploaded through a presigned link. SAM 3.1 and Muse Image turn the photo into look avatars to pick from.
+- The child's spoken question becomes text on the app server (`voice.transcribe`, Muse Voice Transcribe).
+- Start an adventure from the question (`POST /adventures`), list adventures, and read one while its places are made (`GET /adventures/{id}`, polled every `pollAfterSec`).
+- Mark a place visited (`POST /adventures/{id}/nodes/{node}/visit`). The goodnight opens after all 4 places.
 
 Binding constraints:
 
@@ -62,7 +62,7 @@ Binding constraints:
 
 ## Evidence on Hand
 
-- Real story stills and clips made by the backend, kept outside this repo. Never use stills that show a real child's likeness.
+- Real story pictures and clips made by the engine, kept outside this repo. Never use any that show a real child's likeness.
 - No testimonials, user counts, press or pricing exist. Do not invent any.
 
 ## Product Principles
