@@ -38,6 +38,7 @@ describe("engine client", () => {
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
 			childId: "child-1",
 			question: "Why do whales sing?",
+			style: "clay",
 		});
 	});
 
