@@ -1,374 +1,430 @@
-import { SecondaryButton } from "@little-adventures/native-ui/button";
+import { BackButton } from "@little-adventures/native-ui/back-button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { HeroCard } from "@little-adventures/native-ui/hero-card";
-import { Pulse } from "@little-adventures/native-ui/pulse";
-import { RowCard } from "@little-adventures/native-ui/row-card";
+import { MorphPill } from "@little-adventures/native-ui/morph-pill";
+import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { StoryCover } from "@little-adventures/native-ui/story-cover";
-import { StoryShelf } from "@little-adventures/native-ui/story-shelf";
-import {
-	colors,
-	layout,
-	motion,
-	spacing,
-	storyCover,
-} from "@little-adventures/native-ui/tokens";
+import { SpeechPlate } from "@little-adventures/native-ui/speech-plate";
+import { StarTake } from "@little-adventures/native-ui/star-take";
+import { TitleHold } from "@little-adventures/native-ui/title-hold";
+import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
-import MaskedView from "@react-native-masked-view/masked-view";
-import { LinearGradient } from "expo-linear-gradient";
+import { VoiceHalo } from "@little-adventures/native-ui/voice-halo";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import Animated, {
+	type SharedValue,
+	useAnimatedStyle,
+} from "react-native-reanimated";
 import {
-	Platform,
-	ScrollView,
-	StyleSheet,
-	View,
-	type ViewStyle,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-	devFlags,
-	getIdeas,
-	getLatestAdventure,
-} from "@/src/data/adventure-client";
-import { micPermission } from "@/src/data/mic-permission";
-import { useChild } from "@/src/data/profile-queries";
-import type { AdventureSummary, Idea } from "@/src/data/types";
+	useSafeAreaFrame,
+	useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
+import { PresetQuestions } from "@/src/admin/preset-questions";
+import type { AdventureSummary } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
+import {
+	type ListenLayout,
+	listenLayout,
+	type RestLayout,
+	restLayout,
+} from "@/src/home/home-layout";
+import { IdeasShelf, YoursShelf } from "@/src/home/shelves";
+import { useFocusRun, useHomeData, useMicOff } from "@/src/home/use-home";
+import { useMorph } from "@/src/home/use-morph";
+import { lineFor, takeFor, titleFor } from "@/src/voice/ask-copy";
+import { useAsk } from "@/src/voice/use-ask";
+import { useMissedTilt } from "@/src/voice/use-tilt";
 
-// Mockup B2 (390 x 844 phone, px = pt), measured as gaps between pieces.
-const TITLE_GAP = 8;
-const TITLE_SIZE = 33;
-const TITLE_LINE = 36;
-const TITLE_LINES = 2;
-const HERO_GAP = 17;
-const HERO_HEIGHT = 140;
-const LABEL_GAP = 16;
-const LABEL_INSET = 4;
-const SHELF_GAP = 9;
-const MIC_MSG_FONT = 22;
-const MIC_MSG_LINE = 28;
-// The Ask your own card pulses once, after the avatar star has waved.
-const HERO_PULSE_DELAY = motion.pulseOffset + 200;
-const SKELETON_FADE = 0.15;
-// Soft fade under the avatar and lock: content is gone above the bar's bottom edge and clear this
-// far below it. The fade turns on over the first FADE_ON_SCROLL pt of scroll, so Home at rest is
-// untouched.
-const FADE_BAND = 52;
-const FADE_ON_SCROLL = 24;
-const IS_WEB = Platform.OS === "web";
-
-// A fixed mask over the scroll view: transparent at `gone`, solid at `gone + FADE_BAND`; `on` (0 to 1)
-// is how far the fade has turned on. Web uses a CSS mask.
-function fadeMask(gone: number, on: number): ViewStyle | undefined {
-	if (on <= 0) {
-		return undefined;
+const PILL_WIDTH = 300;
+const MIC = 176;
+const PLATE_BOX = 88;
+const HINT = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
+const MIC_OFF_TEXT = "Ask a grown-up to turn on the mic.";
+/** The pressed button hides as Home switches state: on web it must not keep the focus. */
+function releaseFocus() {
+	if (Platform.OS === "web") {
+		(globalThis.document?.activeElement as HTMLElement | null)?.blur();
 	}
-	const top = `rgba(0,0,0,${(1 - on).toFixed(3)})`;
-	return {
-		maskImage: `linear-gradient(to bottom, ${top} ${gone}px, #000 ${gone + FADE_BAND}px)`,
-	} as ViewStyle;
 }
 
-// The same mask for iOS and Android (MaskedView reads only its alpha): `top` alpha down to the bar's
-// bottom edge, a FADE_BAND ramp to solid, then solid. Fixed-height pieces, so no layout pass.
-function NativeFadeMask({ gone, on }: { gone: number; on: number }) {
-	const top = `rgba(0,0,0,${(1 - on).toFixed(3)})` as const;
-	return (
-		<View style={styles.maskFill}>
-			<View style={{ backgroundColor: top, height: gone }} />
-			<LinearGradient colors={[top, "#000"]} style={{ height: FADE_BAND }} />
-			<View style={styles.maskSolid} />
-		</View>
-	);
+// One element for the life of the app, so the admin sheet does not re-register it every render.
+const PRESET_TOOLS = <PresetQuestions />;
+
+type AskState = ReturnType<typeof useAsk>;
+
+interface Stage {
+	calm: boolean;
+	listen: ListenLayout;
+	progress: SharedValue<number>;
+	rest: RestLayout;
+	width: number;
 }
 
-interface HomeData {
-	avatarUrl: string | null;
-	/** The adventure made last; null when the child has none yet. */
-	latest: AdventureSummary | null;
-	name: string;
-}
-
-export default function Home() {
-	const router = useRouter();
-	const insets = useSafeAreaInsets();
-	// Bottom edge of the avatar and lock row, from the screen top (119 pt on a 47 pt inset).
-	const barBottom = insets.top + layout.topBarOffset + layout.topBarHeight;
-	const [scrolled, setScrolled] = useState(0);
-	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
-	// Dev only: production builds ignore the queries.
-	const first = dev(params.first);
-	// Denied in the phone's settings: the Ask your own card goes off. Read on every focus, so a
-	// grown-up who turns it on in settings finds it on when they come back.
-	const [micDenied, setMicDenied] = useState(false);
-	// Android is not a launch target and has no WAV recorder, so its mic is off too.
-	const micOff =
-		dev(params.mic) === "off" || micDenied || Platform.OS === "android";
-	const child = useChild();
-	const refetchChild = child.refetch;
-	// The adventure made last, once read: `{ latest: null }` when the child has none yet.
-	const [newest, setNewest] = useState<{
-		latest: AdventureSummary | null;
-	} | null>(null);
-	const data: HomeData | null =
-		newest && child.data
-			? {
-					avatarUrl: child.data.avatarUrl,
-					latest: newest.latest,
-					name: child.data.profile.childName,
-				}
-			: null;
-	const [ideas, setIdeas] = useState<Idea[] | null>(null);
-
-	// Counts focuses: each one waves the avatar star again and pulses the Ask your own card.
-	// The first focus is the mount, which already plays both.
-	const [run, setRun] = useState(0);
-	const seenFocus = useRef(false);
-	useFocusEffect(
-		useCallback(() => {
-			if (seenFocus.current) {
-				setRun((n) => n + 1);
-			}
-			seenFocus.current = true;
-		}, [])
-	);
-
-	useFocusEffect(
-		useCallback(() => {
-			let live = true;
-			micPermission()
-				.then((status) => live && setMicDenied(status === "denied"))
-				.catch(() => undefined);
-			return () => {
-				live = false;
+/** The star: at rest it waves under the plate; listening it rises and grows, and follows the child's hold. */
+function HomeStar({
+	ask,
+	listening,
+	run,
+	stage,
+}: {
+	ask: AskState;
+	listening: boolean;
+	run: number;
+	stage: Stage;
+}) {
+	const { calm, listen, progress, rest, width } = stage;
+	const tiltStyle = useMissedTilt(ask.state === "missed");
+	// Drawn at its listening size and scaled down to the resting one.
+	const size = listen.starSize;
+	const dy = rest.starTop + rest.starSize / 2 - (listen.starTop + size / 2);
+	const shrink = rest.starSize / size;
+	const style = useAnimatedStyle(() => {
+		const p = progress.get();
+		if (calm) {
+			// No travel: the star is gone for the middle of the cross-fade and back where it belongs.
+			const resting = p < 0.5;
+			return {
+				opacity: Math.abs(1 - 2 * p),
+				transform: [
+					{ translateY: resting ? dy : 0 },
+					{ scale: resting ? shrink : 1 },
+				],
 			};
-		}, [])
-	);
-
-	useFocusEffect(
-		useCallback(() => {
-			let live = true;
-			// Dev query: /home?first=1 shows the first-home state (no stories yet).
-			if (first !== undefined) {
-				devFlags.isFirstHome = first === "1";
-			}
-			// A story list that cannot be read shows as none, never as a skeleton for ever.
-			getLatestAdventure()
-				.catch(() => null)
-				.then((found) => live && setNewest({ latest: found }));
-			// Read the child again on every focus (fresh picture urls); a read already running is kept.
-			refetchChild({ cancelRefetch: false });
-			return () => {
-				live = false;
-			};
-		}, [first, refetchChild])
-	);
-
-	useEffect(() => {
-		let live = true;
-		getIdeas().then((list) => live && setIdeas(list));
-		return () => {
-			live = false;
+		}
+		return {
+			transform: [
+				{ translateY: (1 - p) * dy },
+				{ scale: shrink + (1 - shrink) * p },
+			],
 		};
-	}, []);
-
-	const ask = (question: string) =>
-		router.push({ params: { question }, pathname: "/style" });
-
-	const latest = data?.latest ?? null;
-
-	const scroll = (
-		<ScrollView
-			contentContainerStyle={[
-				styles.content,
-				{
-					// No dock: the shelf scrolls clear of the home indicator.
-					paddingBottom: insets.bottom + spacing.lg,
-					paddingTop: barBottom + spacing.lg,
-				},
-			]}
-			onScroll={(e) =>
-				setScrolled(
-					Math.round(Math.min(FADE_ON_SCROLL, e.nativeEvent.contentOffset.y))
-				)
-			}
-			scrollEventThrottle={16}
-			showsVerticalScrollIndicator={false}
+	});
+	return (
+		<Animated.View
+			pointerEvents="none"
 			style={[
-				styles.scroll,
-				IS_WEB
-					? fadeMask(barBottom, scrolled / FADE_ON_SCROLL)
-					: { marginTop: barBottom },
+				styles.star,
+				{
+					height: size,
+					left: (width - size) / 2,
+					top: listen.starTop,
+					width: size,
+				},
+				style,
 			]}
+		>
+			<Animated.View style={tiltStyle}>
+				<StarTake
+					hold={listening}
+					key={listening ? "ask" : run}
+					size={size}
+					take={listening ? takeFor(ask.pressing, ask.thinking) : "wave"}
+				/>
+			</Animated.View>
+		</Animated.View>
+	);
+}
+
+/** The headline and the hint under the round mic, in once the mic has arrived. */
+function ListenWords({
+	ask,
+	listening,
+	progress,
+	stage,
+}: {
+	ask: AskState;
+	listening: boolean;
+	progress: SharedValue<number>;
+	stage: Stage;
+}) {
+	const style = useAnimatedStyle(() => ({ opacity: progress.get() }));
+	return (
+		<Animated.View
+			aria-hidden={!listening}
+			pointerEvents="none"
+			style={[styles.words, style]}
 		>
 			<ClayText
 				accessibilityRole="header"
 				align="center"
 				color={colors.cream}
-				numberOfLines={TITLE_LINES}
-				style={styles.title}
+				style={[styles.at, { top: stage.listen.headlineTop }]}
 				variant="headline"
 			>
-				{data ? `What shall we explore, ${data.name}?` : ""}
+				{titleFor(ask.state, ask.hint)}
 			</ClayText>
-			<View style={{ marginTop: HERO_GAP }}>
-				<Pulse delay={HERO_PULSE_DELAY} play={run}>
-					{micOff ? (
-						<HeroCard height={HERO_HEIGHT} label={"Mic is\noff"} off />
-					) : (
-						<HeroCard
-							height={HERO_HEIGHT}
-							label={"Ask\nyour own"}
-							onPress={() => router.push("/listening")}
-						/>
-					)}
-				</Pulse>
-			</View>
-			{micOff ? (
-				<ClayText
-					align="center"
-					color={colors.cream}
-					style={styles.micMsg}
-					variant="label"
-				>
-					Ask a grown-up to turn it on.
-				</ClayText>
-			) : null}
-			{latest ? (
-				<>
-					<View style={styles.keepRow}>
-						<ClayText
-							color={colors.cream}
-							style={styles.keepLabel}
-							variant="label"
-						>
-							Keep exploring
-						</ClayText>
-						<SecondaryButton
-							icon="map"
-							label="Past stories"
-							onPress={() => router.push("/library")}
-							size="md"
-							style={styles.past}
-						/>
-					</View>
-					<RowCard
-						onPress={() => router.push(`/map?id=${latest.id}`)}
-						picture={latest.picture}
-						style={styles.latest}
-						subtitle={
-							latest.finished
-								? "Finished"
-								: `${latest.partsDone} of ${latest.partsTotal} places`
-						}
-						title={latest.title}
-					/>
-				</>
-			) : null}
-			{micOff && !latest ? null : (
-				<ClayText color={colors.cream} style={styles.label} variant="label">
-					Or try an idea
-				</ClayText>
-			)}
-			<StoryShelf style={styles.shelf}>
-				{ideas
-					? ideas.map((idea) => (
-							<StoryCover
-								key={idea.question}
-								onPress={() => ask(idea.question)}
-								picture={idea.picture}
-								size="shelf"
-								title={idea.question}
-							/>
-						))
-					: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
-			</StoryShelf>
-		</ScrollView>
+			<ClayText
+				align="center"
+				color={colors.cream}
+				style={[styles.at, HINT, { top: stage.listen.hintTop }]}
+				variant="body"
+			>
+				{lineFor(ask.state, ask.hint)}
+			</ClayText>
+		</Animated.View>
 	);
+}
 
+/** The voice halo takes over from the pill where the pill lands, and then takes the holds. */
+function HaloSpot({
+	ask,
+	landed,
+	progress,
+	stage,
+}: {
+	ask: AskState;
+	landed: boolean;
+	progress: SharedValue<number>;
+	stage: Stage;
+}) {
+	const { calm, listen, width } = stage;
+	const style = useAnimatedStyle(() => {
+		const p = progress.get();
+		return { opacity: calm ? p : Number(p >= 1) };
+	});
 	return (
-		<Screen>
-			{IS_WEB ? (
-				scroll
-			) : (
-				<MaskedView
-					androidRenderingMode="software"
-					maskElement={
-						<NativeFadeMask gone={barBottom} on={scrolled / FADE_ON_SCROLL} />
-					}
-					style={styles.scroll}
-				>
-					{scroll}
-				</MaskedView>
-			)}
-			{/* No bar behind them: the avatar and lock float on the sky, over the scroll area. */}
+		<Animated.View
+			aria-hidden={!landed}
+			pointerEvents={landed ? "auto" : "none"}
+			style={[
+				styles.halo,
+				{ left: width / 2 - MIC / 2, top: listen.micCy - MIC / 2 },
+				style,
+			]}
+		>
+			<VoiceHalo
+				level={ask.level}
+				onHoldEnd={ask.onHoldEnd}
+				onHoldStart={ask.onHoldStart}
+				state={ask.state}
+			/>
+		</Animated.View>
+	);
+}
+
+/** Everything that waits while the child asks: the avatar and lock, the plate and both shelves. */
+function RestLayer({
+	data,
+	listening,
+	micOff,
+	onAsk,
+	onGate,
+	onOpen,
+	rest,
+	run,
+	stage,
+}: {
+	data: ReturnType<typeof useHomeData>;
+	listening: boolean;
+	micOff: boolean;
+	onAsk: (question: string) => void;
+	onGate: () => void;
+	onOpen: (adventure: AdventureSummary) => void;
+	rest: SharedValue<number>;
+	run: number;
+	stage: Stage;
+}) {
+	const { adventures, avatarUrl, ideas, name } = data;
+	const spots = stage.rest;
+	const insets = useSafeAreaInsets();
+	const style = useAnimatedStyle(() => ({ opacity: rest.get() }));
+	const text = micOff ? MIC_OFF_TEXT : `What shall we explore, ${name}?`;
+	return (
+		<Animated.View
+			aria-hidden={listening}
+			pointerEvents={listening ? "none" : "box-none"}
+			style={[styles.layer, style]}
+		>
 			<View
 				pointerEvents="box-none"
-				style={[styles.topBar, { top: insets.top + layout.topBarOffset }]}
+				style={[styles.topBar, { top: insets.top + 8 }]}
 			>
 				<TopBar
 					action={{
 						accessibilityLabel: "Grown-ups",
 						icon: "lock",
-						onPress: () => router.push("/gate"),
+						onPress: onGate,
 					}}
-					avatar={data !== null}
-					avatarUrl={data?.avatarUrl}
+					avatar={name !== null}
+					avatarUrl={avatarUrl}
+					compact
 					take="wave"
 					takeRun={run}
-					title={data ? `Hi ${data.name}!` : ""}
 				/>
+			</View>
+			{name === null ? null : (
+				<TitleHold
+					style={[
+						styles.plate,
+						{ top: spots.plateBottom - PLATE_BOX, width: stage.width },
+					]}
+				>
+					<SpeechPlate width={Math.min(PILL_WIDTH, stage.width - 2 * 22)}>
+						{text}
+					</SpeechPlate>
+				</TitleHold>
+			)}
+			<YoursShelf
+				adventures={adventures}
+				labelTop={spots.yoursLabelTop}
+				onOpen={onOpen}
+				top={spots.yoursTop}
+			/>
+			<IdeasShelf
+				ideas={ideas}
+				labelTop={spots.ideasLabelTop}
+				onAsk={onAsk}
+				top={spots.ideasTop}
+			/>
+		</Animated.View>
+	);
+}
+
+export default function Home() {
+	useScreenAdminTools("Home", PRESET_TOOLS);
+	const router = useRouter();
+	const insets = useSafeAreaInsets();
+	// The screen the app is drawn in: the window on a phone, the preview phone on web.
+	const { height, width } = useSafeAreaFrame();
+	const calm = useCalm();
+	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
+	const data = useHomeData(dev(params.first));
+	const mic = useMicOff(params.mic);
+	const run = useFocusRun();
+	const [listening, setListening] = useState(false);
+	const { landed, progress, rest } = useMorph(listening);
+	// Home goes on to Verify with a push, so back from Verify is Home again.
+	const ask = useAsk(
+		useCallback(() => {
+			router.push("/verify");
+		}, [router])
+	);
+	const { arm, disarm } = ask;
+	const { deny } = mic;
+
+	const close = useCallback(() => {
+		releaseFocus();
+		disarm();
+		setListening(false);
+	}, [disarm]);
+	// Leaving Home lets go of the mic; Home is at rest when it gets focus again.
+	useFocusEffect(useCallback(() => close, [close]));
+	const open = () => {
+		releaseFocus();
+		setListening(true);
+		arm(() => {
+			close();
+			deny();
+		});
+	};
+
+	const stage: Stage = {
+		calm,
+		listen: listenLayout(height, insets),
+		progress,
+		rest: restLayout(height, insets),
+		width,
+	};
+	const ready = data.name !== null;
+
+	return (
+		<Screen>
+			<View style={styles.root}>
+				<RestLayer
+					data={data}
+					listening={listening}
+					micOff={mic.off}
+					onAsk={(question) =>
+						router.push({ params: { question }, pathname: "/style" })
+					}
+					onGate={() => router.push("/gate")}
+					onOpen={(adventure) =>
+						router.push(
+							adventure.finished
+								? `/end?id=${adventure.id}`
+								: `/map?id=${adventure.id}`
+						)
+					}
+					rest={rest}
+					run={run}
+					stage={stage}
+				/>
+				<HomeStar ask={ask} listening={listening} run={run} stage={stage} />
+				<MorphPill
+					icon="plus"
+					label="New adventure"
+					listening={listening}
+					mic={{ cx: width / 2, cy: stage.listen.micCy }}
+					off={mic.off || !ready}
+					onPress={open}
+					progress={progress}
+					rest={{ cx: width / 2, cy: stage.rest.buttonCy }}
+					restWidth={Math.min(PILL_WIDTH, width - 2 * layout.sideMargin)}
+					size={MIC}
+				/>
+				<HaloSpot ask={ask} landed={landed} progress={progress} stage={stage} />
+				<ListenWords
+					ask={ask}
+					listening={listening}
+					progress={progress}
+					stage={stage}
+				/>
+				<BackSpot listening={listening} onBack={close} rest={rest} />
 			</View>
 		</Screen>
 	);
 }
 
+/** Back from listening to rest, where the avatar was. */
+function BackSpot({
+	listening,
+	onBack,
+	rest,
+}: {
+	listening: boolean;
+	onBack: () => void;
+	rest: SharedValue<number>;
+}) {
+	const insets = useSafeAreaInsets();
+	const style = useAnimatedStyle(() => ({ opacity: 1 - rest.get() }));
+	return (
+		<Animated.View
+			aria-hidden={!listening}
+			pointerEvents={listening ? "auto" : "none"}
+			style={[styles.back, { top: insets.top + layout.topBarOffset }, style]}
+		>
+			<BackButton onPress={onBack} />
+		</Animated.View>
+	);
+}
+
 const styles = StyleSheet.create({
-	// The body has side padding; the scroll view undoes it so the shelf can bleed to the edge.
-	content: { paddingHorizontal: layout.sideMargin },
-	fill: { flex: 1 },
-	// Keep exploring on the left, the Past stories button (64 pt) on the right.
-	keepLabel: { marginLeft: LABEL_INSET },
-	keepRow: {
-		alignItems: "center",
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginTop: LABEL_GAP,
+	at: {
+		left: layout.sideMargin,
+		position: "absolute",
+		right: layout.sideMargin,
 	},
-	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
-	latest: { marginTop: SHELF_GAP },
-	maskFill: { backgroundColor: "transparent", flex: 1 },
-	maskSolid: { backgroundColor: "#000", flex: 1 },
-	micMsg: {
-		fontSize: MIC_MSG_FONT,
-		lineHeight: MIC_MSG_LINE,
-		marginTop: LABEL_GAP,
+	back: { left: layout.sideMargin, position: "absolute" },
+	halo: { height: MIC, position: "absolute", width: MIC },
+	layer: StyleSheet.absoluteFill,
+	plate: {
+		height: PLATE_BOX,
+		justifyContent: "flex-end",
+		left: 0,
+		position: "absolute",
 	},
-	past: { alignSelf: "auto", paddingHorizontal: 22 },
-	scroll: { flex: 1, marginHorizontal: -layout.sideMargin },
-	shelf: { marginTop: SHELF_GAP },
-	skeleton: {
-		backgroundColor: colors.sand,
-		borderRadius: storyCover.radius,
-		height: storyCover.shelf.height,
-		opacity: SKELETON_FADE,
-		width: storyCover.shelf.width,
-	},
-	title: {
-		fontSize: TITLE_SIZE,
-		lineHeight: TITLE_LINE,
-		marginTop: TITLE_GAP,
-		minHeight: TITLE_LINE * TITLE_LINES,
-	},
-	// Same row as Screen's top bar, drawn over the scroll area (the body adds the side margins).
+	// The body has side padding; undo it so everything is placed from the screen edge.
+	root: { flex: 1, marginHorizontal: -layout.sideMargin },
+	star: { position: "absolute" },
 	topBar: {
 		alignItems: "center",
 		flexDirection: "row",
 		gap: layout.gap,
 		height: layout.topBarHeight,
-		left: 0,
+		left: layout.sideMargin,
 		position: "absolute",
-		right: 0,
+		right: layout.sideMargin,
 	},
+	words: StyleSheet.absoluteFill,
 });
