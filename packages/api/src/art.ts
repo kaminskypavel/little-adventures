@@ -15,7 +15,7 @@ import {
 } from "@little-adventures/image-editing/looks";
 import { and, eq } from "drizzle-orm";
 
-import { recordAiCall } from "./ai-calls";
+import { recordAiCall, safetyIdOf } from "./ai-calls";
 import type { Context } from "./context";
 import { userPrefix } from "./photo-key";
 
@@ -25,21 +25,6 @@ interface ArtRun {
 	childId: string;
 	ownerId: string;
 	photoKey: string;
-}
-
-const HEX_LENGTH = 32;
-
-/** An opaque, stable id of the grown-up for the model API's abuse checks. */
-export async function safetyIdOf(ownerId: string): Promise<string> {
-	const digest = await crypto.subtle.digest(
-		"SHA-256",
-		new TextEncoder().encode(ownerId)
-	);
-	return Array.from(new Uint8Array(digest), (byte) =>
-		byte.toString(16).padStart(2, "0")
-	)
-		.join("")
-		.slice(0, HEX_LENGTH);
 }
 
 async function fetchBytes(url: string): Promise<Uint8Array> {

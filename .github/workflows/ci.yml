@@ -45,8 +45,8 @@ jobs:
         working-directory: apps/web
       - name: Package tests
         run: |
-          for pkg in llm decision image-editing transcribe api; do
-            (cd "packages/$pkg" && bun test) || exit 1
+          for dir in packages/llm packages/decision packages/image-editing packages/transcribe packages/api packages/auth packages/storage packages/validation apps/native; do
+            (cd "$dir" && bun test) || exit 1
           done
 
   e2e:

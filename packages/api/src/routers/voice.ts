@@ -5,9 +5,7 @@ import {
 } from "@little-adventures/transcribe";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
-import { recordAiCall } from "../ai-calls";
-import { safetyIdOf } from "../art";
+import { recordAiCall, safetyIdOf } from "../ai-calls";
 import { protectedProcedure, router } from "../index";
 
 const MAX_SECONDS = 30;

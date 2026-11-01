@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { createStorage, NOT_CONFIGURED } from "./index";
 
@@ -21,6 +22,10 @@ describe("storage without credentials", () => {
 		await expect(
 			storage.copyFrom("https://example.invalid/file.bin", "a/b.bin")
 		).rejects.toThrow(NOT_CONFIGURED);
+	});
+
+	test("deletePrefix throws instead of deleting nothing", async () => {
+		await expect(storage.deletePrefix("a/")).rejects.toThrow(NOT_CONFIGURED);
 	});
 
 	test("readUrl and uploadUrlFor throw instead of returning a broken url", async () => {
@@ -80,5 +85,48 @@ describe("presigned urls", () => {
 		expect(await publicStorage.readUrl("files/f1/object.bin")).toBe(
 			"https://media.example.com/files/f1/object.bin"
 		);
+	});
+});
+
+describe("deletePrefix", () => {
+	let send: ReturnType<typeof spyOn>;
+
+	beforeEach(() => {
+		send = spyOn(S3Client.prototype, "send");
+	});
+
+	afterEach(() => {
+		send.mockRestore();
+	});
+
+	test("lists every page under the prefix and deletes each key", async () => {
+		const listed: unknown[] = [];
+		const deleted: string[] = [];
+		const pages = [
+			{
+				Contents: [{ Key: "a/1" }, { Key: "a/2" }],
+				IsTruncated: true,
+				NextContinuationToken: "t1",
+			},
+			{ IsTruncated: true, NextContinuationToken: "t2" },
+			{ Contents: [{ Key: "a/3" }], IsTruncated: false },
+		];
+		send.mockImplementation(((command: unknown) => {
+			if (command instanceof DeleteObjectCommand) {
+				deleted.push(command.input.Key ?? "");
+				return Promise.resolve({});
+			}
+			listed.push((command as { input: unknown }).input);
+			return Promise.resolve(pages[listed.length - 1]);
+		}) as never);
+
+		await createStorage(FAKE).deletePrefix("a/");
+
+		expect(listed).toMatchObject([
+			{ Bucket: "media", Prefix: "a/" },
+			{ ContinuationToken: "t1", Prefix: "a/" },
+			{ ContinuationToken: "t2", Prefix: "a/" },
+		]);
+		expect(deleted.sort()).toEqual(["a/1", "a/2", "a/3"]);
 	});
 });
