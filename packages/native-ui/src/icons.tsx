@@ -15,6 +15,7 @@ export type IconName =
 	| "pause"
 	| "play"
 	| "plus"
+	| "sliders"
 	| "user"
 	| "x";
 
@@ -32,6 +33,7 @@ export const iconNames: readonly IconName[] = [
 	"x",
 	"plus",
 	"back",
+	"sliders",
 ];
 
 // One family: 24 grid, round caps and joins. Stroke widths follow round 7.
@@ -109,6 +111,13 @@ const shapes: Record<IconName, (color: string) => ReactNode> = {
 	),
 	plus: (c) => (
 		<Path d="M12 5v14M5 12h14" stroke={c} strokeWidth={3} {...line} />
+	),
+	sliders: (c) => (
+		<G stroke={c} strokeWidth={2.4} {...line}>
+			<Path d="M4 8h16M4 16h16" />
+			<Circle cx={9} cy={8} fill={colors.cream} r={2.6} />
+			<Circle cx={15} cy={16} fill={colors.cream} r={2.6} />
+		</G>
 	),
 	user: (c) => (
 		<G stroke={c} strokeWidth={2.4} {...line}>

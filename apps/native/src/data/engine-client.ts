@@ -54,6 +54,13 @@ export interface EngineSummary {
 	status: string;
 	title: string | null;
 }
+/** The admin switches for the paid steps of a live adventure (the effective values). */
+export interface EngineSteps {
+	pictures: boolean;
+	story: boolean;
+	video: boolean;
+	voice: boolean;
+}
 /** The signed-in account as the engine knows it. `live` is the admin switch for real adventures. */
 export interface EngineMe {
 	email?: string;
@@ -61,6 +68,7 @@ export interface EngineMe {
 	isAdmin: boolean;
 	live: boolean;
 	name?: string;
+	steps: EngineSteps;
 }
 export interface VisitResult {
 	outroLocked: boolean;
@@ -119,6 +127,13 @@ export function createEngineClient(engineFetch: EngineFetch) {
 		setLive: (on: boolean) =>
 			call<{ live: boolean }>("/me/live", {
 				body: JSON.stringify({ on }),
+				headers: { "content-type": "application/json" },
+				method: "PUT",
+			}),
+		/** Admins only: sets some of the steps; the engine answers all four. */
+		setSteps: (steps: Partial<EngineSteps>) =>
+			call<{ steps: EngineSteps }>("/me/steps", {
+				body: JSON.stringify(steps),
 				headers: { "content-type": "application/json" },
 				method: "PUT",
 			}),

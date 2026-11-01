@@ -75,13 +75,28 @@ describe("engine client", () => {
 	});
 
 	test("getMe reads the account and setLive puts the switch", async () => {
-		const me = { email: "a@b.c", id: "u1", isAdmin: true, live: false };
+		const me = {
+			email: "a@b.c",
+			id: "u1",
+			isAdmin: true,
+			live: false,
+			steps: { pictures: true, story: true, video: false, voice: true },
+		};
 		const { client, requests } = engine(json(me), json({ live: true }));
 		expect(await client.getMe()).toEqual(me);
 		expect(await client.setLive(true)).toEqual({ live: true });
 		expect(requests.map((r) => r.path)).toEqual(["/me", "/me/live"]);
 		expect(requests[1].init?.method).toBe("PUT");
 		expect(JSON.parse(String(requests[1].init?.body))).toEqual({ on: true });
+	});
+
+	test("setSteps puts a partial body and answers the four steps", async () => {
+		const steps = { pictures: true, story: true, video: true, voice: true };
+		const { client, requests } = engine(json({ steps }));
+		expect(await client.setSteps({ video: true })).toEqual({ steps });
+		expect(requests[0].path).toBe("/me/steps");
+		expect(requests[0].init?.method).toBe("PUT");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({ video: true });
 	});
 
 	test("setLive by a non-admin is an EngineError 403", async () => {

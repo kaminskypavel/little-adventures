@@ -6,6 +6,7 @@ import { ENV } from "@/src/env";
 import {
 	createEngineClient,
 	type EngineAdventure,
+	type EngineSteps,
 	sleep,
 } from "./engine-client";
 import {
@@ -53,6 +54,14 @@ export const setLive = (on: boolean) => {
 		throw new Error("No engine");
 	}
 	return engine.setLive(on);
+};
+
+/** Admin switches for the paid steps. Only called when the engine said the account is an admin. */
+export const setSteps = (steps: Partial<EngineSteps>) => {
+	if (!engine) {
+		throw new Error("No engine");
+	}
+	return engine.setSteps(steps);
 };
 
 /** Dev flag for the mock. isFirstHome: getHome returns empty lists (E4). */
