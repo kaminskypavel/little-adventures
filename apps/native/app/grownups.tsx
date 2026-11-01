@@ -128,29 +128,20 @@ export default function Grownups() {
 		photoUrl: string;
 	} | null>(null);
 
-	useEffect(() => {
-		let live = true;
-		const read = () =>
+	const read = useCallback(
+		() =>
 			Promise.all([getProfile(), getAvatarUrl().catch(() => null)]).then(
 				([p, url]) => {
-					if (live) {
-						setProfile(p);
-						setAvatarUrl(url);
-					}
-					return p;
+					setProfile(p);
+					setAvatarUrl(url);
 				}
-			);
-		// Asks again while the art is still drawn, so it appears without a reopen.
-		const watch = async () => {
-			let p = await read();
-			while (live && p.artStatus === "working") {
-				await new Promise((done) => setTimeout(done, POLL_MS));
-				if (live) {
-					p = await read();
-				}
-			}
-		};
-		watch();
+			),
+		[]
+	);
+
+	useEffect(() => {
+		let live = true;
+		read();
 		getAdventures()
 			.then((a) => live && setAdventures(a))
 			.catch(() => live && setAdventures([]));
@@ -158,6 +149,16 @@ export default function Grownups() {
 			live = false;
 		};
 	}, []);
+
+	// Asks again while the art is still drawn, so it appears without a reopen.
+	const drawing = profile?.artStatus === "working";
+	useEffect(() => {
+		if (!drawing) {
+			return;
+		}
+		const timer = setInterval(read, POLL_MS);
+		return () => clearInterval(timer);
+	}, [drawing, read]);
 
 	// Read again each time the screen is shown, so a photo just replaced appears.
 	useFocusEffect(
