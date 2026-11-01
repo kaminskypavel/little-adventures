@@ -32,6 +32,7 @@
         "@hookform/resolvers": "^6.0.2",
         "@little-adventures/native-ui": "workspace:*",
         "@little-adventures/validation": "workspace:*",
+        "@react-native-masked-view/masked-view": "0.3.2",
         "@trpc/client": "catalog:",
         "@varlock/expo-integration": "1.2.2",
         "expo": "~58.0.12",
