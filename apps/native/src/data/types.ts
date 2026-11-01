@@ -35,16 +35,7 @@ export interface EndGoal {
 	name: string;
 	open: Picture | null;
 }
-export interface Cast {
-	childAge: number;
-	childKind: "girl" | "boy";
-	childName: string;
-	grownUp: boolean;
-	puppy: boolean;
-}
 export interface Adventure {
-	/** Absent for engine adventures: the screens read the child from the profile. */
-	cast?: Cast;
 	endGoal: EndGoal;
 	id: string;
 	places: Record<NodeId, Place>;

@@ -17,13 +17,6 @@ const place = (
 });
 
 export const mockAdventure: Adventure = {
-	cast: {
-		childAge: 5,
-		childKind: "girl",
-		childName: "Noa",
-		grownUp: false,
-		puppy: true,
-	},
 	endGoal: {
 		closed: require("../../assets/story/moon-gate.png"),
 		name: "Goodnight moon",
@@ -135,6 +128,3 @@ export const ideas: Idea[] = [
 ];
 
 export const transcribedQuestion = "Why do whales sing?";
-
-/** Child name from the cast, never hard-coded in UI strings. */
-export const childName = (a: Adventure): string => a.cast?.childName ?? "";

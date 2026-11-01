@@ -1,8 +1,8 @@
 import type { PermissionStatus } from "expo-audio";
 import { wavDataSize } from "./wav";
 
-/** A spoken question stops by itself here; the server takes at most this much. */
-export const MAX_RECORD_MS = 30_000;
+/** A spoken question stops by itself here, just under the 30 s the server takes at most. */
+export const MAX_RECORD_MS = 29_000;
 
 export const SAMPLE_RATE = 16_000;
 

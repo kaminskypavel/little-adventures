@@ -1,4 +1,4 @@
-import type { NodeId } from "./types";
+import type { NodeId, Progress } from "./types";
 
 export const PLACES: NodeId[] = ["p1", "p2", "p1a", "p2a"];
 
@@ -19,6 +19,13 @@ export const missingPlaces = (visited: NodeId[]): number =>
 
 export const isGoodnightOpen = (visited: NodeId[]): boolean =>
 	missingPlaces(visited) === 0;
+
+/** Goodnight is locked: the engine's word when it gave one, else the four-places rule. */
+export const isOutroLocked = ({
+	outroLocked,
+	visited,
+}: Pick<Progress, "outroLocked" | "visited">): boolean =>
+	outroLocked ?? !isGoodnightOpen(visited);
 
 export const choicesFrom = (
 	node: NodeId,

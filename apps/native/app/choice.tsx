@@ -16,7 +16,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { getProfile, getProgress } from "@/src/data/adventure-client";
-import { choicesFrom, missingPlaces } from "@/src/data/map-rules";
+import {
+	choicesFrom,
+	isOutroLocked,
+	missingPlaces,
+} from "@/src/data/map-rules";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -46,14 +50,13 @@ interface Card {
 function cardsOf(
 	adventure: Adventure,
 	from: NodeId,
-	visited: NodeId[],
-	lock: boolean | undefined,
+	progress: Pick<Progress, "outroLocked" | "visited">,
 	devDrawing: string | undefined
 ): Card[] {
-	return choicesFrom(from, visited).map(({ locked: ruled, node }) => {
+	return choicesFrom(from, progress.visited).map(({ locked: ruled, node }) => {
 		const place = adventure.places[node];
 		const goal = node === "outro";
-		const locked = goal && lock !== undefined ? lock : ruled;
+		const locked = goal ? isOutroLocked(progress) : ruled;
 		let { picture } = place;
 		if (goal) {
 			picture = locked ? adventure.endGoal.closed : adventure.endGoal.open;
@@ -132,7 +135,12 @@ export default function Choice() {
 	const engineOutroLock = devVisited ? undefined : progress?.outroLocked;
 	const cards =
 		adventure && visited
-			? cardsOf(adventure, from, visited, engineOutroLock, devDrawing)
+			? cardsOf(
+					adventure,
+					from,
+					{ outroLocked: engineOutroLock, visited },
+					devDrawing
+				)
 			: [];
 
 	const goodnight = cards.find((c) => c.goal);

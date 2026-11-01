@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	choicesFrom,
 	isGoodnightOpen,
+	isOutroLocked,
 	missingPlaces,
 	neighbours,
 } from "./map-rules";
@@ -37,6 +38,20 @@ describe("goodnight unlock", () => {
 	test("open after all four", () => {
 		expect(isGoodnightOpen(all)).toBe(true);
 		expect(missingPlaces(all)).toBe(0);
+	});
+});
+
+describe("isOutroLocked", () => {
+	test("the engine's word wins", () => {
+		expect(isOutroLocked({ outroLocked: true, visited: all })).toBe(true);
+		expect(isOutroLocked({ outroLocked: false, visited: ["intro"] })).toBe(
+			false
+		);
+	});
+
+	test("without it the four-places rule decides", () => {
+		expect(isOutroLocked({ visited: ["intro", "p1"] })).toBe(true);
+		expect(isOutroLocked({ visited: all })).toBe(false);
 	});
 });
 

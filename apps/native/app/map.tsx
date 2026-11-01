@@ -10,7 +10,7 @@ import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { getProfile } from "@/src/data/adventure-client";
-import { isGoodnightOpen, neighbours } from "@/src/data/map-rules";
+import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -93,10 +93,7 @@ export default function StoryMapScreen() {
 		const places = Object.fromEntries(
 			PLACE_IDS.map((node) => [node, place(node)])
 		) as Record<MapPlaceNode, MapPlace>;
-		const goodnightOpen =
-			progress.outroLocked === undefined
-				? isGoodnightOpen(progress.visited)
-				: !progress.outroLocked;
+		const goodnightOpen = !isOutroLocked(progress);
 		// The road just walked glows: from the node visited before this one, to this one.
 		const at = progress.visited.indexOf(progress.here);
 
