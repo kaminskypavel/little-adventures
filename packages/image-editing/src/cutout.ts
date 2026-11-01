@@ -112,6 +112,81 @@ export async function faceCutout(
 	return new Uint8Array(png);
 }
 
+/**
+ * The mask with every hole closed: background not connected to the mask's
+ * edge (a gap SAM left inside a toy or a hand) becomes part of the person.
+ */
+export function fillHoles(
+	mask: Uint8Array,
+	width: number,
+	height: number
+): Uint8Array {
+	const outside = new Uint8Array(mask.length);
+	const stack: number[] = [];
+	const visit = (x: number, y: number) => {
+		const i = y * width + x;
+		if (mask[i] === 0 && outside[i] === 0) {
+			outside[i] = 1;
+			stack.push(i);
+		}
+	};
+	for (let x = 0; x < width; x += 1) {
+		visit(x, 0);
+		visit(x, height - 1);
+	}
+	for (let y = 0; y < height; y += 1) {
+		visit(0, y);
+		visit(width - 1, y);
+	}
+	while (stack.length > 0) {
+		const i = stack.pop() as number;
+		const x = i % width;
+		const y = (i - x) / width;
+		if (x > 0) {
+			visit(x - 1, y);
+		}
+		if (x < width - 1) {
+			visit(x + 1, y);
+		}
+		if (y > 0) {
+			visit(x, y - 1);
+		}
+		if (y < height - 1) {
+			visit(x, y + 1);
+		}
+	}
+	return outside.map((o) => (o ? 0 : 1));
+}
+
+/** Height of a person cut-out: the wait screen shows it about 200 pt tall. */
+export const PERSON_HEIGHT = 600;
+
+/**
+ * The masked person on a transparent background, cropped to the mask's box
+ * (a portrait keeps its shoulders cut off at the bottom edge) and scaled to
+ * 600 px tall. The downscale softens the mask's hard edge.
+ */
+export async function personCutout(
+	image: Uint8Array,
+	found: Found
+): Promise<Uint8Array> {
+	const { box, data, height, width } = await maskOut(image, {
+		...found,
+		mask: fillHoles(found.mask, found.maskWidth, found.maskHeight),
+	});
+	const webp = await sharp(data, { raw: { channels: 4, height, width } })
+		.extract({
+			height: box.y2 - box.y1,
+			left: box.x1,
+			top: box.y1,
+			width: box.x2 - box.x1,
+		})
+		.resize({ height: PERSON_HEIGHT, withoutEnlargement: true })
+		.webp({ alphaQuality: 90, quality: 82 })
+		.toBuffer();
+	return new Uint8Array(webp);
+}
+
 /** Margin kept around a cut-out object, as a share of its longer side. */
 const OBJECT_MARGIN = 0.04;
 /** A background pixel is light and grey: the plain backdrop and its soft shadow. */

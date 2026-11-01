@@ -8,7 +8,10 @@ import {
 	MUSE_IMAGE_COST_MICRO_USD,
 	SAM_COST_MICRO_USD,
 } from "@little-adventures/image-editing";
-import { faceCutout } from "@little-adventures/image-editing/cutout";
+import {
+	faceCutout,
+	personCutout,
+} from "@little-adventures/image-editing/cutout";
 import {
 	grownUpLookPrompt,
 	LOOKS,
@@ -60,7 +63,7 @@ export async function drawArt(
 
 	const [started] = await db
 		.update(childrenTable)
-		.set({ artStatus: "working", drawings: {}, faceKey: null })
+		.set({ artStatus: "working", cutKey: null, drawings: {}, faceKey: null })
 		.where(current)
 		.returning({ id: childrenTable.id });
 	if (!started) {
@@ -138,12 +141,52 @@ export async function drawArt(
 		return key;
 	}
 
+	/** The drawn look cut out of its backdrop, for the wait screen. */
+	async function drawCut(lookKey: string): Promise<void> {
+		const lookUrl = await storage.readUrl(lookKey);
+		const [found, look] = await Promise.all([
+			art.segment(lookUrl, "child", (call) =>
+				recorded("look.cut.segment", MODELS.segment, SAM_COST_MICRO_USD, call)
+			),
+			fetchBytes(lookUrl),
+		]);
+		if (!found) {
+			return;
+		}
+		const key = cutKeyOf(folder);
+		await storage.putObject({
+			body: await personCutout(look, found),
+			contentType: "image/webp",
+			key,
+		});
+		const saved = await db
+			.update(childrenTable)
+			.set({ cutKey: key })
+			.where(current)
+			.returning({ id: childrenTable.id });
+		if (saved.length === 0) {
+			await dropIfPhotoChanged([key]);
+		}
+	}
+
+	/** One look, then its cut-out before the art reads ready (the app stops asking then). */
+	async function drawLookAndCut(
+		look: Look,
+		photoUrl: string,
+		safetyId: string
+	): Promise<string> {
+		const key = await drawLook(look, photoUrl, safetyId);
+		// Without a cut-out the wait screen shows the round look, so a failed cut is not a failed look.
+		await drawCut(key).catch(() => undefined);
+		return key;
+	}
+
 	try {
 		const photoUrl = await storage.readUrl(photoKey);
 		const safetyId = await safetyIdOf(ownerId);
 		const [face, ...looks] = await Promise.allSettled([
 			drawFace(photoUrl),
-			...LOOKS.map((look) => drawLook(look, photoUrl, safetyId)),
+			...LOOKS.map((look) => drawLookAndCut(look, photoUrl, safetyId)),
 		]);
 		const drawings: Drawings = {};
 		for (const [index, look] of LOOKS.entries()) {
@@ -187,10 +230,14 @@ export function artFolder(
 export const grownUpArtFolder = (ownerId: string, photoKey: string): string =>
 	`${userPrefix(ownerId)}grown-up/art/${photoIdOf(photoKey)}/`;
 
+/** Where the cut-out of a folder's clay look is kept. */
+const cutKeyOf = (folder: string) => `${folder}looks/clay-cut.webp`;
+
 /**
  * Draws the grown-up from their photo in the background, like the child: the
  * face cut-out (SAM 3.1, asking for the grown-up, since the photo may show the
- * child too) and the drawn clay look (Muse Image). Each row write is guarded
+ * child too) and the drawn clay look (Muse Image), then the look cut out of
+ * its backdrop for the wait screen (SAM 3.1). Each row write is guarded
  * by `photo_key`: a newer photo never gets an older photo's art.
  */
 export async function drawGrownUpFace(
@@ -209,7 +256,7 @@ export async function drawGrownUpFace(
 	/** Saves one key on the row; when the photo changed meanwhile, the file is no one's. */
 	const keep = async (
 		key: string,
-		set: { faceKey: string } | { lookKey: string }
+		set: { cutKey: string } | { faceKey: string } | { lookKey: string }
 	) => {
 		const saved = await db
 			.update(grownUps)
@@ -269,16 +316,51 @@ export async function drawGrownUpFace(
 		const key = `${folder}looks/clay.png`;
 		await storage.putObject({ body: png, contentType: "image/png", key });
 		await keep(key, { lookKey: key });
+		await cut(key);
+	};
+
+	/** The drawn picture cut out of its backdrop, for the wait screen. */
+	const cut = async (lookKey: string) => {
+		const lookUrl = await storage.readUrl(lookKey);
+		const [found, image] = await Promise.all([
+			art.segment(lookUrl, "grown-up", (call) =>
+				recordAiCall(
+					db,
+					{
+						costMicroUsd: SAM_COST_MICRO_USD,
+						model: MODELS.segment,
+						operation: "grown-up.look.cut.segment",
+						ownerId,
+					},
+					call
+				)
+			),
+			fetchBytes(lookUrl),
+		]);
+		if (!found) {
+			return;
+		}
+		const key = cutKeyOf(folder);
+		await storage.putObject({
+			body: await personCutout(image, found),
+			contentType: "image/webp",
+			key,
+		});
+		await keep(key, { cutKey: key });
 	};
 
 	await Promise.allSettled([face(), look()]);
 }
 
-/** Every object key the art of one child holds (face and looks). */
+/** Every object key the art of one child holds (face, looks and the cut-out). */
 export const artKeys = (
-	row: Pick<typeof childrenTable.$inferSelect, "drawings" | "faceKey">
+	row: Pick<
+		typeof childrenTable.$inferSelect,
+		"cutKey" | "drawings" | "faceKey"
+	>
 ): string[] => [
 	...(row.faceKey ? [row.faceKey] : []),
+	...(row.cutKey ? [row.cutKey] : []),
 	...Object.values(row.drawings),
 ];
 
@@ -287,8 +369,9 @@ export async function withArtUrls(
 	storage: Pick<Context["storage"], "readUrl">,
 	row: typeof childrenTable.$inferSelect
 ) {
-	const [faceUrl, drawn] = await Promise.all([
+	const [faceUrl, cutUrl, drawn] = await Promise.all([
 		row.faceKey ? storage.readUrl(row.faceKey) : null,
+		row.cutKey ? storage.readUrl(row.cutKey) : null,
 		Promise.all(
 			Object.entries(row.drawings).map(
 				async ([look, key]) => [look, await storage.readUrl(key)] as const
@@ -297,6 +380,7 @@ export async function withArtUrls(
 	]);
 	return {
 		...row,
+		cutUrl,
 		drawingUrls: Object.fromEntries(drawn) as Drawings,
 		faceUrl,
 	};

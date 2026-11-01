@@ -38,6 +38,8 @@ export const children = littleAdventures.table(
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
+		/** R2 key of the drawn look cut out of its backdrop (the wait screen); null until cut. */
+		cutKey: text("cut_key"),
 		drawings: jsonb("drawings").$type<Drawings>().notNull().default({}),
 		faceKey: text("face_key"),
 		grownUp: boolean("grown_up").notNull().default(false),
@@ -62,6 +64,8 @@ export const grownUps = littleAdventures.table("grown_ups", {
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),
+	/** R2 key of the drawn picture cut out of its backdrop (the wait screen); null until cut. */
+	cutKey: text("cut_key"),
 	/** R2 key of the grown-up's face cut-out; null until it is cut out, or when no person was found. */
 	faceKey: text("face_key"),
 	/** R2 key of the grown-up's drawn picture (the clay look, like the child's); null until drawn. */

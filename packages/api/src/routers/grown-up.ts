@@ -45,12 +45,13 @@ export const grownUpRouter = router({
 		if (!row) {
 			return null;
 		}
-		const [photoUrl, faceUrl, lookUrl] = await Promise.all([
+		const [photoUrl, cutUrl, faceUrl, lookUrl] = await Promise.all([
 			ctx.storage.readUrl(row.photoKey),
+			row.cutKey ? ctx.storage.readUrl(row.cutKey) : null,
 			row.faceKey ? ctx.storage.readUrl(row.faceKey) : null,
 			row.lookKey ? ctx.storage.readUrl(row.lookKey) : null,
 		]);
-		return { ...row, faceUrl, lookUrl, photoUrl };
+		return { ...row, cutUrl, faceUrl, lookUrl, photoUrl };
 	}),
 
 	save: protectedProcedure
@@ -65,7 +66,12 @@ export const grownUpRouter = router({
 				.insert(grownUps)
 				.values({ ownerId, photoKey: input.photoKey })
 				.onConflictDoUpdate({
-					set: { faceKey: null, lookKey: null, photoKey: input.photoKey },
+					set: {
+						cutKey: null,
+						faceKey: null,
+						lookKey: null,
+						photoKey: input.photoKey,
+					},
 					target: grownUps.ownerId,
 				})
 				.returning();

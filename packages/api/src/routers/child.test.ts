@@ -63,7 +63,7 @@ describe("child", () => {
 			puppy: false,
 		});
 		expect(await callerFor("u1").child.mine()).toEqual([
-			{ ...row, drawingUrls: {}, faceUrl: null },
+			{ ...row, cutUrl: null, drawingUrls: {}, faceUrl: null },
 		]);
 	});
 
@@ -86,7 +86,7 @@ describe("child", () => {
 			.catch((e) => e);
 		expect(error.code).toBe("NOT_FOUND");
 		expect(await callerFor("u2").child.mine()).toEqual([
-			{ ...theirs, drawingUrls: {}, faceUrl: null },
+			{ ...theirs, cutUrl: null, drawingUrls: {}, faceUrl: null },
 		]);
 		expect(await callerFor("u1").child.mine()).toEqual([]);
 	});
@@ -215,7 +215,8 @@ describe("child art", () => {
 		},
 		readUrl: (key: string) =>
 			Promise.resolve(
-				key.includes("/photos/")
+				// Photos and drawn looks are read back as bytes; the rest only as urls.
+				key.includes("/photos/") || key.endsWith("/looks/clay.png")
 					? `data:image/png;base64,${TINY_PNG}`
 					: `https://files.test/${key}`
 			),
@@ -289,13 +290,18 @@ describe("child art", () => {
 			`https://files.test/${folder}${saved.id}/art/a/face.png`
 		);
 		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual(["clay"]);
-		expect(put).toHaveLength(2);
-		// The child's photo cuts out the child, whoever else is in it.
-		expect(segmentRoles).toEqual(["child"]);
+		// The face, the look, and the look cut out of its backdrop for the wait screen.
+		expect(put).toHaveLength(3);
+		expect(child?.cutUrl).toBe(
+			`https://files.test/${folder}${saved.id}/art/a/looks/clay-cut.webp`
+		);
+		// The child's photo and look cut out the child, whoever else is in them.
+		expect(segmentRoles).toEqual(["child", "child"]);
 		const calls = await db.select().from(aiCalls);
 		expect(calls.map((call) => call.operation).sort()).toEqual([
 			"face.segment",
 			"look.clay",
+			"look.cut.segment",
 		]);
 		expect(calls.every((call) => call.ok && call.ownerId === "u1")).toBe(true);
 	});
@@ -312,7 +318,7 @@ describe("child art", () => {
 			photoKey: photo,
 		});
 		expect(pending).toHaveLength(1);
-		expect(segmentCalls).toBe(1);
+		expect(segmentCalls).toBe(2);
 	});
 
 	test("without a model key the child stays idle and nothing is called", async () => {
@@ -394,7 +400,12 @@ describe("child art", () => {
 		);
 		const older = `${folder}${first.id}/art/a/`;
 		expect([...new Set(deleted)].sort()).toEqual(
-			[photo, `${older}face.png`, `${older}looks/clay.png`].sort()
+			[
+				photo,
+				`${older}face.png`,
+				`${older}looks/clay.png`,
+				`${older}looks/clay-cut.webp`,
+			].sort()
 		);
 	});
 
@@ -412,7 +423,12 @@ describe("child art", () => {
 		await settle();
 		const older = `${folder}${first.id}/art/a/`;
 		expect(deleted.sort()).toEqual(
-			[photo, `${older}face.png`, `${older}looks/clay.png`].sort()
+			[
+				photo,
+				`${older}face.png`,
+				`${older}looks/clay.png`,
+				`${older}looks/clay-cut.webp`,
+			].sort()
 		);
 	});
 
@@ -446,7 +462,7 @@ describe("child art", () => {
 		expect(stored.has(extra)).toBe(false);
 	});
 
-	test("photo.delete removes the face and looks too and resets the art", async () => {
+	test("photo.delete removes the face, looks and cut-out and resets the art", async () => {
 		const saved = await callerFor("u1").child.save({
 			...noah,
 			photoKey: photo,
@@ -458,6 +474,7 @@ describe("child art", () => {
 				photo,
 				`${folder}${saved.id}/art/a/face.png`,
 				`${folder}${saved.id}/art/a/looks/clay.png`,
+				`${folder}${saved.id}/art/a/looks/clay-cut.webp`,
 			].sort()
 		);
 		const [child] = await callerFor("u1").child.mine();

@@ -38,7 +38,13 @@ export const photoRouter = router({
 			}
 			await ctx.db
 				.update(children)
-				.set({ artStatus: "idle", drawings: {}, faceKey: null, photoKey: null })
+				.set({
+					artStatus: "idle",
+					cutKey: null,
+					drawings: {},
+					faceKey: null,
+					photoKey: null,
+				})
 				.where(owned);
 			return { ok: true };
 		}),

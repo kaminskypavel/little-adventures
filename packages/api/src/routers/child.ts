@@ -41,6 +41,7 @@ export const childRouter = router({
 		const [before] = id
 			? await ctx.db
 					.select({
+						cutKey: children.cutKey,
 						drawings: children.drawings,
 						faceKey: children.faceKey,
 						photoKey: children.photoKey,
@@ -55,6 +56,7 @@ export const childRouter = router({
 			? {
 					...fields,
 					artStatus: "working" as const,
+					cutKey: null,
 					drawings: {},
 					faceKey: null,
 				}
