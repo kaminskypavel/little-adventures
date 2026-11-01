@@ -53,7 +53,7 @@ export default function Handover() {
 				style={[styles.line, LINE]}
 				variant="body"
 			>
-				{`Hand the phone to ${profile.childName}.`}
+				{`Hand the\nphone to ${profile.childName}.`}
 			</ClayText>
 		</Screen>
 	);

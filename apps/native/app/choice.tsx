@@ -184,7 +184,7 @@ export default function Choice() {
 					/>
 				) : undefined
 			}
-			title={`Which way, ${childName}?`}
+			title={`Which\nway, ${childName}?`}
 		>
 			{goodnightOpen ? (
 				<ClayText

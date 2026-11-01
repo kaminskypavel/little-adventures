@@ -17,7 +17,7 @@ export default function Gate() {
 	return (
 		<Screen
 			dock={<SecondaryButton label="Back" onPress={() => router.back()} />}
-			title="For grown-ups"
+			title={"For\ngrown-ups"}
 		>
 			<ClayText
 				align="center"

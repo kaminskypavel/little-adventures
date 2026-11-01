@@ -37,11 +37,12 @@ export default function End() {
 
 	return (
 		<Screen
+			compactTitle
 			dock={
 				<PrimaryButton label="Home" onPress={() => router.replace("/home")} />
 			}
 			// A blank line keeps the headline's room while the name loads.
-			title={childName ? `Goodnight, ${childName}!` : " "}
+			title={childName ? `Goodnight,\n${childName}!` : " "}
 		>
 			{adventure && childName ? (
 				<Animated.View

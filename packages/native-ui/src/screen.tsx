@@ -44,6 +44,7 @@ function enter(index: number, calm: boolean) {
 export function Screen({
 	bodyStyle,
 	children,
+	compactTitle = false,
 	dim = false,
 	dock,
 	title,
@@ -52,6 +53,8 @@ export function Screen({
 }: {
 	bodyStyle?: StyleProp<ViewStyle>;
 	children?: ReactNode;
+	/** 37 pt headline, for two long lines. */
+	compactTitle?: boolean;
 	/** Scrim over the sky for text-heavy screens. */
 	dim?: boolean;
 	/** Bottom actions, stacked 14 apart (primary 88, secondary 80). */
@@ -64,9 +67,9 @@ export function Screen({
 	const insets = useSafeAreaInsets();
 	const calm = useCalm();
 	const onBack = useBackAction();
-	// Without a top bar the back button gets a row of its own; the headline then sits where it
-	// always did (titleTop below the top of the screen, plus the inset).
-	const backRow = onBack && !topBar;
+	// Without a top bar the back button floats in the top left corner over the content, so the
+	// headline sits where it always did (titleTop below the top of the screen).
+	const floatBack = topBar ? null : onBack;
 
 	return (
 		<View style={styles.root}>
@@ -76,7 +79,7 @@ export function Screen({
 					style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]}
 				/>
 			) : null}
-			{topBar || backRow ? (
+			{topBar ? (
 				<View
 					style={[
 						styles.topBar,
@@ -92,7 +95,7 @@ export function Screen({
 					style={[
 						styles.title,
 						{
-							marginTop: titleGap(Boolean(topBar), Boolean(backRow), titleTop),
+							marginTop: topBar ? spacing.lg : titleTop,
 						},
 						enter(0, calm),
 					]}
@@ -102,7 +105,7 @@ export function Screen({
 						align="center"
 						color={colors.cream}
 						numberOfLines={2}
-						variant="headline"
+						variant={compactTitle ? "headlineLong" : "headline"}
 					>
 						{title}
 					</ClayText>
@@ -122,27 +125,21 @@ export function Screen({
 					{dock}
 				</Animated.View>
 			) : null}
+			{floatBack ? (
+				<View
+					style={[styles.floatBack, { top: insets.top + layout.topBarOffset }]}
+				>
+					<BackButton onPress={floatBack} />
+				</View>
+			) : null}
 		</View>
 	);
-}
-
-/** Space above the headline: under a top bar, under the back row, or from the screen top. */
-function titleGap(hasTopBar: boolean, hasBackRow: boolean, titleTop: number) {
-	if (hasTopBar) {
-		return spacing.lg;
-	}
-	if (hasBackRow) {
-		return Math.max(
-			spacing.sm,
-			titleTop - layout.topBarOffset - layout.topBarHeight
-		);
-	}
-	return titleTop;
 }
 
 const styles = StyleSheet.create({
 	body: { flex: 1, paddingHorizontal: layout.sideMargin },
 	dock: { gap: layout.gap, paddingHorizontal: layout.sideMargin },
+	floatBack: { left: layout.sideMargin, position: "absolute" },
 	root: { flex: 1 },
 	title: { paddingHorizontal: layout.sideMargin },
 	topBar: {

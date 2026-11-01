@@ -126,6 +126,7 @@ export const type = {
 	fieldError: { fontFamily: fonts.body, fontSize: 19, lineHeight: 23 },
 	fieldLong: { fontFamily: fonts.label, fontSize: 24, lineHeight: 30 },
 	headline: { fontFamily: fonts.heavy, fontSize: 39, lineHeight: 42 },
+	headlineLong: { fontFamily: fonts.heavy, fontSize: 37, lineHeight: 40 },
 	heroLabel: { fontFamily: fonts.heavy, fontSize: 36, lineHeight: 37 },
 	label: { fontFamily: fonts.label, fontSize: 19, lineHeight: 23 },
 	lookLabel: { fontFamily: fonts.heavy, fontSize: 21, lineHeight: 24 },

@@ -1,15 +1,25 @@
 import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { Chip } from "@little-adventures/native-ui/chip";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
 import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { colors, layout, spacing } from "@little-adventures/native-ui/tokens";
+import {
+	clayFaces,
+	colors,
+	layout,
+	listCards,
+	motion,
+	spacing,
+} from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdminOnly } from "@/src/admin/admin-only";
 import { LiveRow } from "@/src/admin/live-row";
@@ -18,6 +28,7 @@ import {
 	deleteChildPhoto,
 	deleteGrownUpPhoto,
 	getAdventures,
+	getAvatarUrl,
 	getGrownUpPhoto,
 	getProfile,
 } from "@/src/data/adventure-client";
@@ -32,6 +43,75 @@ const SUB_FONT = 19.5;
 const PROFILE_INSET = 6;
 const PROFILE_GAP = 19.5;
 const ADD_GAP = 42;
+const NOW_FONT = 17;
+const NOW_DOT = 10;
+const NOW_GAP = 8;
+const NOW_TOP = 6;
+// While the art is drawn, the screen asks again this often.
+const POLL_MS = 1500;
+const { choice } = listCards;
+const INNER = PORTRAIT - PORTRAIT_BORDER * 2;
+// The band is as wide as the circle: off the left edge at the start, off the right at the end.
+const sweep = {
+	from: { transform: [{ translateX: -1.05 * INNER }] },
+	to: { transform: [{ translateX: 2.55 * INNER }] },
+};
+
+/** The child's look art; while it is drawn, the Drawing clay with the map's slow shimmer. */
+function Avatar({ drawing, url }: { drawing: boolean; url: string | null }) {
+	const calm = useCalm();
+	if (url) {
+		return (
+			<Image
+				accessibilityIgnoresInvertColors
+				contentFit="cover"
+				source={url}
+				style={styles.portrait}
+			/>
+		);
+	}
+	if (!drawing) {
+		return <Placeholder icon="user" style={styles.portrait} />;
+	}
+	return (
+		<View style={[styles.portrait, styles.drawing]}>
+			<LinearGradient
+				colors={clayFaces.drawing}
+				style={StyleSheet.absoluteFill}
+			/>
+			{calm ? null : (
+				<Animated.View
+					pointerEvents="none"
+					style={{
+						animationDuration: `${motion.shimmer}ms`,
+						animationIterationCount: "infinite",
+						animationName: sweep,
+						animationTimingFunction: "linear",
+						bottom: "-30%",
+						position: "absolute",
+						top: "-30%",
+						width: INNER,
+					}}
+				>
+					<View
+						style={{ flex: 1, transform: [{ rotate: choice.shimmerTilt }] }}
+					>
+						<LinearGradient
+							colors={[
+								choice.shimmerClear,
+								choice.shimmer,
+								choice.shimmerClear,
+							]}
+							end={{ x: 1, y: 0.5 }}
+							start={{ x: 0, y: 0.5 }}
+							style={StyleSheet.absoluteFill}
+						/>
+					</View>
+				</Animated.View>
+			)}
+		</View>
+	);
+}
 
 const subtitle = (a: AdventureSummary) =>
 	a.finished
@@ -42,6 +122,7 @@ export default function Grownups() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const [profile, setProfile] = useState<Profile | null>(null);
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [adventures, setAdventures] = useState<AdventureSummary[] | null>(null);
 	const [grownUpPhoto, setGrownUpPhoto] = useState<{
 		photoUrl: string;
@@ -49,7 +130,27 @@ export default function Grownups() {
 
 	useEffect(() => {
 		let live = true;
-		getProfile().then((p) => live && setProfile(p));
+		const read = () =>
+			Promise.all([getProfile(), getAvatarUrl().catch(() => null)]).then(
+				([p, url]) => {
+					if (live) {
+						setProfile(p);
+						setAvatarUrl(url);
+					}
+					return p;
+				}
+			);
+		// Asks again while the art is still drawn, so it appears without a reopen.
+		const watch = async () => {
+			let p = await read();
+			while (live && p.artStatus === "working") {
+				await new Promise((done) => setTimeout(done, POLL_MS));
+				if (live) {
+					p = await read();
+				}
+			}
+		};
+		watch();
 		getAdventures()
 			.then((a) => live && setAdventures(a))
 			.catch(() => live && setAdventures([]));
@@ -76,6 +177,7 @@ export default function Grownups() {
 
 	const deletePhoto = async () => {
 		setProfile(await deleteChildPhoto());
+		setAvatarUrl(null);
 	};
 
 	const signOut = async () => {
@@ -106,7 +208,10 @@ export default function Grownups() {
 				{profile && adventures ? (
 					<>
 						<View style={styles.profile}>
-							<Placeholder icon="user" style={styles.portrait} />
+							<Avatar
+								drawing={profile.artStatus === "working"}
+								url={avatarUrl}
+							/>
 							<View style={styles.who}>
 								<ClayText
 									color={colors.cream}
@@ -124,18 +229,24 @@ export default function Grownups() {
 								>
 									{profile.childAge} years old
 								</ClayText>
+								{avatarUrl === null && profile.artStatus === "working" ? (
+									<View style={styles.now}>
+										<View style={styles.dot} />
+										<ClayText
+											color={colors.cream}
+											style={styles.nowText}
+											variant="label"
+										>
+											{`Drawing ${profile.childName}'s look`}
+										</ClayText>
+									</View>
+								) : null}
 							</View>
 						</View>
 						<View style={styles.chips}>
 							<Chip
 								label="Edit"
 								onPress={() => router.push("/child")}
-								size="label"
-								style={styles.flex}
-							/>
-							<Chip
-								label="Redraw"
-								onPress={() => router.push("/look")}
 								size="label"
 								style={styles.flex}
 							/>
@@ -223,6 +334,13 @@ const styles = StyleSheet.create({
 	actions: { gap: layout.gap, marginTop: ADD_GAP },
 	age: { fontSize: SUB_FONT, lineHeight: SUB_FONT * 1.25, opacity: 0.8 },
 	chips: { flexDirection: "row", gap: layout.gapTight, marginTop: spacing.md },
+	dot: {
+		backgroundColor: colors.sun,
+		borderRadius: NOW_DOT / 2,
+		height: NOW_DOT,
+		width: NOW_DOT,
+	},
+	drawing: { overflow: "hidden" },
 	flex: { flex: 1 },
 	heading: {
 		marginTop: spacing.lg,
@@ -230,6 +348,13 @@ const styles = StyleSheet.create({
 		paddingLeft: spacing.sm,
 	},
 	list: { gap: layout.gap, marginTop: spacing.md },
+	now: {
+		alignItems: "center",
+		flexDirection: "row",
+		gap: NOW_GAP,
+		marginTop: NOW_TOP,
+	},
+	nowText: { fontSize: NOW_FONT, lineHeight: NOW_FONT },
 	own: { marginTop: spacing.md },
 	ownChips: { flex: 1, flexDirection: "row", gap: layout.gapTight },
 	portrait: {
