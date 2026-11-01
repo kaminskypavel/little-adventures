@@ -1,14 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { playbackOf, wordIndexAt } from "./playback";
+import { endSource, wordIndexAt } from "./playback";
 
-describe("playbackOf", () => {
-	test("a ready node with a clip url selects the video player", () => {
-		expect(playbackOf({ video: "https://files.test/p1-clip" })).toBe("video");
-	});
+describe("endSource", () => {
+	const cases = [
+		{ clip: true, expected: "clip", narration: true },
+		{ clip: true, expected: "clip", narration: false },
+		{ clip: false, expected: "narration", narration: true },
+		{ clip: false, expected: "timer", narration: false },
+	] as const;
 
-	test("a node without a clip selects its picture", () => {
-		expect(playbackOf({ video: null })).toBe("picture");
-	});
+	for (const { clip, expected, narration } of cases) {
+		test(`clip ${clip}, narration ${narration} ends on the ${expected}`, () => {
+			expect(endSource({ hasClip: clip, hasNarration: narration })).toBe(
+				expected
+			);
+		});
+	}
 });
 
 describe("wordIndexAt", () => {

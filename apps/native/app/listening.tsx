@@ -35,6 +35,7 @@ export default function Listening() {
 	const { start, stop } = useRecorder();
 	const busy = useRef<boolean>(false);
 	const finishRef = useRef<() => void>(() => undefined);
+	const mounted = useRef<boolean>(true);
 	const [thinking, setThinking] = useState(false);
 	const [missed, setMissed] = useState(false);
 	// The listen take plays once. Dropping to idle for one render and asking for listen again
@@ -42,6 +43,12 @@ export default function Listening() {
 	const [rest, setRest] = useState(false);
 	const queueAgain = useCallback(() => setRest(true), []);
 
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 	useEffect(() => {
 		setRest(true);
 	}, []);
@@ -76,6 +83,9 @@ export default function Listening() {
 		} catch {
 			// Counts as not heard: the same retry line as an empty recording.
 		}
+		if (!mounted.current) {
+			return;
+		}
 		if (question) {
 			router.replace({ params: { question }, pathname: "/verify" });
 			return;
@@ -83,7 +93,7 @@ export default function Listening() {
 		setMissed(true);
 		setThinking(false);
 		busy.current = false;
-		listen();
+		await listen();
 	}, [listen, router, stop]);
 	finishRef.current = finish;
 

@@ -30,7 +30,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { getProfile } from "@/src/data/adventure-client";
-import { playbackOf, wordIndexAt } from "@/src/data/playback";
+import { endSource, wordIndexAt } from "@/src/data/playback";
 import type {
 	Adventure,
 	NarrationAudio,
@@ -252,6 +252,7 @@ function MediaPlayer({
 	onBack,
 	onEnd,
 	onMediaError,
+	timerMs,
 	words,
 }: {
 	audio: NarrationAudio | null;
@@ -262,6 +263,8 @@ function MediaPlayer({
 	onBack: () => void;
 	onEnd: () => void;
 	onMediaError: () => void;
+	/** How long the node stays when neither its clip nor its narration can end it. */
+	timerMs: number;
 	words: string[];
 }) {
 	const audioPlayer = useAudioPlayer(audio?.url ?? null, {
@@ -283,6 +286,9 @@ function MediaPlayer({
 	const narrationFailed = Boolean(heard.error);
 	const hasClip = clip !== null && !clipFailed;
 	const hasNarration = audio !== null && !narrationFailed;
+	const source = endSource({ hasClip, hasNarration });
+	// The narration may finish before a clip that then fails: remember it did.
+	const [narrationEnded, setNarrationEnded] = useState(false);
 
 	const endRef = useRef(onEnd);
 	endRef.current = onEnd;
@@ -307,10 +313,22 @@ function MediaPlayer({
 		}
 	});
 	useEffect(() => {
-		if (!hasClip && hasNarration && heard.didJustFinish) {
+		if (heard.didJustFinish) {
+			setNarrationEnded(true);
+		}
+	}, [heard.didJustFinish]);
+	useEffect(() => {
+		if (source === "narration" && narrationEnded) {
 			fireEnd();
 		}
-	}, [fireEnd, hasClip, hasNarration, heard.didJustFinish]);
+	}, [fireEnd, narrationEnded, source]);
+	useEffect(() => {
+		if (source !== "timer" || !playing) {
+			return;
+		}
+		const timer = setTimeout(fireEnd, timerMs);
+		return () => clearTimeout(timer);
+	}, [fireEnd, playing, source, timerMs]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
 	useEffect(() => {
 		if (clipFailed || narrationFailed) {
@@ -472,9 +490,8 @@ export default function Place() {
 		) : (
 			<PlaceFrame onError={onMediaError} picture={place.picture} />
 		);
-	const playback = playbackOf(place);
 
-	if (audio === null && playback === "picture") {
+	if (audio === null && place.video === null) {
 		return (
 			<TimerPlayer
 				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
@@ -489,13 +506,14 @@ export default function Place() {
 	return (
 		<MediaPlayer
 			audio={audio}
-			clip={playback === "video" ? place.video : null}
+			clip={place.video}
 			cover={cover}
 			key={`${place.video}|${audio?.url}`}
 			name={place.name}
 			onBack={onBack}
 			onEnd={onEnd}
 			onMediaError={onMediaError}
+			timerMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
 			words={words}
 		/>
 	);

@@ -24,9 +24,17 @@ export function useRecorder(): Recorder {
 	const media = useRef<MediaRecorder | null>(null);
 	const chunks = useRef<Blob[]>([]);
 	const limit = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const alive = useRef<boolean>(true);
 
 	const start = useCallback(async (onLimit: () => void) => {
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		// The child left while the browser was asking: let go of the microphone at once.
+		if (!alive.current) {
+			for (const track of stream.getTracks()) {
+				track.stop();
+			}
+			return;
+		}
 		const next = new MediaRecorder(stream);
 		chunks.current = [];
 		next.ondataavailable = (event) => chunks.current.push(event.data);
@@ -54,15 +62,16 @@ export function useRecorder(): Recorder {
 	}, []);
 
 	// Leaving the screen lets go of the microphone.
-	useEffect(
-		() => () => {
+	useEffect(() => {
+		alive.current = true;
+		return () => {
+			alive.current = false;
 			clearTimeout(limit.current);
 			for (const track of media.current?.stream.getTracks() ?? []) {
 				track.stop();
 			}
-		},
-		[]
-	);
+		};
+	}, []);
 
 	return { start, stop };
 }
