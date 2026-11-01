@@ -118,13 +118,16 @@ const GOAL_HEIGHT = ((88 * 500) / 422) * DRAWN_PT;
 const GOAL_FOOT = 200;
 const GOAL_X = 141;
 
-/** Where each plate sits: above the upper row, below the lower row, to the right of the box. */
+/**
+ * Where each plate sits: below both rows (above the upper row they would cover the goodnight
+ * plate once every place is named), to the right of the box.
+ */
 const PLATE_SIDE: Record<MapPlaceNode, "above" | "below" | "right"> = {
 	intro: "right",
 	p1: "below",
-	p1a: "above",
+	p1a: "below",
 	p2: "below",
-	p2a: "above",
+	p2a: "below",
 };
 
 const PLACE_NODES = ["intro", "p1", "p2", "p1a", "p2a"] as const;

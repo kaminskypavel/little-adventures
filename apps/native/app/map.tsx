@@ -82,8 +82,8 @@ export default function StoryMapScreen() {
 					? openPlace(node)
 					: router.setParams({ walkTo: node });
 			return {
-				// Plates only for the current place and the places next to it.
-				label: state === "here" || (next.includes(node) && state !== "done"),
+				// Every place shows its name plate (the user's call, 2026-11-01).
+				label: true,
 				name: adventure.places[node].name,
 				onPress: reachable ? go : undefined,
 				picture: adventure.places[node].picture,
