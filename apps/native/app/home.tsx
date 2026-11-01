@@ -6,7 +6,7 @@ import { Screen } from "@little-adventures/native-ui/screen";
 import { SpeechPlate } from "@little-adventures/native-ui/speech-plate";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { TitleHold } from "@little-adventures/native-ui/title-hold";
-import { colors, layout } from "@little-adventures/native-ui/tokens";
+import { colors, layout, motion } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { VoiceHalo } from "@little-adventures/native-ui/voice-halo";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -22,7 +22,7 @@ import {
 } from "react-native-safe-area-context";
 import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
 import { PresetQuestions } from "@/src/admin/preset-questions";
-import type { AdventureSummary } from "@/src/data/types";
+import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 import {
 	type ListenLayout,
@@ -203,12 +203,11 @@ function HaloSpot({
 	);
 }
 
-/** Everything that waits while the child asks: the avatar and lock, the plate and both shelves. */
+/** Everything that waits while the child asks: the avatar and lock, the plate and Yours. */
 function RestLayer({
 	data,
 	listening,
 	micOff,
-	onAsk,
 	onGate,
 	onOpen,
 	rest,
@@ -218,14 +217,13 @@ function RestLayer({
 	data: ReturnType<typeof useHomeData>;
 	listening: boolean;
 	micOff: boolean;
-	onAsk: (question: string) => void;
 	onGate: () => void;
 	onOpen: (adventure: AdventureSummary) => void;
 	rest: SharedValue<number>;
 	run: number;
 	stage: Stage;
 }) {
-	const { adventures, avatarUrl, ideas, name } = data;
+	const { adventures, avatarUrl, name } = data;
 	const spots = stage.rest;
 	const insets = useSafeAreaInsets();
 	const style = useAnimatedStyle(() => ({ opacity: rest.get() }));
@@ -271,12 +269,57 @@ function RestLayer({
 				onOpen={onOpen}
 				top={spots.yoursTop}
 			/>
-			<IdeasShelf
-				ideas={ideas}
-				labelTop={spots.ideasLabelTop}
-				onAsk={onAsk}
-				top={spots.ideasTop}
-			/>
+		</Animated.View>
+	);
+}
+
+/**
+ * The ideas under the mic: another way to start an adventure. They come in with the mic, and
+ * fade and take no taps while the child holds the mic or the star is thinking.
+ */
+function ListenIdeas({
+	ask,
+	ideas,
+	listening,
+	onAsk,
+	progress,
+	stage,
+}: {
+	ask: AskState;
+	ideas: Idea[] | null;
+	listening: boolean;
+	onAsk: (question: string) => void;
+	progress: SharedValue<number>;
+	stage: Stage;
+}) {
+	const style = useAnimatedStyle(() => ({ opacity: progress.get() }));
+	const busy = ask.pressing || ask.thinking;
+	const open = listening && !busy;
+	return (
+		<Animated.View
+			aria-hidden={!open}
+			pointerEvents={open ? "box-none" : "none"}
+			style={[styles.layer, style]}
+		>
+			<Animated.View
+				pointerEvents="box-none"
+				style={[
+					styles.layer,
+					{
+						opacity: busy ? 0 : 1,
+						transitionDuration: `${motion.exit}ms`,
+						transitionProperty: "opacity",
+					},
+				]}
+			>
+				<IdeasShelf
+					ideas={ideas}
+					label="Or pick one"
+					labelTop={stage.listen.ideasLabelTop}
+					onAsk={onAsk}
+					top={stage.listen.ideasTop}
+				/>
+			</Animated.View>
 		</Animated.View>
 	);
 }
@@ -335,9 +378,6 @@ export default function Home() {
 					data={data}
 					listening={listening}
 					micOff={mic.off}
-					onAsk={(question) =>
-						router.push({ params: { question }, pathname: "/style" })
-					}
 					onGate={() => router.push("/gate")}
 					onOpen={(adventure) =>
 						router.push(
@@ -367,6 +407,16 @@ export default function Home() {
 				<ListenWords
 					ask={ask}
 					listening={listening}
+					progress={progress}
+					stage={stage}
+				/>
+				<ListenIdeas
+					ask={ask}
+					ideas={data.ideas}
+					listening={listening}
+					onAsk={(question) =>
+						router.push({ params: { question }, pathname: "/style" })
+					}
 					progress={progress}
 					stage={stage}
 				/>

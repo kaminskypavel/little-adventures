@@ -97,11 +97,13 @@ export function YoursShelf({
 /** The label and shelf of ideas, at `labelTop` and `top`. */
 export function IdeasShelf({
 	ideas,
+	label,
 	labelTop,
 	onAsk,
 	top,
 }: {
 	ideas: Idea[] | null;
+	label: string;
 	labelTop: number;
 	onAsk: (question: string) => void;
 	top: number;
@@ -113,7 +115,7 @@ export function IdeasShelf({
 				style={[styles.label, { top: labelTop }]}
 				variant="label"
 			>
-				Ideas
+				{label}
 			</ClayText>
 			<StoryShelf
 				gap={homeShelf.idea.gap}

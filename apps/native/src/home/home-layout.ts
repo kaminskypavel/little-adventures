@@ -18,10 +18,10 @@ const LABEL_GAP = 9;
 const DOOR = 96;
 const CHIP = 10;
 const IDEA = 88;
-const STAR = { max: 138, min: 96 };
-// Gaps in the design: bar to plate, tail to star, star to button, button to Yours, Yours shelf
-// to Ideas, Ideas shelf to the bottom edge.
-const REST_GAPS = [5, 2, 34, 40, 14, 10] as const;
+// With Yours as the only shelf the star has Round 1's room again (190 at most).
+const STAR = { max: 190, min: 96 };
+// Gaps: bar to plate, tail to star, star to button, button to Yours, Yours shelf to the bottom.
+const REST_GAPS = [5, 2, 34, 40, 10] as const;
 
 const MIC = 176;
 const HEADLINE = 42;
@@ -29,8 +29,8 @@ const HINT_GAP = 10;
 const HINT = 26;
 const LISTEN_STAR = { max: 150, min: 110 };
 const LISTEN_TOP = 37;
-// Star to mic, mic to headline, headline block to the bottom edge.
-const LISTEN_GAPS = [166, 70, 86] as const;
+// Star to mic, mic to headline, hint to the ideas' label, ideas to the bottom edge.
+const LISTEN_GAPS = [96, 44, 34, 12] as const;
 
 // The gaps never shrink below this share of the design before the star starts to shrink.
 const GAP_FLOOR = 0.5;
@@ -56,8 +56,6 @@ export function fit(
 
 export interface RestLayout {
 	buttonCy: number;
-	ideasLabelTop: number;
-	ideasTop: number;
 	plateBottom: number;
 	starSize: number;
 	starTop: number;
@@ -65,50 +63,51 @@ export interface RestLayout {
 	yoursTop: number;
 }
 
-/** Home at rest: plate, star, the New adventure button, then the two shelves. */
+/** Home at rest: plate, star, the New adventure button, then the Yours shelf. */
 export function restLayout(height: number, insets: Insets): RestLayout {
 	const barBottom = insets.top + BAR;
-	const fixed =
-		PLATE + TAIL + BUTTON + 2 * (LABEL + LABEL_GAP) + DOOR + CHIP + IDEA;
+	const fixed = PLATE + TAIL + BUTTON + LABEL + LABEL_GAP + DOOR + CHIP;
 	const free = height - barBottom - insets.bottom - fixed - STAR.max;
 	const { gaps, size } = fit(free, STAR, REST_GAPS);
 	const plateBottom = barBottom + (gaps[0] ?? 0) + PLATE;
 	const starTop = plateBottom + TAIL + (gaps[1] ?? 0);
 	const buttonTop = starTop + size + (gaps[2] ?? 0);
 	const yoursLabelTop = buttonTop + BUTTON + (gaps[3] ?? 0);
-	const yoursTop = yoursLabelTop + LABEL + LABEL_GAP;
-	const ideasLabelTop = yoursTop + DOOR + CHIP + (gaps[4] ?? 0);
 	return {
 		buttonCy: buttonTop + BUTTON / 2,
-		ideasLabelTop,
-		ideasTop: ideasLabelTop + LABEL + LABEL_GAP,
 		plateBottom,
 		starSize: size,
 		starTop,
 		yoursLabelTop,
-		yoursTop,
+		yoursTop: yoursLabelTop + LABEL + LABEL_GAP,
 	};
 }
 
 export interface ListenLayout {
 	headlineTop: number;
 	hintTop: number;
+	ideasLabelTop: number;
+	ideasTop: number;
 	micCy: number;
 	starSize: number;
 	starTop: number;
 }
 
-/** Home after New adventure: the star on top, the round mic, the words under it. */
+/** Home after New adventure: the star on top, the round mic, the words, then the ideas. */
 export function listenLayout(height: number, insets: Insets): ListenLayout {
 	const starTop = insets.top + LISTEN_TOP;
-	const fixed = MIC + HEADLINE + HINT_GAP + HINT;
+	const fixed = MIC + HEADLINE + HINT_GAP + HINT + LABEL + LABEL_GAP + IDEA;
 	const free = height - insets.bottom - starTop - LISTEN_STAR.max - fixed;
 	const { gaps, size } = fit(free, LISTEN_STAR, LISTEN_GAPS);
 	const micTop = starTop + size + (gaps[0] ?? 0);
 	const headlineTop = micTop + MIC + (gaps[1] ?? 0);
+	const hintTop = headlineTop + HEADLINE + HINT_GAP;
+	const ideasLabelTop = hintTop + HINT + (gaps[2] ?? 0);
 	return {
 		headlineTop,
-		hintTop: headlineTop + HEADLINE + HINT_GAP,
+		hintTop,
+		ideasLabelTop,
+		ideasTop: ideasLabelTop + LABEL + LABEL_GAP,
 		micCy: micTop + MIC / 2,
 		starSize: size,
 		starTop,
