@@ -8,6 +8,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
+import { dropShadow } from "./drop-shadow";
 import { FallbackImage } from "./fallback-image";
 import { Medallion, type MedallionState } from "./medallion";
 import { useCalm } from "./motion-provider";
@@ -291,45 +292,42 @@ export function MapBackdrop() {
 	);
 }
 
-// The drop shadow follows the cut-out's shape; the CSS form has no spread, so the token's fourth
-// length is dropped (as in `characterFilter`).
-function dropShadow(token: string): string {
-	const [x, y, blur, , ...color] = token.split(" ");
-	return `drop-shadow(${x} ${y} ${blur} ${color.join(" ")})`;
-}
-const goalFilter = dropShadow(shadows.character);
-const moonFilter = dropShadow(shadows.walker);
+// The drop shadow follows the cut-out's shape.
+const goalShadow = dropShadow(shadows.character);
+const moonShadow = dropShadow(shadows.walker);
 
 /**
  * The end goal cut-out, `height` tall, its foot and center at (`x`, `y`). The assets are portrait or
  * square, so a square box of that height holds any of them at full height.
  */
 function Goal({
-	filter,
 	height,
 	image,
 	kind,
+	shadow,
 	x,
 	y,
 }: {
-	filter: string;
 	height: number;
 	image: ImageSource | number | null;
 	kind: "goalClosed" | "goalOpen";
+	shadow: ViewStyle;
 	x: number;
 	y: number;
 }) {
 	return (
 		<View
 			pointerEvents="none"
-			style={{
-				filter,
-				height,
-				left: x - height / 2,
-				position: "absolute",
-				top: y - height,
-				width: height,
-			}}
+			style={[
+				{
+					height,
+					left: x - height / 2,
+					position: "absolute",
+					top: y - height,
+					width: height,
+				},
+				shadow,
+			]}
 		>
 			<FallbackImage
 				accessibilityIgnoresInvertColors
@@ -586,10 +584,10 @@ export function StoryMap({
 				<>
 					<Stones ahead={nextStones(here, next)} frame={frame} lit={lit} />
 					<Goal
-						filter={goalFilter}
 						height={goalHeight}
 						image={goodnight.image}
 						kind={goodnight.locked ? "goalClosed" : "goalOpen"}
+						shadow={goalShadow}
 						x={frame.x(GOAL_X)}
 						y={goalFoot}
 					/>
@@ -706,10 +704,10 @@ export function EndMap({
 						/>
 					))}
 					<Goal
-						filter={moonFilter}
 						height={END_GOAL.width * END_GOAL.ratio * e}
 						image={goal}
 						kind="goalOpen"
+						shadow={moonShadow}
 						x={END_GOAL.x * e}
 						y={END_GOAL.foot * e}
 					/>

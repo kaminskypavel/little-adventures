@@ -1,5 +1,5 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
-import { characterFilter } from "@little-adventures/native-ui/character";
+import { characterShadow } from "@little-adventures/native-ui/character";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { FallbackImage } from "@little-adventures/native-ui/fallback-image";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
 	},
 	goalFrame: {
 		aspectRatio: GOAL_WIDTH / GOAL_HEIGHT,
-		filter: characterFilter,
+		...characterShadow,
 		height: "100%",
 		maxHeight: GOAL_HEIGHT,
 	},

@@ -11,6 +11,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { dropShadow } from "./drop-shadow";
 import { Hop } from "./hop";
 import { useCalm } from "./motion-provider";
 import { motion, shadows } from "./tokens";
@@ -22,10 +23,8 @@ export const walkerSize = 75;
 const STAR_RATIO = 420 / 418;
 const star = require("../assets/characters/star.png");
 
-// The cut-out is transparent, so the shadow follows its shape: the CSS drop-shadow form has no
-// spread value, so drop the token's fourth length (same as `characterFilter`).
-const [dropX, dropY, dropBlur, , ...dropColor] = shadows.walker.split(" ");
-const walkerFilter = `drop-shadow(${dropX} ${dropY} ${dropBlur} ${dropColor.join(" ")})`;
+// The cut-out is transparent, so the shadow follows its shape.
+const walkerShadow = dropShadow(shadows.walker);
 
 // Each hop to the next stone rises twice the standing bob and lands softly, ease-in-out.
 const HOP_ARC = motion.hopHeight * 2;
@@ -135,12 +134,12 @@ export function Walker({
 			style={[
 				{
 					aspectRatio: STAR_RATIO,
-					filter: walkerFilter,
 					left: origin.x,
 					position: "absolute",
 					top: origin.y,
 					width: size,
 				},
+				walkerShadow,
 				move,
 			]}
 		>

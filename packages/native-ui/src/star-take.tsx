@@ -2,7 +2,7 @@ import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Character, characterFilter } from "./character";
+import { Character, characterShadow } from "./character";
 import { useCalm } from "./motion-provider";
 import { starSource } from "./star-source";
 import type { StarTakeName } from "./star-source-files";
@@ -269,10 +269,7 @@ export function StarTake({
 			accessibilityLabel="The happy star"
 			accessibilityRole="image"
 			pointerEvents="none"
-			style={[
-				styles.box,
-				{ filter: characterFilter, height: size, width: size },
-			]}
+			style={[styles.box, characterShadow, { height: size, width: size }]}
 		>
 			{loaded ? null : (
 				<View style={styles.still}>

@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { View, type ViewStyle } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
+import { dropShadow } from "./drop-shadow";
 import { useCalm } from "./motion-provider";
 import { Placeholder } from "./placeholder";
 import { colors, iconSizes, motion } from "./tokens";
@@ -49,7 +50,7 @@ const companionSlot = {
 } as const;
 const CHILD_TILT = "5deg";
 const COMPANION_TILT = "-5deg";
-const pictureFilter = "drop-shadow(0px 7px 7px rgba(0,0,0,0.4))";
+const pictureShadow = dropShadow("0px 7px 7px 0px rgba(0,0,0,0.4)");
 
 const SLIDE_MS = 800;
 const slideEase = cubicBezier(0.2, 0.8, 0.2, 1);
@@ -206,7 +207,8 @@ function Peeker({
 			<Animated.View style={[{ flex: 1, transformOrigin: "50% 100%" }, pop]}>
 				<Animated.View
 					style={[
-						{ filter: pictureFilter, flex: 1, transformOrigin: "50% 100%" },
+						{ flex: 1, transformOrigin: "50% 100%" },
+						pictureShadow,
 						calm
 							? null
 							: {
