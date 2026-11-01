@@ -7,8 +7,8 @@ import { Screen } from "@little-adventures/native-ui/screen";
 import { ToggleCard } from "@little-adventures/native-ui/toggle-card";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import {
@@ -69,6 +69,23 @@ function Coming({ profile }: { profile: Profile }) {
 	const router = useRouter();
 	const [grownUp, setGrownUp] = useState(profile.grownUp);
 	const [puppy, setPuppy] = useState(profile.puppy);
+	const [photoUri, setPhotoUri] = useState<string | null>(null);
+
+	// Read again each time the screen shows, so a photo just replaced appears on return.
+	useFocusEffect(
+		useCallback(() => {
+			let alive = true;
+			getGrownUpPhoto()
+				.then((saved) => alive && setPhotoUri(saved?.photoUrl ?? null))
+				.catch(() => undefined);
+			return () => {
+				alive = false;
+			};
+		}, [])
+	);
+
+	const openPhoto = () =>
+		router.push({ params: { replace: "1" }, pathname: "/grownup-photo" });
 
 	const next = async () => {
 		await saveProfile({ grownUp, puppy });
@@ -81,7 +98,7 @@ function Coming({ profile }: { profile: Profile }) {
 		<Screen
 			bodyStyle={styles.body}
 			dock={<PrimaryButton label="Next" onPress={next} />}
-			title={`Who's coming\nalong?`}
+			title={"Who's\ncoming along?"}
 		>
 			<Portrait faceUrl={profile.faceUrl} name={profile.childName} />
 			<Plate
@@ -101,8 +118,17 @@ function Coming({ profile }: { profile: Profile }) {
 				avatar="you"
 				on={grownUp}
 				onPress={() => setGrownUp((on) => !on)}
+				photo={{
+					label: photoUri ? "Change your photo" : "Add your photo",
+					onPress: openPhoto,
+					uri: photoUri,
+				}}
 				style={styles.you}
-				subtitle="Add a photo"
+				subtitle={
+					photoUri
+						? "Tap your photo to change"
+						: "Tap the circle to add a photo"
+				}
 				title="You"
 			/>
 			<ToggleCard

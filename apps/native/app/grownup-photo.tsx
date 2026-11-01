@@ -115,7 +115,7 @@ export default function GrownUpPhoto() {
 					{replacing ? null : <QuietLink label="Not now" onPress={skip} />}
 				</>
 			}
-			title={"Add a photo\nof you"}
+			title={"Add a\nphoto of you"}
 		>
 			<PhotoRing done={done} photoUri={photoUri} />
 			<ClayText
