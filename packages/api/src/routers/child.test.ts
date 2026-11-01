@@ -339,6 +339,23 @@ describe("child art", () => {
 		expect(felt?.error).toContain("model said no");
 	});
 
+	test("replacing the photo deletes the old photo object", async () => {
+		const first = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await settle();
+		stored.add(photo);
+		await callerFor("u1").child.save({
+			...noah,
+			id: first.id,
+			photoKey: newer,
+		});
+		await settle();
+		expect(deleted).toContain(photo);
+		expect(stored.has(photo)).toBe(false);
+	});
+
 	test("a newer photo's art is never overwritten by an older run", async () => {
 		const first = await callerFor("u1").child.save({
 			...noah,
@@ -377,6 +394,7 @@ describe("child art", () => {
 		const older = `${folder}${first.id}/art/a/`;
 		expect([...new Set(deleted)].sort()).toEqual(
 			[
+				photo,
 				`${older}face.png`,
 				`${older}looks/clay.png`,
 				`${older}looks/felt.png`,
@@ -400,6 +418,7 @@ describe("child art", () => {
 		const older = `${folder}${first.id}/art/a/`;
 		expect(deleted.sort()).toEqual(
 			[
+				photo,
 				`${older}face.png`,
 				`${older}looks/clay.png`,
 				`${older}looks/felt.png`,

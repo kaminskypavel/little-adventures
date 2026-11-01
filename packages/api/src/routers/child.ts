@@ -81,8 +81,14 @@ export const childRouter = router({
 			);
 		}
 		if (newPhoto && before?.photoKey) {
+			const oldPhoto = before.photoKey;
 			ctx.waitUntil(
-				ctx.storage.deletePrefix(artFolder(ownerId, row.id, before.photoKey))
+				Promise.all([
+					ctx.storage.deletePrefix(artFolder(ownerId, row.id, oldPhoto)),
+					ownsKey(ownerId, oldPhoto)
+						? ctx.storage.deleteObject(oldPhoto)
+						: undefined,
+				])
 			);
 		}
 		if (drawsArt && row.photoKey) {
