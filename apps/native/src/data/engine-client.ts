@@ -119,6 +119,13 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				headers: { "content-type": "application/json" },
 				method: "PUT",
 			}),
+		/** One very short, clear sentence that restates the question, for the screen. */
+		shortQuestion: (question: string) =>
+			call<{ short: string }>("/questions/short", {
+				body: JSON.stringify({ question }),
+				headers: { "content-type": "application/json" },
+				method: "POST",
+			}),
 		visitNode: (id: string, node: string) =>
 			call<VisitResult>(
 				`/adventures/${encodeURIComponent(id)}/nodes/${encodeURIComponent(node)}/visit`,

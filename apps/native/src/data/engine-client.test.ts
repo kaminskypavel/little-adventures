@@ -41,6 +41,19 @@ describe("engine client", () => {
 		});
 	});
 
+	test("shortQuestion posts the question and returns the short one", async () => {
+		const { client, requests } = engine(json({ short: "Why do whales sing?" }));
+		const out = await client.shortQuestion(
+			"um so why do whales like sing a lot"
+		);
+		expect(out.short).toBe("Why do whales sing?");
+		expect(requests[0].path).toBe("/questions/short");
+		expect(requests[0].init?.method).toBe("POST");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			question: "um so why do whales like sing a lot",
+		});
+	});
+
 	test("getAdventure, listAdventures and visitNode use their routes", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", nodes: [], pollAfterSec: null }),

@@ -34,7 +34,7 @@ import type {
 	Profile,
 	Progress,
 } from "./types";
-import { hasAudio } from "./voice-rules";
+import { hasAudio, trimQuestion } from "./voice-rules";
 import { bytesToBase64 } from "./wav";
 
 const ENGINE_URL = ENV.EXPO_PUBLIC_ENGINE_URL?.replace(/\/$/u, "");
@@ -158,6 +158,22 @@ export const getHome = async (): Promise<{
 	};
 };
 
+/** The adventure made last, for Home's "Keep exploring" card. The engine lists newest first. */
+export const getLatestAdventure =
+	async (): Promise<AdventureSummary | null> => {
+		if (devFlags.isFirstHome) {
+			return null;
+		}
+		const list = engine ? await listEngine(engine) : await wait(keepGoing);
+		return list[0] ?? null;
+	};
+
+/** The picture drawn of the child in the look they picked; null until one is drawn. */
+export const getAvatarUrl = async (): Promise<string | null> => {
+	const [row] = await trpc.child.mine.query();
+	return row?.drawingUrls[row.look as Look] ?? null;
+};
+
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
 
 /**
@@ -175,6 +191,22 @@ export const transcribe = async (wav: Uint8Array): Promise<string> => {
 		audioBase64: bytesToBase64(wav),
 	});
 	return text;
+};
+
+/**
+ * One very short, clear question for the check screen. The engine writes it; the bundled sample
+ * mode, and any engine miss, uses the transcript trimmed to about 60 characters.
+ */
+export const shortQuestion = async (question: string): Promise<string> => {
+	if (!engine) {
+		return trimQuestion(question);
+	}
+	try {
+		const { short } = await engine.shortQuestion(question);
+		return short.trim() || trimQuestion(question);
+	} catch {
+		return trimQuestion(question);
+	}
 };
 
 export const startAdventure = async (
