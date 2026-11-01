@@ -37,6 +37,8 @@ import {
 	startAdventure,
 	watchMaking,
 } from "@/src/data/adventure-client";
+import type { Style } from "@/src/data/engine-client";
+import { useChild } from "@/src/data/profile-queries";
 import {
 	clearSpokenQuestion,
 	getSpokenQuestion,
@@ -146,12 +148,19 @@ function useWaitProgress() {
 	return { finish, full, progress, stage };
 }
 
-function statusText(stage: number, full: boolean, noun: string) {
+/** What the first stage says, by the chosen style. */
+const FIRST_STAGE: Record<Style, string> = {
+	clay: "Mixing the clay",
+	felt: "Stitching the felt",
+	wood: "Carving the wood",
+};
+
+function statusText(stage: number, full: boolean, noun: string, style: Style) {
 	if (full) {
 		return "All ready";
 	}
 	if (stage === 0) {
-		return "Mixing the clay";
+		return FIRST_STAGE[style];
 	}
 	return stage === 1 ? `Shaping the ${noun}` : "Almost there";
 }
@@ -213,6 +222,7 @@ export default function Making() {
 		style?: string;
 	}>();
 	const style = toStyle(pickedStyle);
+	const child = useChild();
 	// Read once: the id this screen writes into the address must not start it again.
 	const [resumeId] = useState(madeId);
 	// A picked idea arrives in the address; the child's own spoken question never does (it waits
@@ -333,7 +343,7 @@ export default function Making() {
 	return (
 		<View style={styles.root}>
 			<WaitLoop away={revealed} fast={serverReady && !full} source={LOADER} />
-			<WatchHill away={revealed} />
+			<WatchHill away={revealed} picture={child.data?.avatarUrl ?? null} />
 			<Screen
 				bodyStyle={styles.body}
 				dock={
@@ -387,7 +397,9 @@ export default function Making() {
 					show={!revealed}
 					style={[styles.row, { top: STATUS_TOP }]}
 				>
-					<StatusPill text={statusText(engineStage ?? stage, full, noun)} />
+					<StatusPill
+						text={statusText(engineStage ?? stage, full, noun, style)}
+					/>
 				</Fade>
 				<Fade ms={fadeMs} show={revealed}>
 					<Plate label={shownQuestion} variant="question" />

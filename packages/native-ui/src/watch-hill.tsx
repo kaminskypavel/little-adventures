@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
@@ -6,7 +7,7 @@ import { Placeholder } from "./placeholder";
 import { colors, iconSizes, motion } from "./tokens";
 
 // Round 7 `.noawatch`, `.nw` and `.hill` at 0.72 scale (px / 0.72). The child's picture stands on
-// a clay hill at the bottom left. It is the neutral round placeholder, never a picture of a child.
+// a clay hill at the bottom left: their drawn look, or the neutral round placeholder without one.
 const hill = {
 	bottom: -86,
 	height: 208,
@@ -55,7 +56,14 @@ const slideEase = cubicBezier(0.2, 0.8, 0.2, 1);
  * 10a: the child's picture on a clay hill at the bottom left of the wait screen. Absolute, so
  * the parent must fill the screen. `away` slides it off the bottom (a 200 ms fade under reduced motion).
  */
-export function WatchHill({ away = false }: { away?: boolean }) {
+export function WatchHill({
+	away = false,
+	picture: url = null,
+}: {
+	away?: boolean;
+	/** The child's drawn look; null shows the neutral placeholder. */
+	picture?: string | null;
+}) {
 	const calm = useCalm();
 
 	return (
@@ -89,11 +97,20 @@ export function WatchHill({ away = false }: { away?: boolean }) {
 					width: picture.size,
 				}}
 			>
-				<Placeholder
-					icon="user"
-					iconSize={iconSizes.hero}
-					style={{ borderRadius: picture.size / 2, flex: 1 }}
-				/>
+				{url ? (
+					<Image
+						accessibilityIgnoresInvertColors
+						contentFit="cover"
+						source={{ uri: url }}
+						style={{ borderRadius: picture.size / 2, flex: 1 }}
+					/>
+				) : (
+					<Placeholder
+						icon="user"
+						iconSize={iconSizes.hero}
+						style={{ borderRadius: picture.size / 2, flex: 1 }}
+					/>
+				)}
 			</View>
 			<View
 				style={{
