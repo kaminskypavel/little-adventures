@@ -26,7 +26,18 @@ export const childOptions = () =>
 				? POLL_MS
 				: false,
 	});
-export const grownUpOptions = () => trpc.grownUp.mine.queryOptions();
+// A new grown-up photo is cut out in the background: read it again until its face is in, for a
+// minute at most (a photo with no person found never gets one).
+const FACE_WAIT_MS = 60_000;
+export const grownUpOptions = () =>
+	trpc.grownUp.mine.queryOptions(undefined, {
+		refetchInterval: (query) => {
+			const row = query.state.data;
+			const fresh =
+				row && Date.now() - new Date(row.updatedAt).getTime() < FACE_WAIT_MS;
+			return row && !row.faceUrl && fresh ? POLL_MS : false;
+		},
+	});
 
 /** The child as the screens know it. Undefined data while loading. */
 export const useChild = () => useQuery({ ...childOptions(), select: toChild });

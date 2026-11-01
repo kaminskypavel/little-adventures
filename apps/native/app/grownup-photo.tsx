@@ -42,9 +42,10 @@ export default function GrownUpPhoto() {
 	const [note, setNote] = useState<string | null>(null);
 	const busy = useRef<boolean>(false);
 
+	// The saved photo shows as its face cut-out, like the child's, once it is cut out.
 	useEffect(() => {
 		if (saved) {
-			setPhotoUri((current) => current ?? saved.photoUrl);
+			setPhotoUri(saved.faceUrl ?? saved.photoUrl);
 		}
 	}, [saved]);
 
