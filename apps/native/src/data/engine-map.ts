@@ -1,9 +1,10 @@
 // Puts the engine's adventure onto the app's own types, and holds the rules of the wait.
-import type {
-	EngineAdventure,
-	EngineMedia,
-	EngineNode,
-	EngineSummary,
+import {
+	type EngineAdventure,
+	type EngineMedia,
+	type EngineNode,
+	type EngineSummary,
+	pollAdventure,
 } from "./engine-client";
 import { PLACES } from "./map-rules";
 import type {
@@ -177,5 +178,71 @@ export function nextWait(
 		giveUp:
 			failedReads >= MAX_FAILED_READS ||
 			now - state.startedAt >= WAIT_CEILING_MS,
+	};
+}
+
+/**
+ * Follows the engine until the intro is ready, then calls `onStatus` once with it. Ends in one
+ * "failed" after several failed reads in a row, at the wait ceiling (also when a read hangs), or
+ * when the engine stops asking for reads with no intro. Returns unsubscribe, after which nothing
+ * is called. The clock, sleep and timer are injected so the rules run without a phone.
+ */
+export function watchIntro({
+	after,
+	now,
+	onStatus,
+	read,
+	sleep,
+}: {
+	/** Runs `fn` once after `ms`; returns the cancel. */
+	after: (fn: () => void, ms: number) => () => void;
+	now: () => number;
+	onStatus: (status: MakeStatus) => void;
+	read: () => Promise<EngineAdventure>;
+	sleep: (ms: number) => Promise<void>;
+}): () => void {
+	let live = true;
+	let patience = initialWait(now());
+	const end = (status: MakeStatus) => {
+		live = false;
+		cancelCeiling();
+		onStatus(status);
+	};
+	onStatus({ progress: 0, stage: 0, state: "making" });
+	const cancelCeiling = after(() => {
+		if (live) {
+			end({ state: "failed" });
+		}
+	}, WAIT_CEILING_MS);
+	pollAdventure({
+		isLive: () => live,
+		onFailed: () => {
+			patience = nextWait(patience, "failed", now());
+			if (patience.giveUp) {
+				end({ state: "failed" });
+			}
+		},
+		onRead: (raw) => {
+			patience = nextWait(patience, "ok", now());
+			const status = makeStatusOf(raw);
+			if (status.state !== "making") {
+				end(status);
+			} else if (patience.giveUp) {
+				end({ state: "failed" });
+			} else {
+				onStatus(status);
+			}
+		},
+		read,
+		sleep,
+	}).then(() => {
+		// The engine stopped asking for reads and the intro never came.
+		if (live) {
+			end({ state: "failed" });
+		}
+	});
+	return () => {
+		live = false;
+		cancelCeiling();
 	};
 }

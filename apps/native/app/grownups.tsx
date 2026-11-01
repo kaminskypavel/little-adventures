@@ -48,7 +48,9 @@ export default function Grownups() {
 	useEffect(() => {
 		let live = true;
 		getProfile().then((p) => live && setProfile(p));
-		getAdventures().then((a) => live && setAdventures(a));
+		getAdventures()
+			.then((a) => live && setAdventures(a))
+			.catch(() => live && setAdventures([]));
 		return () => {
 			live = false;
 		};
@@ -153,6 +155,7 @@ export default function Grownups() {
 								</ClayText>
 								<View style={[styles.profile, styles.own]}>
 									<Image
+										accessibilityLabel="Your photo"
 										contentFit="cover"
 										source={grownUpPhoto.photoUrl}
 										style={styles.portrait}

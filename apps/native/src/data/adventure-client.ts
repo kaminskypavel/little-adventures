@@ -6,17 +6,14 @@ import { ENV } from "@/src/env";
 import {
 	createEngineClient,
 	type EngineAdventure,
-	pollAdventure,
 	sleep,
 } from "./engine-client";
 import {
-	initialWait,
 	type KnownUrls,
-	makeStatusOf,
-	nextWait,
 	progressOf,
 	toAdventure,
 	toSummary,
+	watchIntro,
 } from "./engine-map";
 import {
 	finished,
@@ -105,45 +102,17 @@ const watchEngine = (
 	client: Engine,
 	id: string,
 	onStatus: (s: MakeStatus) => void
-): (() => void) => {
-	let live = true;
-	let patience = initialWait(Date.now());
-	const end = (status: MakeStatus) => {
-		live = false;
-		onStatus(status);
-	};
-	onStatus({ progress: 0, stage: 0, state: "making" });
-	pollAdventure({
-		isLive: () => live,
-		onFailed: () => {
-			patience = nextWait(patience, "failed", Date.now());
-			if (patience.giveUp) {
-				end({ state: "failed" });
-			}
+): (() => void) =>
+	watchIntro({
+		after: (fn, ms) => {
+			const timer = setTimeout(fn, ms);
+			return () => clearTimeout(timer);
 		},
-		onRead: (raw) => {
-			patience = nextWait(patience, "ok", Date.now());
-			const status = makeStatusOf(raw);
-			if (status.state !== "making") {
-				end(status);
-			} else if (patience.giveUp) {
-				end({ state: "failed" });
-			} else {
-				onStatus(status);
-			}
-		},
+		now: Date.now,
+		onStatus,
 		read: () => readEngine(client, id),
 		sleep,
-	}).then(() => {
-		// The engine stopped asking for reads and the intro never came.
-		if (live) {
-			end({ state: "failed" });
-		}
 	});
-	return () => {
-		live = false;
-	};
-};
 
 async function visitEngine(client: Engine, id: string, node: NodeId) {
 	const p = await progressFor(client, id);
@@ -154,7 +123,9 @@ async function visitEngine(client: Engine, id: string, node: NodeId) {
 	try {
 		p.outroLocked = (await client.visitNode(id, node)).outroLocked;
 	} catch {
-		// A visit that did not reach the engine never holds the child up.
+		// A visit that did not reach the engine never holds the child up: the screens fall back
+		// to the local goodnight rule rather than a lock that was true before.
+		p.outroLocked = undefined;
 	}
 	return { ...p, visited: [...p.visited] };
 }
@@ -179,15 +150,15 @@ export const getHome = async (): Promise<{
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
 
 /**
- * A spoken question (WAV bytes) as text. An empty recording is never sent and gives "". With the
- * bundled adventure the canned question comes back, as it always did.
+ * A spoken question (WAV bytes) as text. With the bundled adventure the canned question comes
+ * back, as it always did. With the engine an empty recording is never sent and gives "".
  */
 export const transcribe = async (wav: Uint8Array): Promise<string> => {
-	if (!hasAudio(wav)) {
-		return "";
-	}
 	if (!engine) {
 		return wait(transcribedQuestion);
+	}
+	if (!hasAudio(wav)) {
+		return "";
 	}
 	const { text } = await trpc.voice.transcribe.mutate({
 		audioBase64: bytesToBase64(wav),

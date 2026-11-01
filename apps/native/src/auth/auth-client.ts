@@ -200,6 +200,9 @@ export async function getToken() {
 	return token ?? (await mint());
 }
 
+// An engine call that has not answered by now counts as failed, so a hung read still ends the wait.
+const ENGINE_TIMEOUT_MS = 20_000;
+
 const withBearer = (headers: HeadersInit | undefined, jwt: string | null) => {
 	const next = new Headers(headers);
 	if (jwt) {
@@ -208,16 +211,31 @@ const withBearer = (headers: HeadersInit | undefined, jwt: string | null) => {
 	return next;
 };
 
+/** A fetch that gives up after `ms`, so a hung server cannot hold a caller for ever. */
+const fetchWithin = async (ms: number, url: string, init: RequestInit) => {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), ms);
+	try {
+		return await fetch(url, { ...init, signal: controller.signal });
+	} finally {
+		clearTimeout(timer);
+	}
+};
+
 const createAuthedFetch =
-	(origin: string, credentials: RequestCredentials) =>
+	(origin: string, credentials: RequestCredentials, timeoutMs?: number) =>
 	(path: string, init: RequestInit = {}) =>
 		withRetryOn401({
-			call: (jwt) =>
-				fetch(`${origin}${path}`, {
+			call: (jwt) => {
+				const options = {
 					...init,
 					credentials,
 					headers: withBearer(init.headers, jwt),
-				}),
+				};
+				return timeoutMs
+					? fetchWithin(timeoutMs, `${origin}${path}`, options)
+					: fetch(`${origin}${path}`, options);
+			},
 			getToken,
 			mint,
 			signOut,
@@ -234,4 +252,8 @@ export const authedFetch = createAuthedFetch(SERVER, "include");
  * url. The token alone signs the call, so no cookies travel.
  */
 export const authedFetchTo = (base: string) =>
-	createAuthedFetch(base.replace(TRAILING_SLASH, ""), "omit");
+	createAuthedFetch(
+		base.replace(TRAILING_SLASH, ""),
+		"omit",
+		ENGINE_TIMEOUT_MS
+	);

@@ -10,7 +10,9 @@ import {
 	toAdventure,
 	toSummary,
 	WAIT_CEILING_MS,
+	watchIntro,
 } from "./engine-map";
+import type { MakeStatus } from "./types";
 
 const media = (id: string, url = `https://files.test/${id}?sig=1`) => ({
 	id,
@@ -310,5 +312,95 @@ describe("the wait", () => {
 		state = nextWait(state, "ok", START + MAX_FAILED_READS);
 		state = nextWait(state, "failed", START + MAX_FAILED_READS + 1);
 		expect(state.giveUp).toBe(false);
+	});
+});
+
+describe("watchIntro", () => {
+	const flush = () =>
+		new Promise<void>((resolve) => {
+			setTimeout(resolve, 0);
+		});
+	const making = adventure({
+		nodes: IDS.map((id) => node(id, { status: "making" })),
+		pollAfterSec: 1,
+		status: "making",
+	});
+
+	const setup = (read: () => Promise<EngineAdventure>, now = () => 0) => {
+		const seen: MakeStatus[] = [];
+		const timers: (() => void)[] = [];
+		let cancelled = 0;
+		const stop = watchIntro({
+			after: (fn) => {
+				timers.push(fn);
+				return () => {
+					cancelled += 1;
+				};
+			},
+			now,
+			onStatus: (status) => seen.push(status),
+			read,
+			sleep: () => Promise.resolve(),
+		});
+		return { cancelled: () => cancelled, seen, stop, timers };
+	};
+
+	test("four failed reads in a row give one failed", async () => {
+		let reads = 0;
+		const { seen } = setup(() => {
+			reads += 1;
+			return Promise.reject(new Error("down"));
+		});
+		await flush();
+		expect(reads).toBe(MAX_FAILED_READS);
+		expect(seen.map((s) => s.state)).toEqual(["making", "failed"]);
+	});
+
+	test("a clock past the ceiling gives failed", async () => {
+		let t = 0;
+		const { seen } = setup(
+			() => {
+				t += WAIT_CEILING_MS;
+				return Promise.resolve(making);
+			},
+			() => t
+		);
+		await flush();
+		expect(seen.map((s) => s.state)).toEqual(["making", "failed"]);
+	});
+
+	test("the ceiling timer ends a read that hangs", async () => {
+		const { seen, timers } = setup(() => new Promise(() => undefined));
+		await flush();
+		timers[0]();
+		expect(seen.map((s) => s.state)).toEqual(["making", "failed"]);
+	});
+
+	test("a ready intro gives one ready and no more reads", async () => {
+		let reads = 0;
+		const { cancelled, seen } = setup(() => {
+			reads += 1;
+			return Promise.resolve(adventure());
+		});
+		await flush();
+		expect(reads).toBe(1);
+		expect(seen.map((s) => s.state)).toEqual(["making", "ready"]);
+		expect(cancelled()).toBe(1);
+	});
+
+	test("unsubscribe stops the callbacks", async () => {
+		let release: (a: EngineAdventure) => void = () => undefined;
+		const { cancelled, seen, stop, timers } = setup(
+			() =>
+				new Promise((resolve) => {
+					release = resolve;
+				})
+		);
+		stop();
+		release(adventure());
+		await flush();
+		timers[0]();
+		expect(seen.map((s) => s.state)).toEqual(["making"]);
+		expect(cancelled()).toBe(1);
 	});
 });

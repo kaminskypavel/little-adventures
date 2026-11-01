@@ -14,7 +14,7 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import {
 	devFlags,
 	getHome,
@@ -54,7 +54,9 @@ export default function Home() {
 	// Denied in the phone's settings: the Ask your own card goes off. Read on every focus, so a
 	// grown-up who turns it on in settings finds it on when they come back.
 	const [micDenied, setMicDenied] = useState(false);
-	const micOff = dev(params.mic) === "off" || micDenied;
+	// Android is not a launch target and has no WAV recorder, so its mic is off too.
+	const micOff =
+		dev(params.mic) === "off" || micDenied || Platform.OS === "android";
 	const [data, setData] = useState<HomeData | null>(null);
 	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
@@ -90,14 +92,18 @@ export default function Home() {
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
-			Promise.all([getHome(), getProfile()]).then(([home, profile]) => {
-				if (live) {
-					setData({
-						hasStories: home.keepGoing.length + home.finished.length > 0,
-						name: profile.childName,
-					});
+			// A story list that cannot be read shows as no stories, never as a skeleton for ever.
+			const noStories = { finished: [], keepGoing: [] };
+			Promise.all([getHome().catch(() => noStories), getProfile()]).then(
+				([home, profile]) => {
+					if (live) {
+						setData({
+							hasStories: home.keepGoing.length + home.finished.length > 0,
+							name: profile.childName,
+						});
+					}
 				}
-			});
+			);
 			return () => {
 				live = false;
 			};

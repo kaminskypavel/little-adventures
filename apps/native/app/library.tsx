@@ -37,11 +37,13 @@ export default function Library() {
 		useCallback(() => {
 			let live = true;
 			// Unfinished stories first, finished ones after.
-			getHome().then((home) => {
-				if (live) {
-					setStories([...home.keepGoing, ...home.finished]);
-				}
-			});
+			getHome()
+				.then((home) => {
+					if (live) {
+						setStories([...home.keepGoing, ...home.finished]);
+					}
+				})
+				.catch(() => live && setStories([]));
 			return () => {
 				live = false;
 			};
