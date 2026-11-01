@@ -1,6 +1,6 @@
 import { photoUploadRequestSchema } from "@little-adventures/validation/photo";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
-import { trpc } from "./trpc";
+import { trpcClient } from "./trpc";
 
 const LONG_EDGE = 1600;
 const QUALITY = 0.8;
@@ -30,7 +30,7 @@ export async function uploadChildPhoto(uri: string): Promise<string> {
 		contentType: CONTENT_TYPE,
 		size: bytes.size,
 	});
-	const { key, uploadUrl } = await trpc.photo.uploadUrl.mutate(request);
+	const { key, uploadUrl } = await trpcClient.photo.uploadUrl.mutate(request);
 
 	const put = await fetch(uploadUrl, {
 		body: bytes,

@@ -6,16 +6,18 @@ import { Plate } from "@little-adventures/native-ui/plate";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { ToggleCard } from "@little-adventures/native-ui/toggle-card";
 import { colors } from "@little-adventures/native-ui/tokens";
+import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import {
-	getGrownUpPhoto,
-	getProfile,
-	saveProfile,
-} from "@/src/data/adventure-client";
+	grownUpOptions,
+	useChild,
+	useGrownUpPhoto,
+	useSaveProfile,
+} from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
 
 // Round 7 04b at 0.72 scale: portrait 96 px = 133 pt with a 4 px = 5.5 pt border.
@@ -26,9 +28,6 @@ const ICON_SIZE = 54;
 const ICON_OPACITY = 0.4;
 // The face fades in over 200 ms; the stand-in icon fades out with it.
 const FACE_FADE_MS = 200;
-// While the looks are drawn, the screen asks for the face this often, at most this long.
-const POLL_MS = 1500;
-const POLL_LIMIT_MS = 60_000;
 const iconOut = { from: { opacity: ICON_OPACITY }, to: { opacity: 0 } };
 
 /** The hero circle: a stand-in until the face cutout is there, then the face fades in. */
@@ -78,24 +77,11 @@ function Coming({ profile }: { profile: Profile }) {
 	const router = useRouter();
 	// One companion: the grown-up or the puppy. Nothing is picked on a first run.
 	const [who, setWho] = useState<Who>(saved(profile));
-	const [photoUri, setPhotoUri] = useState<string | null>(null);
-
-	// Read again each time the screen shows, so a photo just replaced appears on return.
-	useFocusEffect(
-		useCallback(() => {
-			let alive = true;
-			getGrownUpPhoto()
-				.then(
-					(saved) =>
-						alive &&
-						setPhotoUri(saved ? (saved.faceUrl ?? saved.photoUrl) : null)
-				)
-				.catch(() => undefined);
-			return () => {
-				alive = false;
-			};
-		}, [])
-	);
+	const client = useQueryClient();
+	const saveProfile = useSaveProfile();
+	// A photo just replaced shows on return: saving it reads the cache again.
+	const { data: photo } = useGrownUpPhoto();
+	const photoUri = photo ? (photo.faceUrl ?? photo.photoUrl) : null;
 
 	const openPhoto = () =>
 		router.push({ params: { replace: "1" }, pathname: "/grownup-photo" });
@@ -106,7 +92,7 @@ function Coming({ profile }: { profile: Profile }) {
 			router.push("/handover");
 		} else if (who === "grownUp") {
 			// The photo is mandatory for You: without one, the photo step saves the choice.
-			if (await getGrownUpPhoto()) {
+			if (await client.fetchQuery(grownUpOptions())) {
 				await saveProfile({ grownUp: true, puppy: false });
 				router.push("/handover");
 			} else {
@@ -165,41 +151,9 @@ function Coming({ profile }: { profile: Profile }) {
 }
 
 export default function ComingAlong() {
-	const [profile, setProfile] = useState<Profile | null>(null);
-
-	// Ask again until the face is drawn, the drawing failed, or it takes too long.
-	useEffect(() => {
-		let stopped = false;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		const startedAt = Date.now();
-		const poll = async () => {
-			try {
-				const next = await getProfile();
-				if (stopped) {
-					return;
-				}
-				setProfile(next);
-				// Idle: no drawing was started (art is off), so nothing to wait for.
-				const settled =
-					next.faceUrl !== undefined ||
-					next.artStatus === "failed" ||
-					next.artStatus === "idle";
-				if (settled || Date.now() - startedAt >= POLL_LIMIT_MS) {
-					return;
-				}
-			} catch {
-				// Keep asking; a missed answer is not worth showing.
-			}
-			timer = setTimeout(poll, POLL_MS);
-		};
-		poll();
-		return () => {
-			stopped = true;
-			clearTimeout(timer);
-		};
-	}, []);
-
-	return profile ? <Coming profile={profile} /> : null;
+	// The cache asks again while the looks are drawn (see profile-queries.ts).
+	const { data } = useChild();
+	return data ? <Coming profile={data.profile} /> : null;
 }
 
 const styles = StyleSheet.create({

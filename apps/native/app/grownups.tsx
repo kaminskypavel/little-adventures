@@ -16,21 +16,20 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
+import { getAdventures } from "@/src/data/adventure-client";
 import {
-	deleteChildPhoto,
-	deleteGrownUpPhoto,
-	getAdventures,
-	getAvatarUrl,
-	getGrownUpPhoto,
-	getProfile,
-} from "@/src/data/adventure-client";
-import type { AdventureSummary, Profile } from "@/src/data/types";
+	useChild,
+	useDeleteChildPhoto,
+	useDeleteGrownUpPhoto,
+	useGrownUpPhoto,
+} from "@/src/data/profile-queries";
+import type { AdventureSummary } from "@/src/data/types";
 
 // 18 Grown-ups. Round 7 (pt = px / 0.72): portrait 92 with a 4 border, name 36,
 // sub 19.5, profile row inset 6 more than the cards, "Add a child" 42 below the list.
@@ -45,8 +44,6 @@ const NOW_FONT = 17;
 const NOW_DOT = 10;
 const NOW_GAP = 8;
 const NOW_TOP = 6;
-// While the art is drawn, the screen asks again this often.
-const POLL_MS = 1500;
 const { choice } = listCards;
 const INNER = PORTRAIT - PORTRAIT_BORDER * 2;
 // The band is as wide as the circle: off the left edge at the start, off the right at the end.
@@ -119,27 +116,17 @@ const subtitle = (a: AdventureSummary) =>
 export default function Grownups() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const [profile, setProfile] = useState<Profile | null>(null);
-	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+	// The cache asks again while the art is drawn, and after every save (see profile-queries.ts).
+	const { data: child } = useChild();
+	const profile = child?.profile ?? null;
+	const avatarUrl = child?.avatarUrl ?? null;
 	const [adventures, setAdventures] = useState<AdventureSummary[] | null>(null);
-	const [grownUpPhoto, setGrownUpPhoto] = useState<{
-		photoUrl: string;
-	} | null>(null);
-
-	const read = useCallback(
-		() =>
-			Promise.all([getProfile(), getAvatarUrl().catch(() => null)]).then(
-				([p, url]) => {
-					setProfile(p);
-					setAvatarUrl(url);
-				}
-			),
-		[]
-	);
+	const { data: grownUpPhoto } = useGrownUpPhoto();
+	const deleteOwnPhoto = useDeleteGrownUpPhoto();
+	const deletePhoto = useDeleteChildPhoto();
 
 	useEffect(() => {
 		let live = true;
-		read();
 		getAdventures()
 			.then((a) => live && setAdventures(a))
 			.catch(() => live && setAdventures([]));
@@ -147,37 +134,6 @@ export default function Grownups() {
 			live = false;
 		};
 	}, []);
-
-	// Asks again while the art is still drawn, so it appears without a reopen.
-	const drawing = profile?.artStatus === "working";
-	useEffect(() => {
-		if (!drawing) {
-			return;
-		}
-		const timer = setInterval(read, POLL_MS);
-		return () => clearInterval(timer);
-	}, [drawing, read]);
-
-	// Read again each time the screen is shown, so a photo just replaced appears.
-	useFocusEffect(
-		useCallback(() => {
-			let live = true;
-			getGrownUpPhoto().then((p) => live && setGrownUpPhoto(p));
-			return () => {
-				live = false;
-			};
-		}, [])
-	);
-
-	const deleteOwnPhoto = async () => {
-		await deleteGrownUpPhoto();
-		setGrownUpPhoto(null);
-	};
-
-	const deletePhoto = async () => {
-		setProfile(await deleteChildPhoto());
-		setAvatarUrl(null);
-	};
 
 	const signOut = async () => {
 		await endSession();

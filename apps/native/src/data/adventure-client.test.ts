@@ -15,7 +15,9 @@ mock.module("@/src/auth/auth-client", () => ({
 	},
 }));
 mock.module("./trpc", () => ({
-	trpc: { child: { mine: { query: () => Promise.resolve([stubChild]) } } },
+	trpcClient: {
+		child: { mine: { query: () => Promise.resolve([stubChild]) } },
+	},
 }));
 mock.module("./mock-adventure", () => ({
 	finished: [],

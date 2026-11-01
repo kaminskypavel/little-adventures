@@ -17,10 +17,9 @@ import {
 	childSchema,
 } from "@little-adventures/validation/child";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
-import { getProfile, saveProfile } from "@/src/data/adventure-client";
+import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
 
 const ageRows = [
@@ -53,6 +52,7 @@ function Group({
 
 function ChildForm({ profile }: { profile: Profile }) {
 	const router = useRouter();
+	const saveProfile = useSaveProfile();
 	const { control, handleSubmit } = useForm<ChildValues>({
 		defaultValues: {
 			age: profile.childAge ?? undefined,
@@ -145,13 +145,8 @@ function ChildForm({ profile }: { profile: Profile }) {
 }
 
 export default function Child() {
-	const [profile, setProfile] = useState<Profile | null>(null);
-
-	useEffect(() => {
-		getProfile().then(setProfile);
-	}, []);
-
-	return profile ? <ChildForm profile={profile} /> : null;
+	const { data } = useChild();
+	return data ? <ChildForm profile={data.profile} /> : null;
 }
 
 const styles = StyleSheet.create({

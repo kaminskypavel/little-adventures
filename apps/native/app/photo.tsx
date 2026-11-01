@@ -9,8 +9,8 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
-import { getProfile, saveProfile } from "@/src/data/adventure-client";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
+import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
 import {
 	ADVANCE_MS,
@@ -24,6 +24,7 @@ import {
 
 function PhotoStep({ profile }: { profile: Profile }) {
 	const router = useRouter();
+	const saveProfile = useSaveProfile();
 	const [done, setDone] = useState(false);
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
 	const [note, setNote] = useState<string | null>(null);
@@ -106,13 +107,8 @@ function PhotoStep({ profile }: { profile: Profile }) {
 }
 
 export default function Photo() {
-	const [profile, setProfile] = useState<Profile | null>(null);
-
-	useEffect(() => {
-		getProfile().then(setProfile);
-	}, []);
-
-	return profile ? <PhotoStep profile={profile} /> : null;
+	const { data } = useChild();
+	return data ? <PhotoStep profile={data.profile} /> : null;
 }
 
 const styles = StyleSheet.create({

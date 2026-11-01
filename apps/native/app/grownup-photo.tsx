@@ -10,12 +10,12 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
-import {
-	getGrownUpPhoto,
-	saveGrownUpPhoto,
-	saveProfile,
-} from "@/src/data/adventure-client";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
+import {
+	useGrownUpPhoto,
+	useSaveGrownUpPhoto,
+	useSaveProfile,
+} from "@/src/data/profile-queries";
 import {
 	ADVANCE_MS,
 	CAMERA_OFF,
@@ -30,6 +30,9 @@ export default function GrownUpPhoto() {
 	const router = useRouter();
 	const { replace } = useLocalSearchParams<{ replace?: string }>();
 	const replacing = replace === "1";
+	const saveGrownUpPhoto = useSaveGrownUpPhoto();
+	const saveProfile = useSaveProfile();
+	const { data: saved } = useGrownUpPhoto();
 	const [done, setDone] = useState(false);
 	// The photo just picked, or the saved one when the grown-up comes back.
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -40,18 +43,10 @@ export default function GrownUpPhoto() {
 	const busy = useRef<boolean>(false);
 
 	useEffect(() => {
-		let alive = true;
-		getGrownUpPhoto()
-			.then((saved) => {
-				if (alive && saved) {
-					setPhotoUri((current) => current ?? saved.photoUrl);
-				}
-			})
-			.catch(() => undefined);
-		return () => {
-			alive = false;
-		};
-	}, []);
+		if (saved) {
+			setPhotoUri((current) => current ?? saved.photoUrl);
+		}
+	}, [saved]);
 
 	useEffect(() => {
 		if (!done) {

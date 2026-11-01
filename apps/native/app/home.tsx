@@ -28,12 +28,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	devFlags,
-	getAvatarUrl,
 	getIdeas,
 	getLatestAdventure,
-	getProfile,
 } from "@/src/data/adventure-client";
 import { micPermission } from "@/src/data/mic-permission";
+import { useChild } from "@/src/data/profile-queries";
 import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -106,7 +105,20 @@ export default function Home() {
 	// Android is not a launch target and has no WAV recorder, so its mic is off too.
 	const micOff =
 		dev(params.mic) === "off" || micDenied || Platform.OS === "android";
-	const [data, setData] = useState<HomeData | null>(null);
+	const child = useChild();
+	const refetchChild = child.refetch;
+	// The adventure made last, once read: `{ latest: null }` when the child has none yet.
+	const [newest, setNewest] = useState<{
+		latest: AdventureSummary | null;
+	} | null>(null);
+	const data: HomeData | null =
+		newest && child.data
+			? {
+					avatarUrl: child.data.avatarUrl,
+					latest: newest.latest,
+					name: child.data.profile.childName,
+				}
+			: null;
 	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
 	// Counts focuses: each one waves the avatar star again and pulses the Ask your own card.
@@ -141,20 +153,16 @@ export default function Home() {
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
-			// A story list or picture that cannot be read shows as none, never as a skeleton for ever.
-			Promise.all([
-				getLatestAdventure().catch(() => null),
-				getAvatarUrl().catch(() => null),
-				getProfile(),
-			]).then(([newest, avatarUrl, profile]) => {
-				if (live) {
-					setData({ avatarUrl, latest: newest, name: profile.childName });
-				}
-			});
+			// A story list that cannot be read shows as none, never as a skeleton for ever.
+			getLatestAdventure()
+				.catch(() => null)
+				.then((found) => live && setNewest({ latest: found }));
+			// Read the child again on every focus (fresh picture urls); a read already running is kept.
+			refetchChild({ cancelRefetch: false });
 			return () => {
 				live = false;
 			};
-		}, [first])
+		}, [first, refetchChild])
 	);
 
 	useEffect(() => {
