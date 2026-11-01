@@ -99,6 +99,7 @@ export function toAdventure(raw: EngineAdventure, urls: KnownUrls): Adventure {
 		) as Record<NodeId, Place>,
 		pollAfterSec: raw.pollAfterSec ?? null,
 		question: raw.question,
+		source: raw.source,
 		title: raw.title ?? raw.question,
 	};
 }

@@ -15,6 +15,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -31,6 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { getProfile } from "@/src/data/adventure-client";
 import { endSource, wordIndexAt } from "@/src/data/playback";
+import { readWindow } from "@/src/data/read-window";
 import type {
 	Adventure,
 	NarrationAudio,
@@ -64,6 +66,9 @@ const PAUSE_ICON = 42;
 // The goodnight picture is a tall cut-out; show it at this share of the frame width.
 const GOAL_WIDTH = "60%";
 const GOAL_RATIO = 365 / 500;
+// The read-along card shows one sentence (see readWindow) and stops here, so the place name and
+// the picture above it stay visible.
+const NARRATION_MAX_HEIGHT = 270;
 
 function Scrim() {
 	return (
@@ -100,6 +105,11 @@ function PlayerChrome({
 	words: string[];
 }) {
 	const insets = useSafeAreaInsets();
+	const { end, start } = useMemo(
+		() => readWindow(words, current),
+		[words, current]
+	);
+	const shown = useMemo(() => words.slice(start, end), [words, start, end]);
 	return (
 		<View style={styles.root}>
 			{frame}
@@ -116,7 +126,7 @@ function PlayerChrome({
 				<NamePill text={name} />
 			</View>
 			<NarrationBar
-				current={current}
+				current={current - start}
 				progress={progress}
 				style={[
 					styles.narration,
@@ -128,7 +138,7 @@ function PlayerChrome({
 							layout.gap,
 					},
 				]}
-				words={words}
+				words={shown}
 			/>
 			<View
 				pointerEvents="box-none"
@@ -537,6 +547,8 @@ const styles = StyleSheet.create({
 	},
 	narration: {
 		left: layout.sideMargin,
+		maxHeight: NARRATION_MAX_HEIGHT,
+		overflow: "hidden",
 		position: "absolute",
 		right: layout.sideMargin,
 	},

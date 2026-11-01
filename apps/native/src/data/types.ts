@@ -43,6 +43,8 @@ export interface Adventure {
 	pollAfterSec?: number | null;
 	/** e.g. "How do you get to the moon?". */
 	question: string;
+	/** "recorded" is a sample adventure, not made for this question. Absent: the bundled one. */
+	source?: string;
 	/** e.g. "The Box That Flew". */
 	title: string;
 }

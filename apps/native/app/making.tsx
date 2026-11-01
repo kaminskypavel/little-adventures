@@ -7,13 +7,24 @@ import { Plate } from "@little-adventures/native-ui/plate";
 import { ProgressBar } from "@little-adventures/native-ui/progress-bar";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StatusPill } from "@little-adventures/native-ui/status-pill";
-import { colors, layout, motion } from "@little-adventures/native-ui/tokens";
+import {
+	colors,
+	layout,
+	motion,
+	type,
+} from "@little-adventures/native-ui/tokens";
 import { WaitLoop } from "@little-adventures/native-ui/wait-loop";
 import { WatchHill } from "@little-adventures/native-ui/watch-hill";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import {
+	type StyleProp,
+	StyleSheet,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import Animated, {
 	cubicBezier,
 	useAnimatedReaction,
@@ -24,9 +35,9 @@ import { scheduleOnRN } from "react-native-worklets";
 import {
 	getAdventure,
 	startAdventure,
-	usesEngine,
 	watchMaking,
 } from "@/src/data/adventure-client";
+import { getSpokenQuestion } from "@/src/data/spoken-question";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -50,6 +61,10 @@ const GOAL_TOP = 244;
 const GOAL_WIDTH = 319;
 const GOAL_HEIGHT = 328;
 const BIG_PLATE_TOP = 583;
+const NOTE_TOP = 641; // under the big plate (44 high) with a gap
+const NOTE_WIDTH = 300;
+const NOTE_OPACITY = 0.8;
+const NOTE_TEXT = "Here is a story to explore while we learn more.";
 
 const REVEAL_MS = 500; // progress, status, title, plates and Start
 const POP_MS = 1100;
@@ -171,10 +186,12 @@ function Fade({
 export default function Making() {
 	const router = useRouter();
 	const calm = useCalm();
-	const { fail, question = "" } = useLocalSearchParams<{
+	const { fail, question: picked = "" } = useLocalSearchParams<{
 		fail?: string;
 		question?: string;
 	}>();
+	// A picked idea arrives in the address; the child's own spoken question never does.
+	const question = picked || getSpokenQuestion();
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);
@@ -183,9 +200,10 @@ export default function Making() {
 	const { finish, full, progress, stage } = useWaitProgress();
 
 	const revealed = full && adventure !== null;
-	const shownQuestion = usesEngine
-		? (adventure?.question ?? "")
-		: question || (adventure?.question ?? "");
+	// The child's own question stays on screen. A recorded adventure answers a fixed question, so
+	// its question is only the fallback, and a calm line says it is a sample.
+	const shownQuestion = question || (adventure?.question ?? "");
+	const sample = adventure?.source === "recorded";
 	const fadeMs = calm ? motion.reducedReveal : REVEAL_MS;
 
 	useEffect(() => {
@@ -364,6 +382,13 @@ export default function Making() {
 						variant="big"
 					/>
 				</Fade>
+				<Fade
+					ms={fadeMs}
+					show={revealed && sample}
+					style={[styles.row, styles.rowCentered, { top: NOTE_TOP }]}
+				>
+					<Text style={styles.note}>{NOTE_TEXT}</Text>
+				</Fade>
 			</Screen>
 		</View>
 	);
@@ -373,6 +398,13 @@ const styles = StyleSheet.create({
 	bigPlate: { alignSelf: "center" },
 	body: { paddingHorizontal: 0 },
 	goal: { height: "100%", width: "100%" },
+	note: {
+		...type.label,
+		color: colors.cream,
+		maxWidth: NOTE_WIDTH,
+		opacity: NOTE_OPACITY,
+		textAlign: "center",
+	},
 	root: { flex: 1 },
 	row: {
 		left: layout.sideMargin,
