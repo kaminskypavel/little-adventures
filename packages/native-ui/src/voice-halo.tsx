@@ -5,11 +5,13 @@ import Animated, {
 	Easing,
 	interpolate,
 	type SharedValue,
+	useAnimatedProps,
 	useAnimatedStyle,
 	useSharedValue,
 	withRepeat,
 	withTiming,
 } from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import { ClaySurface } from "./clay-surface";
 import { Icon } from "./icons";
 import { useCalm } from "./motion-provider";
@@ -25,6 +27,10 @@ const GROW = 44;
 const RIPPLE = 9;
 const LEVEL_EASE_MS = 120;
 const RIPPLE_MS = motion.walk;
+// The drawing box holds the widest layer: button, full growth and full ripple.
+const SIZE = BUTTON + 2 * (GROW + RIPPLE);
+const CENTER = SIZE / 2;
+const POINTS = 64;
 const BUBBLE_RISE = 160;
 const BUBBLE_EVERY = 500;
 // Four bubbles in a loop keep one rising every 500 ms (1600 ms of rise plus a 400 ms rest).
@@ -33,14 +39,15 @@ const KEEP_HOLDING = { bottom: 400, left: 400, right: 400, top: 400 } as const;
 
 const easeOut = Easing.bezier(...motion.easeOut);
 
-// Three layers at 10, 16 and 22% sun. Each grows by its share of GROW; turns and phase keep
-// their ripples out of step. ponytail: a stretching, turning ellipse stands in for a bumpy
-// edge (no per-frame path), upgrade to an animated SVG path if it reads too round.
+// Three layers at 10, 16 and 22% sun. Each grows by its share of GROW; lobes (bumps around the
+// edge), travel direction, speed and phase keep the three edges out of step.
 const layers = [
-	{ alpha: 0.1, dir: 1, phase: 0, reach: 1, turns: 1 },
-	{ alpha: 0.16, dir: -1, phase: 2.1, reach: 0.7, turns: 2 },
-	{ alpha: 0.22, dir: 1, phase: 4.2, reach: 0.4, turns: 1 },
+	{ alpha: 0.1, dir: 1, lobes: 3, phase: 0, reach: 1, turns: 1 },
+	{ alpha: 0.16, dir: -1, lobes: 4, phase: 2.1, reach: 0.7, turns: 1 },
+	{ alpha: 0.22, dir: 1, lobes: 5, phase: 4.2, reach: 0.4, turns: 2 },
 ] as const;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const rings = [
 	{ alpha: 0.26, size: 214, width: 3 },
@@ -84,25 +91,33 @@ function HaloLayer({
 	open: SharedValue<number>;
 	t: SharedValue<number>;
 }) {
-	const style = useAnimatedStyle(() => {
+	const animatedProps = useAnimatedProps(() => {
 		const g = grow.get() * open.get();
 		const radius = HALF + g * GROW * layer.reach;
 		// No voice, no ripple: the edge only moves once there is a level.
 		const ripple = RIPPLE * Math.min(1, g * 2);
-		const angle = 2 * Math.PI * layer.turns * t.get() + layer.phase;
-		return {
-			opacity: g < 0.01 ? 0 : 1,
-			transform: [
-				{ rotate: `${layer.dir * 360 * t.get()}deg` },
-				{ scaleX: (radius + ripple * Math.sin(angle)) / HALF },
-				{ scaleY: (radius + ripple * Math.cos(angle)) / HALF },
-			],
-		};
+		const shift = 2 * Math.PI * layer.dir * layer.turns * t.get() + layer.phase;
+		let d = "";
+		for (let i = 0; i < POINTS; i += 1) {
+			const theta = (2 * Math.PI * i) / POINTS;
+			// Two soft bump patterns travelling opposite ways round the edge, peak 1.
+			const wave =
+				0.7 * Math.sin(layer.lobes * theta + shift) +
+				0.3 * Math.sin((layer.lobes + 2) * theta - 2 * shift);
+			const r = radius + ripple * wave;
+			d += `${i === 0 ? "M" : "L"}${CENTER + r * Math.cos(theta)} ${CENTER + r * Math.sin(theta)} `;
+		}
+		return { d: `${d}Z`, fillOpacity: g < 0.01 ? 0 : layer.alpha };
 	});
 	return (
-		<Animated.View
-			style={[styles.layer, { backgroundColor: sun(layer.alpha) }, style]}
-		/>
+		<Svg
+			height={SIZE}
+			style={styles.layer}
+			viewBox={`0 0 ${SIZE} ${SIZE}`}
+			width={SIZE}
+		>
+			<AnimatedPath animatedProps={animatedProps} fill={colors.sun} />
+		</Svg>
 	);
 }
 
@@ -365,11 +380,8 @@ const styles = StyleSheet.create({
 		top: 0,
 	},
 	layer: {
-		borderRadius: HALF,
-		height: BUTTON,
-		left: 0,
+		left: (BUTTON - SIZE) / 2,
 		position: "absolute",
-		top: 0,
-		width: BUTTON,
+		top: (BUTTON - SIZE) / 2,
 	},
 });

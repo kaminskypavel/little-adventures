@@ -13,7 +13,12 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, {
+	Easing,
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { transcribe } from "@/src/data/adventure-client";
 import { askMicPermission } from "@/src/data/mic-permission";
@@ -27,7 +32,8 @@ const STAR_SIZE = 150;
 const STAR_TOP = 37;
 const SPACE_MIN = 56;
 const LINE = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
-const MISSED_TILT = "-8deg";
+const MISSED_TILT = -8;
+const easeOut = Easing.bezier(...motion.easeOut);
 
 type Hint = "ask" | "missed" | "short";
 
@@ -171,22 +177,25 @@ export default function Listening() {
 	}, []);
 
 	const state = haloState(pressing, thinking, hint);
+	const missed = state === "missed";
+
+	// The star leans over on a miss and eases upright when the next hold starts. Reduced motion
+	// sets the pose without moving.
+	const tilt = useSharedValue(0);
+	useEffect(() => {
+		const to = missed ? MISSED_TILT : 0;
+		tilt.set(
+			calm ? to : withTiming(to, { duration: motion.enter, easing: easeOut })
+		);
+	}, [calm, missed, tilt]);
+	const tiltStyle = useAnimatedStyle(() => ({
+		transform: [{ rotate: `${tilt.get()}deg` }],
+	}));
 
 	return (
 		<Screen bodyStyle={styles.body}>
 			<View style={{ height: insets.top + STAR_TOP }} />
-			<Animated.View
-				pointerEvents="none"
-				style={[
-					styles.star,
-					{
-						transform: [{ rotate: state === "missed" ? MISSED_TILT : "0deg" }],
-						transitionDuration: calm ? "0ms" : `${motion.enter}ms`,
-						transitionProperty: "transform",
-						transitionTimingFunction: "ease-out",
-					},
-				]}
-			>
+			<Animated.View pointerEvents="none" style={[styles.star, tiltStyle]}>
 				<StarTake
 					onTakeEnd={queueAgain}
 					size={STAR_SIZE}
