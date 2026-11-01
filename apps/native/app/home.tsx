@@ -3,6 +3,7 @@ import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HeroCard } from "@little-adventures/native-ui/hero-card";
 import { Pulse } from "@little-adventures/native-ui/pulse";
 import { Screen } from "@little-adventures/native-ui/screen";
+import { Skeleton } from "@little-adventures/native-ui/skeleton";
 import { StoryCover } from "@little-adventures/native-ui/story-cover";
 import { StoryShelf } from "@little-adventures/native-ui/story-shelf";
 import {
@@ -38,7 +39,10 @@ const MIC_MSG_FONT = 22;
 const MIC_MSG_LINE = 28;
 // The Ask your own card pulses once, after the avatar star has waved.
 const HERO_PULSE_DELAY = motion.pulseOffset + 200;
-const SKELETON_FADE = 0.15;
+const TITLE_BAR_HEIGHT = 26;
+const TITLE_BAR_WIDTHS = [300, 190];
+// Dev query /home?slow=1 holds the home data back this long, to look at the skeletons.
+const SLOW_MS = 2000;
 
 interface HomeData {
 	hasStories: boolean;
@@ -47,10 +51,19 @@ interface HomeData {
 
 export default function Home() {
 	const router = useRouter();
-	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
+	const params = useLocalSearchParams<{
+		first?: string;
+		mic?: string;
+		slow?: string;
+	}>();
 	// Dev only: production builds ignore the queries.
 	const first = dev(params.first);
 	const micOff = dev(params.mic) === "off";
+	const slow = dev(params.slow) === "1";
+	const lag = useCallback(
+		() => new Promise<void>((done) => setTimeout(done, slow ? SLOW_MS : 0)),
+		[slow]
+	);
 	const [data, setData] = useState<HomeData | null>(null);
 	const [ideas, setIdeas] = useState<Idea[] | null>(null);
 
@@ -74,7 +87,7 @@ export default function Home() {
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
-			Promise.all([getHome(), getProfile()]).then(([home, profile]) => {
+			Promise.all([getHome(), getProfile(), lag()]).then(([home, profile]) => {
 				if (live) {
 					setData({
 						hasStories: home.keepGoing.length + home.finished.length > 0,
@@ -85,16 +98,16 @@ export default function Home() {
 			return () => {
 				live = false;
 			};
-		}, [first])
+		}, [first, lag])
 	);
 
 	useEffect(() => {
 		let live = true;
-		getIdeas().then((list) => live && setIdeas(list));
+		Promise.all([getIdeas(), lag()]).then(([list]) => live && setIdeas(list));
 		return () => {
 			live = false;
 		};
-	}, []);
+	}, [lag]);
 
 	const ask = (question: string) =>
 		router.push({ params: { question }, pathname: "/making" });
@@ -114,20 +127,36 @@ export default function Home() {
 					avatar
 					take="wave"
 					takeRun={run}
-					title={data ? `Hi ${data.name}!` : ""}
+					title={data ? `Hi ${data.name}!` : null}
 				/>
 			}
 		>
-			<ClayText
-				accessibilityRole="header"
-				align="center"
-				color={colors.cream}
-				numberOfLines={TITLE_LINES}
-				style={styles.title}
-				variant="headline"
-			>
-				{data ? `What shall we explore, ${data.name}?` : ""}
-			</ClayText>
+			{data ? (
+				<ClayText
+					accessibilityRole="header"
+					align="center"
+					color={colors.cream}
+					numberOfLines={TITLE_LINES}
+					style={styles.title}
+					variant="headline"
+				>
+					{`What shall we explore, ${data.name}?`}
+				</ClayText>
+			) : (
+				<View style={styles.title}>
+					{TITLE_BAR_WIDTHS.map((width) => (
+						<View key={width} style={styles.titleLine}>
+							<Skeleton
+								style={{
+									borderRadius: TITLE_BAR_HEIGHT / 2,
+									height: TITLE_BAR_HEIGHT,
+									width,
+								}}
+							/>
+						</View>
+					))}
+				</View>
+			)}
 			<View style={{ marginTop: HERO_GAP }}>
 				<Pulse delay={HERO_PULSE_DELAY} play={run}>
 					{micOff ? (
@@ -166,7 +195,7 @@ export default function Home() {
 								title={idea.question}
 							/>
 						))
-					: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
+					: [0, 1, 2].map((n) => <Skeleton key={n} style={styles.skeleton} />)}
 			</StoryShelf>
 		</Screen>
 	);
@@ -175,7 +204,7 @@ export default function Home() {
 // The dock button shows once we know the child has stories. Same-size flat bar while loading.
 function dockFor(data: HomeData | null, onPress: () => void) {
 	if (data === null) {
-		return <View style={styles.dockSkeleton} />;
+		return <Skeleton style={styles.dockSkeleton} />;
 	}
 	return data.hasStories ? (
 		<SecondaryButton label="Continue past stories" onPress={onPress} />
@@ -184,10 +213,8 @@ function dockFor(data: HomeData | null, onPress: () => void) {
 
 const styles = StyleSheet.create({
 	dockSkeleton: {
-		backgroundColor: colors.sand,
 		borderRadius: layout.secondaryHeight / 2,
 		height: layout.secondaryHeight,
-		opacity: SKELETON_FADE,
 	},
 	label: { marginLeft: LABEL_INSET, marginTop: LABEL_GAP },
 	micMsg: {
@@ -197,10 +224,8 @@ const styles = StyleSheet.create({
 	},
 	shelf: { marginTop: SHELF_GAP },
 	skeleton: {
-		backgroundColor: colors.sand,
 		borderRadius: storyCover.radius,
 		height: storyCover.shelf.height,
-		opacity: SKELETON_FADE,
 		width: storyCover.shelf.width,
 	},
 	title: {
@@ -208,5 +233,10 @@ const styles = StyleSheet.create({
 		lineHeight: TITLE_LINE,
 		marginTop: TITLE_GAP,
 		minHeight: TITLE_LINE * TITLE_LINES,
+	},
+	titleLine: {
+		alignItems: "center",
+		height: TITLE_LINE,
+		justifyContent: "center",
 	},
 });
