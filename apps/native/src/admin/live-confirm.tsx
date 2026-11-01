@@ -13,26 +13,21 @@ import {
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { EngineSteps } from "@/src/data/engine-client";
-import { stepsLine } from "./steps-line";
-
 /** The engine's spend cap per adventure, shown so the admin knows the worst case. */
 const SPEND_CAP_USD = 11;
 
 /**
- * Asked before an admin with live adventures on starts one: it spends real credits. The admin
- * picks live, or the recorded adventure for this one. Drawn inside the app, over the screen.
+ * Asked before an admin starts an adventure with the video clips switch on: video is the costly
+ * step. The admin starts with video, or turns video off and starts. Drawn inside the app.
  */
-export function LiveConfirm({
+export function VideoConfirm({
 	onCancel,
-	onLive,
-	onRecorded,
-	steps,
+	onNoVideo,
+	onVideo,
 }: {
 	onCancel: () => void;
-	onLive: () => void;
-	onRecorded: () => void;
-	steps: EngineSteps;
+	onNoVideo: () => void;
+	onVideo: () => void;
 }) {
 	const insets = useSafeAreaInsets();
 	return (
@@ -52,15 +47,15 @@ export function LiveConfirm({
 				<ClaySurface radius={radii.card} tone="field">
 					<View style={styles.sheet}>
 						<ClayText accessibilityRole="header" variant="title">
-							Start a live adventure?
+							Make video clips?
 						</ClayText>
 						<ClayText style={styles.note} variant="body">
-							{`Live adventures are on, so this one spends real credits, up to $${SPEND_CAP_USD}. ${stepsLine(steps)}`}
+							{`Video clips are on. They are the costly part: this adventure can spend up to $${SPEND_CAP_USD}.`}
 						</ClayText>
-						<PrimaryButton label="Start live" onPress={onLive} />
+						<PrimaryButton label="Start with video" onPress={onVideo} />
 						<SecondaryButton
-							label="Use the recorded one"
-							onPress={onRecorded}
+							label="Turn video off and start"
+							onPress={onNoVideo}
 						/>
 					</View>
 				</ClaySurface>

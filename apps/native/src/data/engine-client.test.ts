@@ -76,7 +76,7 @@ describe("engine client", () => {
 		expect(requests[2].init?.method).toBe("POST");
 	});
 
-	test("getMe reads the account and setLive puts the switch", async () => {
+	test("getMe reads the account", async () => {
 		const me = {
 			email: "a@b.c",
 			id: "u1",
@@ -84,12 +84,9 @@ describe("engine client", () => {
 			live: false,
 			steps: { pictures: true, story: true, video: false, voice: true },
 		};
-		const { client, requests } = engine(json(me), json({ live: true }));
+		const { client, requests } = engine(json(me));
 		expect(await client.getMe()).toEqual(me);
-		expect(await client.setLive(true)).toEqual({ live: true });
-		expect(requests.map((r) => r.path)).toEqual(["/me", "/me/live"]);
-		expect(requests[1].init?.method).toBe("PUT");
-		expect(JSON.parse(String(requests[1].init?.body))).toEqual({ on: true });
+		expect(requests.map((r) => r.path)).toEqual(["/me"]);
 	});
 
 	test("setSteps puts a partial body and answers the four steps", async () => {
@@ -101,13 +98,13 @@ describe("engine client", () => {
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({ video: true });
 	});
 
-	test("setLive by a non-admin is an EngineError 403", async () => {
+	test("setSteps by a non-admin is an EngineError 403", async () => {
 		const { client } = engine(
 			json({ code: "FORBIDDEN", message: "Admins only" }, 403)
 		);
 		let caught: unknown;
 		try {
-			await client.setLive(true);
+			await client.setSteps({ video: true });
 		} catch (error) {
 			caught = error;
 		}

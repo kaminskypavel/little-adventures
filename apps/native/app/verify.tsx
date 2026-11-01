@@ -5,12 +5,14 @@ import {
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { LiveConfirm } from "@/src/admin/live-confirm";
+import { VideoConfirm } from "@/src/admin/live-confirm";
 import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
+import { setStepsOptions } from "@/src/data/engine-queries";
 import { getShortSpokenQuestion } from "@/src/data/spoken-question";
 
 // Round 7 09b at 0.72 scale (px / 0.72). The star is centered.
@@ -31,11 +33,13 @@ export default function Verify() {
 	// short version is back, so the card has its words at once.
 	const [short] = useState(getShortSpokenQuestion);
 	const me = useMe();
+	const client = useQueryClient();
+	const steps = useMutation(setStepsOptions(client));
 	const [confirming, setConfirming] = useState(false);
-	// A live adventure spends real credits: an admin with live on chooses first.
-	const asksFirst = isAdminMe(me) && me?.live === true;
-	const start = () =>
-		asksFirst ? setConfirming(true) : router.replace("/making");
+	// Video is the costly step: an admin with video clips on chooses first.
+	const asksFirst = isAdminMe(me) && me?.steps.video === true;
+	const go = () => router.replace("/making");
+	const start = () => (asksFirst ? setConfirming(true) : go());
 
 	useEffect(() => {
 		if (!short) {
@@ -77,14 +81,12 @@ export default function Verify() {
 					</Text>
 				</View>
 			</Screen>
-			{confirming && me ? (
-				<LiveConfirm
+			{confirming ? (
+				<VideoConfirm
 					onCancel={() => setConfirming(false)}
-					onLive={() => router.replace("/making")}
-					onRecorded={() =>
-						router.replace({ params: { recorded: "1" }, pathname: "/making" })
-					}
-					steps={me.steps}
+					// The engine reads the switches when the adventure starts, so wait for the save.
+					onNoVideo={() => steps.mutate({ video: false }, { onSuccess: go })}
+					onVideo={go}
 				/>
 			) : null}
 		</View>

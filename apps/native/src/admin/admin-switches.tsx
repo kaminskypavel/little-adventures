@@ -11,7 +11,7 @@ import {
 	spacing,
 } from "@little-adventures/native-ui/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import {
@@ -19,12 +19,12 @@ import {
 	useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import type { EngineMe } from "@/src/data/engine-client";
-import { setLiveOptions, setStepsOptions } from "@/src/data/engine-queries";
+import { setStepsOptions } from "@/src/data/engine-queries";
 import { AdminOnly } from "./admin-only";
 import { useAdminPanel } from "./admin-panel-store";
 import { useMe } from "./use-me";
 
-type Key = "live" | "pictures" | "story" | "video" | "voice";
+type Key = "pictures" | "story" | "video" | "voice";
 type Values = Record<Key, boolean>;
 
 const BUTTON = 40;
@@ -34,11 +34,6 @@ const EDGE_BOTTOM = 8;
 const easeOut = cubicBezier(...motion.easeOut);
 
 const ROWS: { key: Key; note: string; title: string }[] = [
-	{
-		key: "live",
-		note: "Off: everyone gets the recorded adventure",
-		title: "Live adventures",
-	},
 	{
 		key: "story",
 		note: "Off: the recorded adventure",
@@ -53,7 +48,7 @@ const ROWS: { key: Key; note: string; title: string }[] = [
 	},
 ];
 
-const fromMe = (me: EngineMe): Values => ({ live: me.live, ...me.steps });
+const fromMe = (me: EngineMe): Values => me.steps;
 
 /** Floating round admin button, mounted once in the root layout inside the app field. Admins only. */
 export function AdminButton() {
@@ -158,22 +153,16 @@ function Overlay() {
 function Sheet({ onClose }: { onClose: () => void }) {
 	const me = useMe();
 	const client = useQueryClient();
-	const live = useMutation(setLiveOptions(client));
 	const steps = useMutation(setStepsOptions(client));
 	const { height } = useSafeAreaFrame();
 	const [failed, setFailed] = useState<Key | null>(null);
 	const current = me ? fromMe(me) : null;
-	const saving = live.isPending || steps.isPending;
+	const saving = steps.isPending;
 
 	// The cache is updated at once and rolled back on error (see engine-queries.ts).
 	const toggle = (key: Key, next: boolean) => {
 		setFailed(null);
-		const onError = () => setFailed(key);
-		if (key === "live") {
-			live.mutate(next, { onError });
-		} else {
-			steps.mutate({ [key]: next }, { onError });
-		}
+		steps.mutate({ [key]: next }, { onError: () => setFailed(key) });
 	};
 
 	return (
@@ -188,41 +177,34 @@ function Sheet({ onClose }: { onClose: () => void }) {
 					style={{ maxHeight: height * 0.5 }}
 				>
 					{ROWS.map(({ key, note, title }) => (
-						<Fragment key={key}>
-							{key === "story" ? (
+						<View key={key} style={styles.row}>
+							<View style={styles.text}>
+								<ClayText variant="label">{title}</ClayText>
 								<ClayText style={styles.note} variant="body">
-									Used when live adventures are on
+									{note}
 								</ClayText>
-							) : null}
-							<View style={styles.row}>
-								<View style={styles.text}>
-									<ClayText variant="label">{title}</ClayText>
-									<ClayText style={styles.note} variant="body">
-										{note}
+								{failed === key ? (
+									<ClayText
+										accessibilityLiveRegion="polite"
+										role="alert"
+										variant="fieldError"
+									>
+										Could not change it. Try again.
 									</ClayText>
-									{failed === key ? (
-										<ClayText
-											accessibilityLiveRegion="polite"
-											role="alert"
-											variant="fieldError"
-										>
-											Could not change it. Try again.
-										</ClayText>
-									) : null}
-								</View>
-								<Switch
-									accessibilityLabel={title}
-									disabled={saving || !current}
-									onValueChange={(next) => toggle(key, next)}
-									thumbColor={colors.star}
-									trackColor={{
-										false: colors.toggleOff,
-										true: colors.deepNavy,
-									}}
-									value={current?.[key] ?? false}
-								/>
+								) : null}
 							</View>
-						</Fragment>
+							<Switch
+								accessibilityLabel={title}
+								disabled={saving || !current}
+								onValueChange={(next) => toggle(key, next)}
+								thumbColor={colors.star}
+								trackColor={{
+									false: colors.toggleOff,
+									true: colors.deepNavy,
+								}}
+								value={current?.[key] ?? false}
+							/>
+						</View>
 					))}
 				</ScrollView>
 				<SecondaryButton label="Close" onPress={onClose} />

@@ -129,13 +129,6 @@ export function createEngineClient(engineFetch: EngineFetch) {
 		getMe: () => call<EngineMe>("/me"),
 		listAdventures: async () =>
 			(await call<{ items: EngineSummary[] }>("/adventures")).items,
-		/** Admins only: the engine answers 403 for anyone else. */
-		setLive: (on: boolean) =>
-			call<{ live: boolean }>("/me/live", {
-				body: JSON.stringify({ on }),
-				headers: { "content-type": "application/json" },
-				method: "PUT",
-			}),
 		/** Admins only: sets some of the steps; the engine answers all four. */
 		setSteps: (steps: Partial<EngineSteps>) =>
 			call<{ steps: EngineSteps }>("/me/steps", {

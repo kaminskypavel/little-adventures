@@ -49,14 +49,6 @@ export const usesEngine = engine !== null;
 /** The engine's view of the signed-in account; null in the bundled sample mode. */
 export const getMe = () => (engine ? engine.getMe() : Promise.resolve(null));
 
-/** Admin switch for real adventures. Only called when the engine said the account is an admin. */
-export const setLive = (on: boolean) => {
-	if (!engine) {
-		throw new Error("No engine");
-	}
-	return engine.setLive(on);
-};
-
 /** Admin switches for the paid steps. Only called when the engine said the account is an admin. */
 export const setSteps = (steps: Partial<EngineSteps>) => {
 	if (!engine) {

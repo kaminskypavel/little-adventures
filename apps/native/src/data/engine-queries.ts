@@ -5,7 +5,7 @@ import {
 	type QueryClient,
 	queryOptions,
 } from "@tanstack/react-query";
-import { getMe, setLive, setSteps } from "./adventure-client";
+import { getMe, setSteps } from "./adventure-client";
 import type { EngineMe, EngineSteps } from "./engine-client";
 import { optimisticSet, rollback, type Snapshot } from "./optimistic";
 
@@ -25,18 +25,7 @@ export const meOptions = () =>
 const settle = (client: QueryClient) => () =>
 	client.invalidateQueries({ queryKey: engineKeys.me });
 
-/** Admin switch for real adventures: the cache shows the new value at once, rolls back on error. */
-export const setLiveOptions = (client: QueryClient) =>
-	mutationOptions({
-		mutationFn: (on: boolean) => setLive(on),
-		onError: (_error, _on, snapshot?: Snapshot<Me>) =>
-			rollback(client, engineKeys.me, snapshot),
-		onMutate: (on) =>
-			optimisticSet<Me>(client, engineKeys.me, (me) => ({ ...me, live: on })),
-		onSettled: settle(client),
-	});
-
-/** Admin switches for the paid steps, same optimistic rule. */
+/** Admin switches for the paid steps: the cache shows the new value at once, rolls back on error. */
 export const setStepsOptions = (client: QueryClient) =>
 	mutationOptions({
 		mutationFn: (steps: Partial<EngineSteps>) => setSteps(steps),
