@@ -193,9 +193,42 @@ const OBJECT_MARGIN = 0.04;
 const BACKDROP_MIN_LIGHT = 150;
 const BACKDROP_MAX_TINT = 18;
 
-const isBackdrop = (r: number, g: number, b: number) =>
+// With SAM guarding the object, a warmer backdrop (a lit floor or glow under it) goes too.
+const GUARDED_MAX_TINT = 64;
+const isBackdrop = (r: number, g: number, b: number, maxTint: number) =>
 	Math.min(r, g, b) >= BACKDROP_MIN_LIGHT &&
-	Math.max(r, g, b) - Math.min(r, g, b) <= BACKDROP_MAX_TINT;
+	Math.max(r, g, b) - Math.min(r, g, b) <= maxTint;
+
+/** One flag per image pixel: 1 inside the object's mask (holes closed), stretched over its box. */
+export function objectPixels(
+	found: Found,
+	width: number,
+	height: number
+): Uint8Array {
+	const { box, maskHeight, maskWidth } = found;
+	const mask = fillHoles(found.mask, maskWidth, maskHeight);
+	const kept = new Uint8Array(width * height);
+	const x1 = Math.max(0, Math.round(box.x1));
+	const y1 = Math.max(0, Math.round(box.y1));
+	const x2 = Math.min(width, Math.round(box.x2));
+	const y2 = Math.min(height, Math.round(box.y2));
+	const boxWidth = Math.max(1, x2 - x1);
+	const boxHeight = Math.max(1, y2 - y1);
+	for (let y = y1; y < y2; y += 1) {
+		const my = Math.min(
+			maskHeight - 1,
+			Math.floor(((y - y1) * maskHeight) / boxHeight)
+		);
+		for (let x = x1; x < x2; x += 1) {
+			const mx = Math.min(
+				maskWidth - 1,
+				Math.floor(((x - x1) * maskWidth) / boxWidth)
+			);
+			kept[y * width + x] = mask[my * maskWidth + mx] ?? 0;
+		}
+	}
+	return kept;
+}
 
 /**
  * An object drawn on a plain light backdrop, with the backdrop (and its soft
@@ -203,12 +236,19 @@ const isBackdrop = (r: number, g: number, b: number) =>
  * small margin. Only backdrop pixels connected to the picture's edge are
  * cleared, so light parts inside the object stay.
  */
-export async function backgroundCutout(image: Uint8Array): Promise<Uint8Array> {
+export async function backgroundCutout(
+	image: Uint8Array,
+	object: Found | null = null
+): Promise<Uint8Array> {
 	const { data, info } = await sharp(image)
 		.ensureAlpha()
 		.raw()
 		.toBuffer({ resolveWithObject: true });
 	const { height, width } = info;
+	// SAM's object, holes closed: its pixels stay even when they are as light as the backdrop
+	// (a white plane on a white backdrop).
+	const kept = object ? objectPixels(object, width, height) : null;
+	const maxTint = kept ? GUARDED_MAX_TINT : BACKDROP_MAX_TINT;
 	const clear = new Uint8Array(width * height);
 	const stack: number[] = [];
 	const visit = (x: number, y: number) => {
@@ -216,7 +256,8 @@ export async function backgroundCutout(image: Uint8Array): Promise<Uint8Array> {
 		const o = i * 4;
 		if (
 			clear[i] === 0 &&
-			isBackdrop(data[o] ?? 0, data[o + 1] ?? 0, data[o + 2] ?? 0)
+			kept?.[i] !== 1 &&
+			isBackdrop(data[o] ?? 0, data[o + 1] ?? 0, data[o + 2] ?? 0, maxTint)
 		) {
 			clear[i] = 1;
 			stack.push(i);

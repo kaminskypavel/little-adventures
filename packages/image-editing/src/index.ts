@@ -212,6 +212,20 @@ export function createImageEditing(config: ImageEditingConfig) {
 	return {
 		edit,
 
+		/**
+		 * The largest match for `prompt`, a short noun like "plane", or null when SAM finds none.
+		 * `track` wraps the request (the caller records its cost).
+		 */
+		async findObject(
+			imageUrl: string,
+			prompt: string,
+			track: Track = (call) => call()
+		): Promise<Found | null> {
+			const found = await track(() => findMasks(imageUrl, prompt));
+			const [largest] = found.sort((a, b) => b.area - a.area);
+			return largest ?? null;
+		},
+
 		/** Plain text-to-image at the given size. */
 		generate(input: {
 			prompt: string;

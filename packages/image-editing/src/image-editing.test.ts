@@ -132,6 +132,33 @@ describe("backgroundCutout", () => {
 		expect(alphaAt(54, 54)).toBe(255);
 		expect(alphaAt(1, 1)).toBe(0);
 	});
+
+	test("keeps an object as light as the backdrop where SAM found it", async () => {
+		// All white: without SAM nothing would be left. SAM says the middle 100x100 is the object.
+		const image = await sharp({
+			create: {
+				background: { b: 255, g: 255, r: 255 },
+				channels: 3,
+				height: 200,
+				width: 200,
+			},
+		})
+			.png()
+			.toBuffer();
+		const object = {
+			box: { x1: 50, x2: 150, y1: 50, y2: 150 },
+			mask: Uint8Array.from([1]),
+			maskHeight: 1,
+			maskWidth: 1,
+		};
+		const png = await backgroundCutout(new Uint8Array(image), object);
+		const { data, info } = await sharp(png)
+			.raw()
+			.toBuffer({ resolveWithObject: true });
+		expect([info.width, info.height]).toEqual([108, 108]);
+		expect(data[(54 * info.width + 54) * info.channels + 3]).toBe(255);
+		expect(data[(1 * info.width + 1) * info.channels + 3]).toBe(0);
+	});
 });
 
 describe("muse image calls", () => {
