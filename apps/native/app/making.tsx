@@ -157,6 +157,7 @@ function useWaitProgress() {
 
 /** What the first stage says, by the chosen style. */
 const FIRST_STAGE: Record<Style, string> = {
+	animated: "Lighting the scene",
 	clay: "Mixing the clay",
 	felt: "Stitching the felt",
 	wood: "Carving the wood",

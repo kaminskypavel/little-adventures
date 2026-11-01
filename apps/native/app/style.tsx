@@ -1,18 +1,32 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
+import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { LookTile } from "@little-adventures/native-ui/look-tile";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { select } from "@little-adventures/native-ui/tokens";
+import { ToggleCard } from "@little-adventures/native-ui/toggle-card";
+import { colors, select } from "@little-adventures/native-ui/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { VideoConfirm } from "@/src/admin/live-confirm";
 import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
 import type { Style } from "@/src/data/engine-client";
 import { setStepsOptions } from "@/src/data/engine-queries";
+import {
+	grownUpOptions,
+	useChild,
+	useGrownUpPhoto,
+	useSaveProfile,
+} from "@/src/data/profile-queries";
+import type { Profile } from "@/src/data/types";
 
 const looks: { label: string; picture: number; style: Style }[] = [
+	{
+		label: "3D movie",
+		picture: require("../assets/styles/animated.jpg"),
+		style: "animated",
+	},
 	{
 		label: "Clay",
 		picture: require("../assets/styles/clay.jpg"),
@@ -30,6 +44,57 @@ const looks: { label: string; picture: number; style: Style }[] = [
 	},
 ];
 
+/** Who comes along: the grown-up or the puppy, exactly one (as on the coming screen). */
+function Companion({ profile }: { profile: Profile }) {
+	const router = useRouter();
+	const client = useQueryClient();
+	const saveProfile = useSaveProfile();
+	// A photo just replaced shows on return.
+	const { data: photo } = useGrownUpPhoto();
+	const photoUri = photo ? (photo.faceUrl ?? photo.photoUrl) : null;
+
+	const pickYou = async () => {
+		// The photo is mandatory for You: without one, the photo step saves the choice.
+		if (await client.fetchQuery(grownUpOptions())) {
+			await saveProfile({ grownUp: true, puppy: false });
+		} else {
+			router.push("/grownup-photo");
+		}
+	};
+
+	return (
+		<>
+			<ToggleCard
+				avatar="you"
+				on={profile.grownUp}
+				onPress={pickYou}
+				photo={{
+					label: photoUri ? "Change your photo" : "Add your photo",
+					onPress: () =>
+						router.push({
+							params: { replace: "1" },
+							pathname: "/grownup-photo",
+						}),
+					uri: photoUri,
+				}}
+				subtitle={
+					photoUri
+						? "Tap your photo to change"
+						: "Tap the circle to add a photo"
+				}
+				title="You"
+			/>
+			<ToggleCard
+				avatar="puppy"
+				on={profile.puppy && !profile.grownUp}
+				onPress={() => saveProfile({ grownUp: false, puppy: true })}
+				subtitle="Best friend"
+				title="Puppy"
+			/>
+		</>
+	);
+}
+
 /** Before an adventure starts: how should it be drawn. Reached from the check screen and Home's ideas. */
 export default function StylePicker() {
 	const router = useRouter();
@@ -38,9 +103,10 @@ export default function StylePicker() {
 	const me = useMe();
 	const client = useQueryClient();
 	const steps = useMutation(setStepsOptions(client));
-	const [picked, setPicked] = useState<Style>("clay");
+	const [picked, setPicked] = useState<Style>("animated");
 	const [confirming, setConfirming] = useState(false);
 	// Video is the costly step: an admin with video clips on chooses first.
+	const { data: child } = useChild();
 	const asksFirst = isAdminMe(me) && me?.steps.video === true;
 	const go = () =>
 		router.replace({
@@ -54,20 +120,32 @@ export default function StylePicker() {
 			<Screen
 				bodyStyle={styles.body}
 				dock={<PrimaryButton label="Start" onPress={start} />}
-				title={"How\nshould it look?"}
+				title={"Get\nready"}
 			>
-				<View style={styles.row}>
-					{looks.map(({ label, picture, style }) => (
-						<LookTile
-							key={style}
-							label={label}
-							onPress={() => setPicked(style)}
-							picture={picture}
-							selected={picked === style}
-							style={styles.flex}
-						/>
-					))}
-				</View>
+				<ScrollView
+					contentContainerStyle={styles.content}
+					showsVerticalScrollIndicator={false}
+				>
+					<ClayText color={colors.cream} style={styles.label} variant="label">
+						Style
+					</ClayText>
+					<View style={styles.row}>
+						{looks.map(({ label, picture, style }) => (
+							<LookTile
+								key={style}
+								label={label}
+								onPress={() => setPicked(style)}
+								picture={picture}
+								selected={picked === style}
+								style={styles.tile}
+							/>
+						))}
+					</View>
+					<ClayText color={colors.cream} style={styles.label} variant="label">
+						{"Who's coming?"}
+					</ClayText>
+					{child ? <Companion profile={child.profile} /> : null}
+				</ScrollView>
 			</Screen>
 			{confirming ? (
 				<VideoConfirm
@@ -82,8 +160,11 @@ export default function StylePicker() {
 }
 
 const styles = StyleSheet.create({
-	body: { paddingTop: 34 },
-	flex: { flex: 1 },
+	body: { paddingTop: 20 },
+	content: { gap: 12, paddingBottom: 12 },
+	label: { marginTop: 6, opacity: 0.92 },
 	root: { flex: 1 },
-	row: { flexDirection: "row", gap: select.lookRowGap },
+	row: { flexDirection: "row", flexWrap: "wrap", gap: select.lookRowGap },
+	// Two across: 45% each wraps the third tile, and grow fills the row.
+	tile: { flexBasis: "45%", flexGrow: 1 },
 });

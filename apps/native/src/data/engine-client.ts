@@ -2,7 +2,7 @@
 // values are tolerated, so statuses are plain strings here.
 
 /** How an adventure is drawn. The engine defaults to clay. */
-export type Style = "clay" | "felt" | "wood";
+export type Style = "animated" | "clay" | "felt" | "wood";
 
 /** A stored file: `id` is its storage key (cache by it), `url` is presigned for 2 hours. */
 export interface EngineMedia {
