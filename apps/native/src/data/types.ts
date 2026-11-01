@@ -76,7 +76,7 @@ export type MakeStatus =
 	| { goalName?: string; state: "ready" }
 	| { state: "failed" };
 
-export type Look = "clay" | "felt" | "wood";
+export type Look = "clay";
 /** State of the child's drawn art: idle (none started), working, ready or failed. */
 export type ArtStatus = "idle" | "working" | "ready" | "failed";
 export interface Profile {

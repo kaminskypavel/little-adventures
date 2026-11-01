@@ -28,7 +28,6 @@ import type {
 	Adventure,
 	AdventureSummary,
 	Idea,
-	Look,
 	MakeStatus,
 	NodeId,
 	Profile,
@@ -168,10 +167,13 @@ export const getLatestAdventure =
 		return list[0] ?? null;
 	};
 
-/** The picture drawn of the child in the look they picked; null until one is drawn. */
+/**
+ * The clay picture drawn of the child; null until one is drawn. Never indexed by the saved
+ * look: a child saved earlier may still say "felt", and only the clay drawing is made now.
+ */
 export const getAvatarUrl = async (): Promise<string | null> => {
 	const [row] = await trpc.child.mine.query();
-	return row?.drawingUrls[row.look as Look] ?? null;
+	return row?.drawingUrls.clay ?? null;
 };
 
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
@@ -317,7 +319,8 @@ async function loadChild(): Promise<{ id?: string; profile: Profile }> {
 			faceUrl: row.faceUrl ?? undefined,
 			grownUp: row.grownUp,
 			hasPhoto: row.photoKey !== null,
-			look: row.look as Look,
+			// A child saved earlier may still say "felt"; only clay is drawn now.
+			look: "clay",
 			photoKey: row.photoKey ?? undefined,
 			puppy: row.puppy,
 		},

@@ -1,6 +1,9 @@
 // The engine's player API, as the app uses it. Objects and enums are open: unknown fields and
 // values are tolerated, so statuses are plain strings here.
 
+/** The one art style the app asks for, for now. The engine defaults to it too. */
+const STYLE = "clay";
+
 /** A stored file: `id` is its storage key (cache by it), `url` is presigned for 2 hours. */
 export interface EngineMedia {
 	id: string;
@@ -103,7 +106,7 @@ export function createEngineClient(engineFetch: EngineFetch) {
 	return {
 		createAdventure: (childId: string, question: string) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
-				body: JSON.stringify({ childId, question }),
+				body: JSON.stringify({ childId, question, style: STYLE }),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),

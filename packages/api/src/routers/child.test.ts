@@ -276,7 +276,7 @@ describe("child art", () => {
 		beforeSegment = null;
 	});
 
-	test("a new photo draws the face and three looks after the response", async () => {
+	test("a new photo draws the face and the clay look after the response", async () => {
 		const saved = await callerFor("u1").child.save({
 			...noah,
 			photoKey: photo,
@@ -288,20 +288,14 @@ describe("child art", () => {
 		expect(child?.faceUrl).toBe(
 			`https://files.test/${folder}${saved.id}/art/a/face.png`
 		);
-		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([
-			"clay",
-			"felt",
-			"wood",
-		]);
-		expect(put).toHaveLength(4);
+		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual(["clay"]);
+		expect(put).toHaveLength(2);
 		// The child's photo cuts out the child, whoever else is in it.
 		expect(segmentRoles).toEqual(["child"]);
 		const calls = await db.select().from(aiCalls);
 		expect(calls.map((call) => call.operation).sort()).toEqual([
 			"face.segment",
 			"look.clay",
-			"look.felt",
-			"look.wood",
 		]);
 		expect(calls.every((call) => call.ok && call.ownerId === "u1")).toBe(true);
 	});
@@ -333,20 +327,17 @@ describe("child art", () => {
 	});
 
 	test("a failed look is recorded, the rest is kept, and the child is failed", async () => {
-		failLook = "felt";
+		failLook = "clay";
 		await callerFor("u1").child.save({ ...noah, photoKey: photo });
 		await settle();
 		const [child] = await callerFor("u1").child.mine();
 		expect(child?.artStatus).toBe("failed");
-		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([
-			"clay",
-			"wood",
-		]);
+		expect(Object.keys(child?.drawingUrls ?? {}).sort()).toEqual([]);
 		expect(child?.faceUrl).not.toBeNull();
 		const calls = await db.select().from(aiCalls);
-		const felt = calls.find((call) => call.operation === "look.felt");
-		expect(felt).toMatchObject({ costMicroUsd: 0, ok: false });
-		expect(felt?.error).toContain("model said no");
+		const clay = calls.find((call) => call.operation === "look.clay");
+		expect(clay).toMatchObject({ costMicroUsd: 0, ok: false });
+		expect(clay?.error).toContain("model said no");
 	});
 
 	test("replacing the photo deletes the old photo object", async () => {
@@ -403,13 +394,7 @@ describe("child art", () => {
 		);
 		const older = `${folder}${first.id}/art/a/`;
 		expect([...new Set(deleted)].sort()).toEqual(
-			[
-				photo,
-				`${older}face.png`,
-				`${older}looks/clay.png`,
-				`${older}looks/felt.png`,
-				`${older}looks/wood.png`,
-			].sort()
+			[photo, `${older}face.png`, `${older}looks/clay.png`].sort()
 		);
 	});
 
@@ -427,13 +412,7 @@ describe("child art", () => {
 		await settle();
 		const older = `${folder}${first.id}/art/a/`;
 		expect(deleted.sort()).toEqual(
-			[
-				photo,
-				`${older}face.png`,
-				`${older}looks/clay.png`,
-				`${older}looks/felt.png`,
-				`${older}looks/wood.png`,
-			].sort()
+			[photo, `${older}face.png`, `${older}looks/clay.png`].sort()
 		);
 	});
 
@@ -479,8 +458,6 @@ describe("child art", () => {
 				photo,
 				`${folder}${saved.id}/art/a/face.png`,
 				`${folder}${saved.id}/art/a/looks/clay.png`,
-				`${folder}${saved.id}/art/a/looks/felt.png`,
-				`${folder}${saved.id}/art/a/looks/wood.png`,
 			].sort()
 		);
 		const [child] = await callerFor("u1").child.mine();
