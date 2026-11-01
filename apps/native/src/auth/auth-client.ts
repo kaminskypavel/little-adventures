@@ -208,39 +208,30 @@ const withBearer = (headers: HeadersInit | undefined, jwt: string | null) => {
 	return next;
 };
 
-/**
- * fetch against our server with the bearer JWT. A 401 mints a fresh JWT once and retries once;
- * if that fails too the session is over and the user is signed out.
- */
-export const authedFetch = (path: string, init: RequestInit = {}) =>
-	withRetryOn401({
-		call: (jwt) =>
-			fetch(`${SERVER}${path}`, {
-				...init,
-				credentials: "include",
-				headers: withBearer(init.headers, jwt),
-			}),
-		getToken,
-		mint,
-		signOut,
-	});
-
-/**
- * The same bearer token and the same 401 rule against another server (the engine), by its base
- * url. The token alone signs the call, so no cookies travel.
- */
-export const authedFetchTo = (base: string) => {
-	const origin = base.replace(TRAILING_SLASH, "");
-	return (path: string, init: RequestInit = {}) =>
+const createAuthedFetch =
+	(origin: string, credentials: RequestCredentials) =>
+	(path: string, init: RequestInit = {}) =>
 		withRetryOn401({
 			call: (jwt) =>
 				fetch(`${origin}${path}`, {
 					...init,
-					credentials: "omit",
+					credentials,
 					headers: withBearer(init.headers, jwt),
 				}),
 			getToken,
 			mint,
 			signOut,
 		});
-};
+
+/**
+ * fetch against our server with the bearer JWT. A 401 mints a fresh JWT once and retries once;
+ * if that fails too the session is over and the user is signed out.
+ */
+export const authedFetch = createAuthedFetch(SERVER, "include");
+
+/**
+ * The same bearer token and the same 401 rule against another server (the engine), by its base
+ * url. The token alone signs the call, so no cookies travel.
+ */
+export const authedFetchTo = (base: string) =>
+	createAuthedFetch(base.replace(TRAILING_SLASH, ""), "omit");

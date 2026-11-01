@@ -32,7 +32,6 @@ const STAR_SIZE = 78;
 const STAR_BOTTOM = 19;
 // Round 7 message lines: 800 at 21 pt.
 const LINE = { fontSize: 21, lineHeight: 26 } as const;
-// Said by the star while the places to choose from are still being drawn.
 const WAITING_LINE = "Still being drawn. One moment.";
 
 interface Card {
@@ -130,11 +129,10 @@ export default function Choice() {
 	const visited = devVisited
 		? (devVisited.split(",") as NodeId[])
 		: progress?.visited;
-	// With the engine, it says when goodnight unlocks; otherwise the map rules do.
-	const lock = devVisited ? undefined : progress?.outroLocked;
+	const engineOutroLock = devVisited ? undefined : progress?.outroLocked;
 	const cards =
 		adventure && visited
-			? cardsOf(adventure, from, visited, lock, devDrawing)
+			? cardsOf(adventure, from, visited, engineOutroLock, devDrawing)
 			: [];
 
 	const goodnight = cards.find((c) => c.goal);
@@ -142,7 +140,6 @@ export default function Choice() {
 	const goodnightOpen = goodnight?.state === "open";
 	const drawing = cards.some((c) => c.state === "drawing");
 	const other = cards.find((c) => c.state === "open");
-	// Nothing to peek at: the places to choose from are all still being drawn.
 	const waiting = drawing && !other;
 
 	useEffect(() => {

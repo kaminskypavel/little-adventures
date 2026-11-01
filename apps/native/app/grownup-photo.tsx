@@ -20,17 +20,14 @@ import {
 	pick,
 	type Source,
 	UPLOAD_FAILED,
-} from "./photo";
+} from "@/src/photo/photo-step";
 
-// The grown-up's own photo, asked for in setup when "You" is on. "replace=1" is the
-// Grown-ups screen replacing a saved photo: it goes back there and has no "Not now".
 export default function GrownUpPhoto() {
 	const router = useRouter();
 	const { replace } = useLocalSearchParams<{ replace?: string }>();
 	const replacing = replace === "1";
 	const [done, setDone] = useState(false);
 	const [note, setNote] = useState<string | null>(null);
-	// Taps are ignored while a photo is on its way, and once it has gone.
 	const busy = useRef<boolean>(false);
 
 	useEffect(() => {
@@ -66,7 +63,6 @@ export default function GrownUpPhoto() {
 		busy.current = false;
 	};
 
-	// No photo: "You" goes off, so live adventures leave the grown-up out until one is added.
 	const skip = async () => {
 		if (busy.current) {
 			return;

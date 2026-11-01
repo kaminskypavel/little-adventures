@@ -98,31 +98,32 @@ export function createImageEditing(config: ImageEditingConfig) {
 		};
 	}
 
-	return {
-		/**
-		 * Edits up to 6 reference images with a prompt at the given size.
-		 * `safetyId` is an opaque, stable id of the grown-up (never an email).
-		 */
-		edit(input: {
-			images: string[];
-			prompt: string;
-			safetyId: string;
-			size: string;
-		}): Promise<MuseImageResult> {
-			if (input.images.length > MAX_REFERENCES) {
-				return Promise.reject(
-					new Error(`Muse Image takes at most ${MAX_REFERENCES} references`)
-				);
-			}
-			return museImage("edits", {
-				// The JSON body wants objects; a bare url string is rejected.
-				images: input.images.map((image_url) => ({ image_url })),
-				prompt: input.prompt,
-				safetyId: input.safetyId,
-				size: input.size,
-			});
-		},
+	/**
+	 * Edits up to 6 reference images with a prompt at the given size.
+	 * `safetyId` is an opaque, stable id of the grown-up (never an email).
+	 */
+	function edit(input: {
+		images: string[];
+		prompt: string;
+		safetyId: string;
+		size: string;
+	}): Promise<MuseImageResult> {
+		if (input.images.length > MAX_REFERENCES) {
+			return Promise.reject(
+				new Error(`Muse Image takes at most ${MAX_REFERENCES} references`)
+			);
+		}
+		return museImage("edits", {
+			// The JSON body wants objects; a bare url string is rejected.
+			images: input.images.map((image_url) => ({ image_url })),
+			prompt: input.prompt,
+			safetyId: input.safetyId,
+			size: input.size,
+		});
+	}
 
+	return {
+		edit,
 		/** Plain text-to-image at the given size. */
 		generate(input: {
 			prompt: string;
@@ -143,7 +144,7 @@ export function createImageEditing(config: ImageEditingConfig) {
 			prompt: string;
 			safetyId: string;
 		}): Promise<Uint8Array> {
-			const { bytes } = await this.edit({
+			const { bytes } = await edit({
 				images: [input.imageUrl],
 				prompt: input.prompt,
 				safetyId: input.safetyId,

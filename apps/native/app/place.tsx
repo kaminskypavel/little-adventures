@@ -306,7 +306,6 @@ function MediaPlayer({
 			fireEnd();
 		}
 	});
-	// Without a clip the narration's end ends the node.
 	useEffect(() => {
 		if (!hasClip && hasNarration && heard.didJustFinish) {
 			fireEnd();
@@ -319,7 +318,6 @@ function MediaPlayer({
 		}
 	}, [clipFailed, narrationFailed, onMediaError]);
 
-	// Start the clip and the narration together, once both can play.
 	const ready =
 		(!hasNarration || heard.isLoaded) &&
 		(!hasClip || clipStatus === "readyToPlay");
@@ -464,7 +462,6 @@ export default function Place() {
 	}
 	const place = adventure.places[node];
 	const audio = place.audio ?? null;
-	// The goodnight plays its own node; without narration it keeps the fixed line on the open goal.
 	const fixedLine = goodnight && audio === null;
 	const words = fixedLine
 		? `And the moon said goodnight, ${childName}.`.split(" ")

@@ -7,6 +7,7 @@ import {
 	createEngineClient,
 	type EngineAdventure,
 	pollAdventure,
+	sleep,
 } from "./engine-client";
 import {
 	initialWait,
@@ -45,7 +46,6 @@ const engine = ENGINE_URL
 	: null;
 type Engine = NonNullable<typeof engine>;
 
-/** True when adventures come from the engine, false when the bundled adventure plays. */
 export const usesEngine = engine !== null;
 
 /** Dev flag for the mock. isFirstHome: getHome returns empty lists (E4). */
@@ -75,10 +75,6 @@ const readProgress = (id: string): Progress => {
 // The engine side. Urls are kept by file, so a fresh read never swaps a file that is playing.
 const knownUrls: KnownUrls = new Map();
 const engineProgress = new Map<string, Progress>();
-const sleep = (ms: number) =>
-	new Promise<void>((resolve) => {
-		setTimeout(resolve, ms);
-	});
 
 const seedProgress = (id: string, raw: EngineAdventure): Progress => {
 	const known = engineProgress.get(id) ?? progressOf(raw);
@@ -98,7 +94,6 @@ async function progressFor(client: Engine, id: string) {
 	);
 }
 
-/** The adventures worth opening: one that failed has nothing to play. */
 async function listEngine(client: Engine): Promise<AdventureSummary[]> {
 	const items = await client.listAdventures();
 	return items
@@ -248,7 +243,6 @@ export const getAdventure = async (id: string): Promise<Adventure> => {
 	return toAdventure(await readEngine(engine, id), knownUrls);
 };
 
-/** Read again for fresh file urls, after one that was handed out has expired. */
 export const reloadAdventure = (id: string): Promise<Adventure> => {
 	knownUrls.clear();
 	return getAdventure(id);
@@ -371,12 +365,10 @@ export const getGrownUpPhoto = async (): Promise<{
 	return row ? { photoUrl: row.photoUrl } : null;
 };
 
-/** Saves the grown-up's uploaded photo; a replaced photo's drawings are removed by the server. */
 export const saveGrownUpPhoto = async (photoKey: string): Promise<void> => {
 	await trpc.grownUp.save.mutate({ photoKey });
 };
 
-/** Deletes the grown-up's photo and everything drawn from it. */
 export const deleteGrownUpPhoto = async (): Promise<void> => {
 	await trpc.grownUp.delete.mutate();
 };

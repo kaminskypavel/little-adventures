@@ -196,7 +196,6 @@ export function artFolder(
 	return `${userPrefix(ownerId)}children/${childId}/art/${photoIdOf(photoKey)}/`;
 }
 
-/** The same folder shape for the grown-up's photo. */
 export const grownUpArtFolder = (ownerId: string, photoKey: string): string =>
 	`${userPrefix(ownerId)}grown-up/art/${photoIdOf(photoKey)}/`;
 

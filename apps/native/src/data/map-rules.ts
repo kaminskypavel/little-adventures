@@ -1,6 +1,6 @@
 import type { NodeId } from "./types";
 
-const PLACES: NodeId[] = ["p1", "p2", "p1a", "p2a"];
+export const PLACES: NodeId[] = ["p1", "p2", "p1a", "p2a"];
 
 const EDGES: Record<NodeId, NodeId[]> = {
 	intro: ["p1", "p2"],

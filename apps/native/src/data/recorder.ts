@@ -8,9 +8,7 @@ import {
 	useAudioRecorder,
 } from "expo-audio";
 import { useCallback, useEffect, useRef } from "react";
-import { MAX_RECORD_MS } from "./voice-rules";
-
-const SAMPLE_RATE = 16_000;
+import { MAX_RECORD_MS, type Recorder, SAMPLE_RATE } from "./voice-rules";
 
 const options: RecordingOptions = {
 	...RecordingPresets.HIGH_QUALITY,
@@ -27,13 +25,6 @@ const options: RecordingOptions = {
 	numberOfChannels: 1,
 	sampleRate: SAMPLE_RATE,
 };
-
-export interface Recorder {
-	/** Starts recording; `onLimit` fires if the child talks to the 30 s limit. */
-	start: (onLimit: () => void) => Promise<void>;
-	/** Stops and returns the WAV file's bytes. */
-	stop: () => Promise<Uint8Array>;
-}
 
 export function useRecorder(): Recorder {
 	const recorder = useAudioRecorder(options);

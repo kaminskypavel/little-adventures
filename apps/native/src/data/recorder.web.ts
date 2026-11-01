@@ -1,15 +1,8 @@
 // The browser's recorder gives webm or mp4. Decoding in an AudioContext made at 16 kHz makes the
 // browser resample, then the audio is mixed to mono and written as WAV.
 import { useCallback, useEffect, useRef } from "react";
-import { MAX_RECORD_MS } from "./voice-rules";
+import { MAX_RECORD_MS, type Recorder, SAMPLE_RATE } from "./voice-rules";
 import { encodeWav, toMono } from "./wav";
-
-const SAMPLE_RATE = 16_000;
-
-export interface Recorder {
-	start: (onLimit: () => void) => Promise<void>;
-	stop: () => Promise<Uint8Array>;
-}
 
 async function toWav(blob: Blob): Promise<Uint8Array> {
 	if (blob.size === 0) {

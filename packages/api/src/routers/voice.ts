@@ -19,14 +19,14 @@ export const voiceRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const audio = new Uint8Array(Buffer.from(input.audioBase64, "base64"));
 			let seconds = 0;
-			let invalid: string | null = null;
 			try {
 				({ seconds } = readWav(audio));
 			} catch (error) {
-				invalid = error instanceof Error ? error.message : "Bad audio";
-			}
-			if (invalid) {
-				throw new TRPCError({ code: "BAD_REQUEST", message: invalid });
+				// biome-ignore lint/style/useErrorCause: the client gets the reason as the message, nothing else
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: error instanceof Error ? error.message : "Bad audio",
+				});
 			}
 			if (seconds > MAX_SECONDS) {
 				throw new TRPCError({

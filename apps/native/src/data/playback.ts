@@ -1,6 +1,5 @@
 import type { Place, WordTiming } from "./types";
 
-/** A node with a clip plays it; one without shows its picture. */
 export const playbackOf = (place: Pick<Place, "video">): "picture" | "video" =>
 	place.video === null ? "picture" : "video";
 

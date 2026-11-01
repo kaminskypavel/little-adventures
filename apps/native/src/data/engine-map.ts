@@ -5,6 +5,7 @@ import type {
 	EngineNode,
 	EngineSummary,
 } from "./engine-client";
+import { PLACES } from "./map-rules";
 import type {
 	Adventure,
 	AdventureSummary,
@@ -16,15 +17,8 @@ import type {
 	Progress,
 } from "./types";
 
-export const NODE_IDS: readonly NodeId[] = [
-	"intro",
-	"p1",
-	"p2",
-	"p1a",
-	"p2a",
-	"outro",
-];
-export const PLACES_TOTAL = 4;
+export const NODE_IDS: readonly NodeId[] = ["intro", ...PLACES, "outro"];
+export const PLACES_TOTAL = PLACES.length;
 
 /** The first url seen for each file (by storage key), so a fresh read never swaps a playing file. */
 export type KnownUrls = Map<string, string>;

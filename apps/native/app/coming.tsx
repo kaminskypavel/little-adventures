@@ -72,7 +72,6 @@ function Coming({ profile }: { profile: Profile }) {
 
 	const next = async () => {
 		await saveProfile({ grownUp, puppy });
-		// "You" without a saved photo of your own asks for one first.
 		router.push(
 			grownUp && !(await getGrownUpPhoto()) ? "/grownup-photo" : "/handover"
 		);

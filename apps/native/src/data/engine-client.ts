@@ -111,6 +111,11 @@ export function createEngineClient(engineFetch: EngineFetch) {
 	};
 }
 
+export const sleep = (ms: number) =>
+	new Promise<void>((resolve) => {
+		setTimeout(resolve, ms);
+	});
+
 /** The wait before the next read when the last one failed. */
 export const POLL_FALLBACK_SEC = 3;
 
@@ -125,7 +130,7 @@ export async function pollAdventure<
 	onFailed,
 	onRead,
 	read,
-	sleep,
+	sleep: pause,
 }: {
 	isLive: () => boolean;
 	onFailed?: () => void;
@@ -155,7 +160,7 @@ export async function pollAdventure<
 		if (next === null || !isLive()) {
 			return;
 		}
-		await sleep(next * 1000);
+		await pause(next * 1000);
 	}
 }
 

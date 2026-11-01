@@ -35,9 +35,7 @@ export default function Listening() {
 	const { start, stop } = useRecorder();
 	const busy = useRef<boolean>(false);
 	const finishRef = useRef<() => void>(() => undefined);
-	// While the question goes to be turned into text the star thinks and the mic waits.
 	const [thinking, setThinking] = useState(false);
-	// A failed call, an empty recording or no words: back to listening, with one calm line.
 	const [missed, setMissed] = useState(false);
 	// The listen take plays once. Dropping to idle for one render and asking for listen again
 	// queues it behind the one that is playing, so the star never stops listening.
@@ -56,7 +54,6 @@ export default function Listening() {
 	const listen = useCallback(async () => {
 		const permission = await askMicPermission();
 		if (!canRecord(permission)) {
-			// Home reads the permission on focus and shows the mic-off state.
 			router.dismissTo("/home");
 			return;
 		}
@@ -90,11 +87,10 @@ export default function Listening() {
 	}, [listen, router, stop]);
 	finishRef.current = finish;
 
-	// Once per visit: a changed callback must never start a second recording.
-	const began = useRef<boolean>(false);
+	const recordingStarted = useRef<boolean>(false);
 	useEffect(() => {
-		if (!began.current) {
-			began.current = true;
+		if (!recordingStarted.current) {
+			recordingStarted.current = true;
 			listen();
 		}
 	}, [listen]);

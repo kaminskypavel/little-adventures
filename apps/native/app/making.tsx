@@ -178,13 +178,11 @@ export default function Making() {
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);
-	// The engine's own word on how far along it is; null goes by the bar (the bundled adventure).
-	const [told, setTold] = useState<number | null>(null);
+	const [engineStage, setEngineStage] = useState<number | null>(null);
 	const [serverReady, setServerReady] = useState(false);
 	const { finish, full, progress, stage } = useWaitProgress();
 
 	const revealed = full && adventure !== null;
-	// The engine's adventure says what it is about; the bundled one keeps the question asked.
 	const shownQuestion = usesEngine
 		? (adventure?.question ?? "")
 		: question || (adventure?.question ?? "");
@@ -222,7 +220,6 @@ export default function Making() {
 				return;
 			}
 			setAdventureId(id);
-			// The status line names the end goal; the wait reports its name as soon as it exists.
 			stop = watchMaking(id, (status) => {
 				if (!live) {
 					return;
@@ -240,7 +237,7 @@ export default function Making() {
 					finish();
 					loadMade(id);
 				} else if (status.stage !== undefined) {
-					setTold(status.stage);
+					setEngineStage(status.stage);
 				}
 			});
 		};
@@ -322,7 +319,7 @@ export default function Making() {
 					show={!revealed}
 					style={[styles.row, { top: STATUS_TOP }]}
 				>
-					<StatusPill text={statusText(told ?? stage, full, noun)} />
+					<StatusPill text={statusText(engineStage ?? stage, full, noun)} />
 				</Fade>
 				<Fade
 					ms={fadeMs}

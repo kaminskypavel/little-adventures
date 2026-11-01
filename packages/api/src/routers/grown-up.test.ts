@@ -14,7 +14,6 @@ import { appRouter } from "./index";
 
 const migrationsDir = join(import.meta.dirname, "../../../db/src/migrations");
 
-// Applies the generated migration files to a fresh in-memory Postgres.
 async function freshDb() {
 	const client = new PGlite();
 	const sql = readdirSync(migrationsDir)
@@ -29,7 +28,6 @@ async function freshDb() {
 
 describe("grownUp", () => {
 	let db: Database;
-	// The bucket: every key currently stored.
 	let objects: Set<string>;
 	const storage = {
 		deleteObject: (key: string) => {

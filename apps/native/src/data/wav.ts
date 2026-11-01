@@ -12,7 +12,6 @@ const writeText = (view: DataView, at: number, value: string) => {
 	}
 };
 
-/** Float samples (-1 to 1) at `sampleRate` as a mono 16-bit PCM WAV. Louder samples clamp. */
 export function encodeWav(
 	samples: Float32Array,
 	sampleRate: number
@@ -56,7 +55,6 @@ export function wavDataSize(wav: Uint8Array): number {
 	return 0;
 }
 
-/** One channel from many, by averaging. */
 export function toMono(channels: Float32Array[]): Float32Array {
 	const [first] = channels;
 	if (!first) {

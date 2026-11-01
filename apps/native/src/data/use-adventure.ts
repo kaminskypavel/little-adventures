@@ -5,13 +5,15 @@ import {
 	reloadAdventure,
 	visit as visitNode,
 } from "./adventure-client";
-import { makeExpiryGuard, pollAdventure } from "./engine-client";
+import { makeExpiryGuard, pollAdventure, sleep } from "./engine-client";
 import type { Adventure, NodeId, Progress } from "./types";
 
-const sleep = (ms: number) =>
-	new Promise<void>((resolve) => {
-		setTimeout(resolve, ms);
-	});
+const keepIfSame =
+	<T>(next: T) =>
+	(prev: T | null): T =>
+		prev !== null && JSON.stringify(prev) === JSON.stringify(next)
+			? prev
+			: next;
 
 /**
  * An adventure and the child's progress. While any place is still being made the adventure is read
@@ -28,8 +30,8 @@ export function useAdventure(id: string) {
 		pollAdventure({
 			isLive: () => live,
 			onRead: (a) => {
-				setAdventure(a);
-				getProgress(id).then((p) => live && setProgress(p));
+				setAdventure(keepIfSame(a));
+				getProgress(id).then((p) => live && setProgress(keepIfSame(p)));
 			},
 			read: () => getAdventure(id),
 			sleep,
