@@ -9,6 +9,12 @@ import { drawGrownUpFace, grownUpArtFolder } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey } from "../photo-key";
 
+const called = z.object({
+	name: z.string().trim().min(1).max(30),
+	pronoun: z.enum(["he", "she"]),
+	relation: z.enum(["mother", "father", "grandmother", "grandfather", "other"]),
+});
+
 const rowOf = async (db: Database, ownerId: string) => {
 	const [row] = await db
 		.select()
@@ -82,6 +88,25 @@ export const grownUpRouter = router({
 				ctx.waitUntil(
 					drawGrownUpFace(ctx, { ownerId, photoKey: input.photoKey })
 				);
+			}
+			return row;
+		}),
+
+	/** What the child calls this grown-up; the photo row must exist. */
+	setCalled: protectedProcedure
+		.input(called)
+		.mutation(async ({ ctx, input }) => {
+			const [row] = await ctx.db
+				.update(grownUps)
+				.set({
+					calledName: input.name,
+					calledPronoun: input.pronoun,
+					calledRelation: input.relation,
+				})
+				.where(eq(grownUps.ownerId, ctx.principal.user.id))
+				.returning();
+			if (!row) {
+				throw new TRPCError({ code: "NOT_FOUND" });
 			}
 			return row;
 		}),

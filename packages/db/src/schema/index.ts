@@ -61,6 +61,14 @@ export const children = littleAdventures.table(
 // The grown-up's own photo, one per sign-in user. `ownerId` is the primary
 // key and carries no foreign key, like `children.ownerId`.
 export const grownUps = littleAdventures.table("grown_ups", {
+	/** The word the child uses for this grown-up ("Papa", "Abba"); null until asked. */
+	calledName: text("called_name"),
+	/** "he" or "she", for the story; null until asked. */
+	calledPronoun: text("called_pronoun", { enum: ["he", "she"] }),
+	/** "mother", "father", "grandmother", "grandfather" or "other"; null until asked. */
+	calledRelation: text("called_relation", {
+		enum: ["mother", "father", "grandmother", "grandfather", "other"],
+	}),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),

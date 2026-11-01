@@ -1,0 +1,104 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4c925b74-3137-4345-b8a3-90379e9f33ee",
+  "prevIds": ["976799e5-5fb2-4915-bfb9-199648f60a02"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "grown_ups",
+        "called_name"
+      ],
+      "writes": [
+        "s|col|little_adventures.grown_ups.called_name",
+        "n|col|little_adventures.grown_ups.called_name",
+        "e|col|little_adventures.grown_ups.called_name"
+      ],
+      "reads": ["n|tbl|little_adventures.grown_ups", "n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "grown_ups",
+        "called_pronoun"
+      ],
+      "writes": [
+        "s|col|little_adventures.grown_ups.called_pronoun",
+        "n|col|little_adventures.grown_ups.called_pronoun",
+        "e|col|little_adventures.grown_ups.called_pronoun"
+      ],
+      "reads": ["n|tbl|little_adventures.grown_ups", "n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "grown_ups",
+        "called_relation"
+      ],
+      "writes": [
+        "s|col|little_adventures.grown_ups.called_relation",
+        "n|col|little_adventures.grown_ups.called_relation",
+        "e|col|little_adventures.grown_ups.called_relation"
+      ],
+      "reads": ["n|tbl|little_adventures.grown_ups", "n|sch|little_adventures"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "grown_ups",
+        "name": "called_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "grown_ups",
+        "name": "called_pronoun",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "grown_ups",
+        "name": "called_relation",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

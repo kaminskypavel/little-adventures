@@ -106,4 +106,49 @@ describe("grownUp", () => {
 			"little-adventures/users/u1/photos/other.jpg",
 		]);
 	});
+
+	const papa = { name: "  Papa ", pronoun: "he", relation: "father" } as const;
+
+	test("setCalled saves the trimmed word, pronoun and relation; mine reads them", async () => {
+		await callerFor("u1").grownUp.save({ photoKey: photoA });
+		await callerFor("u1").grownUp.setCalled(papa);
+		expect(await callerFor("u1").grownUp.mine()).toMatchObject({
+			calledName: "Papa",
+			calledPronoun: "he",
+			calledRelation: "father",
+		});
+	});
+
+	test("setCalled without a photo row is NOT_FOUND, and never touches another user's row", async () => {
+		await callerFor("u2").grownUp.save({
+			photoKey: "little-adventures/users/u2/photos/a.jpg",
+		});
+		const error = await callerFor("u1")
+			.grownUp.setCalled(papa)
+			.catch((e) => e);
+		expect(error.code).toBe("NOT_FOUND");
+		expect((await callerFor("u2").grownUp.mine())?.calledName).toBeNull();
+	});
+
+	test("setCalled rejects an empty or long word", async () => {
+		await callerFor("u1").grownUp.save({ photoKey: photoA });
+		const errors = await Promise.all(
+			["   ", "x".repeat(31)].map((name) =>
+				callerFor("u1")
+					.grownUp.setCalled({ ...papa, name })
+					.catch((e) => e)
+			)
+		);
+		expect(errors.map((e) => e.code)).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	});
+
+	test("replacing the photo keeps the called fields", async () => {
+		await callerFor("u1").grownUp.save({ photoKey: photoA });
+		await callerFor("u1").grownUp.setCalled(papa);
+		await callerFor("u1").grownUp.save({ photoKey: photoB });
+		expect(await callerFor("u1").grownUp.mine()).toMatchObject({
+			calledName: "Papa",
+			photoKey: photoB,
+		});
+	});
 });
