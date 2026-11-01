@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { grownUpArtFolder } from "../art";
+import { drawGrownUpFace, grownUpArtFolder } from "../art";
 import { protectedProcedure, router } from "../index";
 import { ownsKey } from "../photo-key";
 
@@ -42,9 +42,14 @@ export const grownUpRouter = router({
 	/** The caller's grown-up photo with a signed read url, or null. */
 	mine: protectedProcedure.query(async ({ ctx }) => {
 		const row = await rowOf(ctx.db, ctx.principal.user.id);
-		return row
-			? { ...row, photoUrl: await ctx.storage.readUrl(row.photoKey) }
-			: null;
+		if (!row) {
+			return null;
+		}
+		const [photoUrl, faceUrl] = await Promise.all([
+			ctx.storage.readUrl(row.photoKey),
+			row.faceKey ? ctx.storage.readUrl(row.faceKey) : null,
+		]);
+		return { ...row, faceUrl, photoUrl };
 	}),
 
 	save: protectedProcedure
@@ -59,12 +64,17 @@ export const grownUpRouter = router({
 				.insert(grownUps)
 				.values({ ownerId, photoKey: input.photoKey })
 				.onConflictDoUpdate({
-					set: { photoKey: input.photoKey },
+					set: { faceKey: null, photoKey: input.photoKey },
 					target: grownUps.ownerId,
 				})
 				.returning();
 			if (before && before.photoKey !== input.photoKey) {
 				await dropPhoto(ctx.storage, ownerId, before.photoKey);
+			}
+			if (before?.photoKey !== input.photoKey) {
+				ctx.waitUntil(
+					drawGrownUpFace(ctx, { ownerId, photoKey: input.photoKey })
+				);
 			}
 			return row;
 		}),

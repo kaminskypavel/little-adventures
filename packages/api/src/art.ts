@@ -1,6 +1,7 @@
 import {
 	children as childrenTable,
 	type Drawings,
+	grownUps,
 } from "@little-adventures/db/schema/index";
 import {
 	MODELS,
@@ -184,6 +185,56 @@ export function artFolder(
 
 export const grownUpArtFolder = (ownerId: string, photoKey: string): string =>
 	`${userPrefix(ownerId)}grown-up/art/${photoIdOf(photoKey)}/`;
+
+/**
+ * Cuts the grown-up's face out of their photo, in the background, so the app
+ * can show only their face. The photo may show the grown-up with the child,
+ * so the cut-out asks for the grown-up. The row write is guarded by `photo_key`:
+ * a newer photo never gets an older photo's face.
+ */
+export async function drawGrownUpFace(
+	ctx: ArtContext,
+	{ ownerId, photoKey }: { ownerId: string; photoKey: string }
+): Promise<void> {
+	const { art, db, storage } = ctx;
+	if (!art.isConfigured) {
+		return;
+	}
+	const photoUrl = await storage.readUrl(photoKey);
+	const [found, photo] = await Promise.all([
+		art.segment(photoUrl, "grown-up", (call) =>
+			recordAiCall(
+				db,
+				{
+					costMicroUsd: SAM_COST_MICRO_USD,
+					model: MODELS.segment,
+					operation: "grown-up.face.segment",
+					ownerId,
+				},
+				call
+			)
+		),
+		fetchBytes(photoUrl),
+	]);
+	if (!found) {
+		return;
+	}
+	const key = `${grownUpArtFolder(ownerId, photoKey)}face.png`;
+	await storage.putObject({
+		body: await faceCutout(photo, found),
+		contentType: "image/png",
+		key,
+	});
+	const saved = await db
+		.update(grownUps)
+		.set({ faceKey: key })
+		.where(and(eq(grownUps.ownerId, ownerId), eq(grownUps.photoKey, photoKey)))
+		.returning({ ownerId: grownUps.ownerId });
+	if (saved.length === 0) {
+		// The photo changed while this ran: its folder is no one's now.
+		await storage.deleteObject(key);
+	}
+}
 
 /** Every object key the art of one child holds (face and looks). */
 export const artKeys = (
