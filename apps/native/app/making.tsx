@@ -197,14 +197,16 @@ export default function Making() {
 	};
 	const {
 		fail,
+		id: madeId,
 		question: picked = "",
-		recorded,
 	} = useLocalSearchParams<{
 		fail?: string;
+		/** The adventure already started for this screen: a refresh picks it up from the database. */
+		id?: string;
 		question?: string;
-		/** "1" when an admin with live on chose the recorded adventure for this one. */
-		recorded?: string;
 	}>();
+	// Read once: the id this screen writes into the address must not start it again.
+	const [resumeId] = useState(madeId);
 	// A picked idea arrives in the address; the child's own spoken question never does.
 	const question = picked || getSpokenQuestion();
 	const [adventureId, setAdventureId] = useState<string | null>(null);
@@ -225,8 +227,8 @@ export default function Making() {
 			const timer = setTimeout(() => router.replace("/oops"), FAIL_AFTER_MS);
 			return () => clearTimeout(timer);
 		}
-		// A reload loses the spoken question (it never rides in the address): start over at Home.
-		if (!question) {
+		// A reload before the adventure was started has no question to start it with: go Home.
+		if (!(question || resumeId)) {
 			router.replace("/home");
 			return;
 		}
@@ -244,14 +246,18 @@ export default function Making() {
 			}
 		};
 		const run = async () => {
-			let id: string;
-			try {
-				({ id } = await startAdventure(question, recorded === "1"));
-			} catch {
-				if (live) {
-					router.replace("/oops");
+			let id = resumeId ?? "";
+			if (!id) {
+				try {
+					({ id } = await startAdventure(question));
+				} catch {
+					if (live) {
+						router.replace("/oops");
+					}
+					return;
 				}
-				return;
+				// The adventure lives in the database now; its id in the address survives a refresh.
+				router.setParams({ id });
 			}
 			if (!live) {
 				return;
@@ -283,7 +289,7 @@ export default function Making() {
 			live = false;
 			stop?.();
 		};
-	}, [fail, finish, question, router]);
+	}, [fail, finish, question, resumeId, router]);
 
 	useEffect(() => {
 		if (revealed) {
