@@ -1,15 +1,20 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/src/auth/use-session";
-import { isSetUp } from "@/src/data/adventure-client";
+import { startRoute } from "@/src/data/adventure-client";
 
-/** Start page: signed out goes to Welcome, signed in goes to Home (or to the grown-up welcome first). */
+/**
+ * Start page: signed out goes to Welcome; signed in goes to Home, the grown-up welcome first, or
+ * the private beta screen for an account outside the beta.
+ */
 export default function Index() {
 	const { status } = useSession();
-	const [setUp, setSetUp] = useState<boolean | null>(null);
+	const [start, setStart] = useState<Awaited<
+		ReturnType<typeof startRoute>
+	> | null>(null);
 
 	useEffect(() => {
-		isSetUp().then(setSetUp);
+		startRoute().then(setStart);
 	}, []);
 
 	if (status === "loading") {
@@ -18,8 +23,8 @@ export default function Index() {
 	if (status === "signed-out") {
 		return <Redirect href="/welcome" />;
 	}
-	if (setUp === null) {
+	if (start === null) {
 		return null;
 	}
-	return <Redirect href={setUp ? "/home" : "/hello"} />;
+	return <Redirect href={start} />;
 }
