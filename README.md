@@ -8,9 +8,9 @@ Website: [littleadventures.app](https://littleadventures.app)
 
 Everything in this repo was written during the hackathon (building period Oct 27 to Nov 4, 2026). This repo was started on Oct 30, 2026, and its commit history is the real record of that work.
 
-This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe). All of it was written this week. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app, which predates the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
+This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe). All of it was written this week. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app. The engine runs on our startup's proprietary technology, which existed before the hackathon. That technology uses Meta's models, through the public packages in this repo; how it uses them is what we cannot disclose during the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
 
-The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through a documented player API with the same sign-in token.
+The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
 
 ```
 apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* ─► Meta models
@@ -60,14 +60,14 @@ Each app declares its environment in `.env.schema`, and Varlock generates a type
 
 ## Prompts
 
-The public packages ship no production prompts and no question sets. `packages/llm` throws without instructions, and `packages/decision` throws when `createDecision` gets none. Each expects its caller to bring its own:
+`llm` and `decision` ship no production prompts and no question sets. The only prompts in this repo are the avatar look prompts in `packages/image-editing/src/looks.ts`. `packages/llm` throws without instructions, and `packages/decision` throws when `createDecision` gets none. Each expects its caller to bring its own:
 
 - `llm`: instructions, a prompt and a zod schema per call. It returns JSON validated against the schema.
 - `decision`: the shared instructions (and optional note for attached images) when you create it, then a named question set per call, each question with its own instructions, plus a pass threshold and what to do when the API cannot be reached.
 - `image-editing`: the image or images and the edit or generation request per call. Calls throw on failure; the caller decides what that means.
 - `transcribe`: a WAV recording (16 kHz, mono).
 
-The production prompts are held by the private engine, because the media production behind them predates the hackathon and is the team's trade secret. [ARCHITECTURE.md](ARCHITECTURE.md) has the reasoning and the organizers' ruling.
+The production prompts were written this week and are held by the private engine, so the shape of the product's output cannot be copied. The engine runs on our startup's proprietary technology, which predates the hackathon. It calls Meta's models through the public packages above; how it uses them is the team's trade secret. [ARCHITECTURE.md](ARCHITECTURE.md) has the reasoning and the organizers' ruling.
 
 ## Scripts
 
