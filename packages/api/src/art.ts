@@ -10,6 +10,7 @@ import {
 } from "@little-adventures/image-editing";
 import { faceCutout } from "@little-adventures/image-editing/cutout";
 import {
+	grownUpLookPrompt,
 	LOOKS,
 	type Look,
 	lookPrompt,
@@ -187,10 +188,10 @@ export const grownUpArtFolder = (ownerId: string, photoKey: string): string =>
 	`${userPrefix(ownerId)}grown-up/art/${photoIdOf(photoKey)}/`;
 
 /**
- * Cuts the grown-up's face out of their photo, in the background, so the app
- * can show only their face. The photo may show the grown-up with the child,
- * so the cut-out asks for the grown-up. The row write is guarded by `photo_key`:
- * a newer photo never gets an older photo's face.
+ * Draws the grown-up from their photo in the background, like the child: the
+ * face cut-out (SAM 3.1, asking for the grown-up, since the photo may show the
+ * child too) and the drawn clay look (Muse Image). Each row write is guarded
+ * by `photo_key`: a newer photo never gets an older photo's art.
  */
 export async function drawGrownUpFace(
 	ctx: ArtContext,
@@ -200,40 +201,77 @@ export async function drawGrownUpFace(
 	if (!art.isConfigured) {
 		return;
 	}
+	const folder = grownUpArtFolder(ownerId, photoKey);
+	const current = and(
+		eq(grownUps.ownerId, ownerId),
+		eq(grownUps.photoKey, photoKey)
+	);
+	/** Saves one key on the row; when the photo changed meanwhile, the file is no one's. */
+	const keep = async (
+		key: string,
+		set: { faceKey: string } | { lookKey: string }
+	) => {
+		const saved = await db
+			.update(grownUps)
+			.set(set)
+			.where(current)
+			.returning({ ownerId: grownUps.ownerId });
+		if (saved.length === 0) {
+			await storage.deleteObject(key);
+		}
+	};
 	const photoUrl = await storage.readUrl(photoKey);
-	const [found, photo] = await Promise.all([
-		art.segment(photoUrl, "grown-up", (call) =>
-			recordAiCall(
-				db,
-				{
-					costMicroUsd: SAM_COST_MICRO_USD,
-					model: MODELS.segment,
-					operation: "grown-up.face.segment",
-					ownerId,
-				},
-				call
-			)
-		),
-		fetchBytes(photoUrl),
-	]);
-	if (!found) {
-		return;
-	}
-	const key = `${grownUpArtFolder(ownerId, photoKey)}face.png`;
-	await storage.putObject({
-		body: await faceCutout(photo, found),
-		contentType: "image/png",
-		key,
-	});
-	const saved = await db
-		.update(grownUps)
-		.set({ faceKey: key })
-		.where(and(eq(grownUps.ownerId, ownerId), eq(grownUps.photoKey, photoKey)))
-		.returning({ ownerId: grownUps.ownerId });
-	if (saved.length === 0) {
-		// The photo changed while this ran: its folder is no one's now.
-		await storage.deleteObject(key);
-	}
+
+	const face = async () => {
+		const [found, photo] = await Promise.all([
+			art.segment(photoUrl, "grown-up", (call) =>
+				recordAiCall(
+					db,
+					{
+						costMicroUsd: SAM_COST_MICRO_USD,
+						model: MODELS.segment,
+						operation: "grown-up.face.segment",
+						ownerId,
+					},
+					call
+				)
+			),
+			fetchBytes(photoUrl),
+		]);
+		if (!found) {
+			return;
+		}
+		const key = `${folder}face.png`;
+		await storage.putObject({
+			body: await faceCutout(photo, found),
+			contentType: "image/png",
+			key,
+		});
+		await keep(key, { faceKey: key });
+	};
+
+	const look = async () => {
+		const png = await recordAiCall(
+			db,
+			{
+				costMicroUsd: MUSE_IMAGE_COST_MICRO_USD,
+				model: MODELS.redraw,
+				operation: "grown-up.look.clay",
+				ownerId,
+			},
+			async () =>
+				art.redraw({
+					imageUrl: photoUrl,
+					prompt: grownUpLookPrompt("clay"),
+					safetyId: await safetyIdOf(ownerId),
+				})
+		);
+		const key = `${folder}looks/clay.png`;
+		await storage.putObject({ body: png, contentType: "image/png", key });
+		await keep(key, { lookKey: key });
+	};
+
+	await Promise.allSettled([face(), look()]);
 }
 
 /** Every object key the art of one child holds (face and looks). */

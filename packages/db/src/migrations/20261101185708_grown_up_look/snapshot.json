@@ -1,0 +1,42 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "62aca682-1d0f-4d41-9e9d-d2d8d014f206",
+  "prevIds": ["b60054f2-dc56-4f08-a279-ff2234e25729"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "grown_ups",
+        "look_key"
+      ],
+      "writes": [
+        "s|col|little_adventures.grown_ups.look_key",
+        "n|col|little_adventures.grown_ups.look_key",
+        "e|col|little_adventures.grown_ups.look_key"
+      ],
+      "reads": ["n|tbl|little_adventures.grown_ups", "n|sch|little_adventures"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "grown_ups",
+        "name": "look_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

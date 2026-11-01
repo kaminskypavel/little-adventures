@@ -64,6 +64,8 @@ export const grownUps = littleAdventures.table("grown_ups", {
 		.defaultNow(),
 	/** R2 key of the grown-up's face cut-out; null until it is cut out, or when no person was found. */
 	faceKey: text("face_key"),
+	/** R2 key of the grown-up's drawn picture (the clay look, like the child's); null until drawn. */
+	lookKey: text("look_key"),
 	ownerId: text("owner_id").primaryKey(),
 	photoKey: text("photo_key").notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true })

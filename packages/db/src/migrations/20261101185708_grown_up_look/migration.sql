@@ -1,0 +1,1 @@
+ALTER TABLE "little_adventures"."grown_ups" ADD COLUMN "look_key" text;
