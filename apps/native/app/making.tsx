@@ -219,6 +219,11 @@ export default function Making() {
 			const timer = setTimeout(() => router.replace("/oops"), FAIL_AFTER_MS);
 			return () => clearTimeout(timer);
 		}
+		// A reload loses the spoken question (it never rides in the address): start over at Home.
+		if (!question) {
+			router.replace("/home");
+			return;
+		}
 		let live = true;
 		let stop: (() => void) | undefined;
 

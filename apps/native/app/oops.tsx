@@ -21,7 +21,14 @@ export default function Oops() {
 
 	return (
 		<Screen
-			dock={<PrimaryButton label="Try again" onPress={() => router.back()} />}
+			dock={
+				<PrimaryButton
+					label="Try again"
+					onPress={() =>
+						router.canGoBack() ? router.back() : router.replace("/home")
+					}
+				/>
+			}
 		>
 			<View pointerEvents="none" style={styles.star}>
 				<StarTake size={STAR_SIZE} take="think" />
