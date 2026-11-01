@@ -211,6 +211,16 @@ export function createImageEditing(config: ImageEditingConfig) {
 
 	return {
 		edit,
+
+		/** The largest thing SAM finds for `prompt` (like "the clay house"), or null. One SAM request. */
+		async findObject(
+			imageUrl: string,
+			prompt: string,
+			track: Track = (call) => call()
+		): Promise<Found | null> {
+			const found = await track(() => findMasks(imageUrl, prompt));
+			return found.sort((a, b) => b.area - a.area)[0] ?? null;
+		},
 		/** Plain text-to-image at the given size. */
 		generate(input: {
 			prompt: string;

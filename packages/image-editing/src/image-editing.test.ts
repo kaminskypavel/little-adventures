@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
-import { faceCutout, faceSquare } from "./cutout";
+import { faceCutout, faceSquare, objectCutout } from "./cutout";
 import { type Candidate, createImageEditing, pickPerson } from "./index";
 import { eventData, splitEvents } from "./sse";
 
@@ -76,6 +76,42 @@ describe("faceCutout", () => {
 			data[(y * info.width + x) * info.channels + 3];
 		expect(alphaAt(100, 256)).toBe(255);
 		expect(alphaAt(400, 256)).toBe(0);
+	});
+});
+
+describe("objectCutout", () => {
+	test("crops to the box with a small margin, transparent outside the mask", async () => {
+		const image = await sharp({
+			create: {
+				background: { b: 40, g: 120, r: 200 },
+				channels: 3,
+				height: 400,
+				width: 400,
+			},
+		})
+			.png()
+			.toBuffer();
+		// Mask: the top half of the box set, the bottom half clear.
+		const mask = new Uint8Array(10 * 10);
+		for (let i = 0; i < 50; i += 1) {
+			mask[i] = 1;
+		}
+		const png = await objectCutout(image, {
+			box: { x1: 100, x2: 300, y1: 100, y2: 300 },
+			mask,
+			maskHeight: 10,
+			maskWidth: 10,
+		});
+		const { data, info } = await sharp(png)
+			.raw()
+			.toBuffer({ resolveWithObject: true });
+		// 200 px box plus 4% (8 px) on each side.
+		expect([info.width, info.height, info.channels]).toEqual([216, 216, 4]);
+		const alphaAt = (x: number, y: number) =>
+			data[(y * info.width + x) * info.channels + 3];
+		expect(alphaAt(108, 50)).toBe(255);
+		expect(alphaAt(108, 170)).toBe(0);
+		expect(alphaAt(2, 2)).toBe(0);
 	});
 });
 

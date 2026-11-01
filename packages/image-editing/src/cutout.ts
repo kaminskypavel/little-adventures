@@ -44,14 +44,8 @@ export function faceSquare(
 	return { left, side, top };
 }
 
-/**
- * The masked person on a transparent background, cropped square and resized to
- * 512 px. SAM's mask covers only its box, so it is stretched back over the box.
- */
-export async function faceCutout(
-	photo: Uint8Array,
-	found: Found
-): Promise<Uint8Array> {
+/** The image with everything outside the mask made transparent, plus the clamped box. */
+async function maskOut(image: Uint8Array, found: Found) {
 	const { box, mask, maskHeight, maskWidth } = found;
 	if (mask.length !== maskWidth * maskHeight) {
 		throw new Error(
@@ -59,7 +53,7 @@ export async function faceCutout(
 		);
 	}
 	// rotate(): phone photos carry an EXIF orientation.
-	const { data, info } = await sharp(photo)
+	const { data, info } = await sharp(image)
 		.rotate()
 		.ensureAlpha()
 		.raw()
@@ -97,11 +91,51 @@ export async function faceCutout(
 			data[((y1 + y) * width + x1 + x) * 4 + 3] = alpha[y * boxWidth + x] ?? 0;
 		}
 	}
+	return { box: { x1, x2, y1, y2 }, data, height, width };
+}
 
-	const { left, side, top } = faceSquare({ x1, x2, y1, y2 }, width, height);
+/**
+ * The masked person on a transparent background, cropped square and resized to
+ * 512 px. SAM's mask covers only its box, so it is stretched back over the box.
+ */
+export async function faceCutout(
+	photo: Uint8Array,
+	found: Found
+): Promise<Uint8Array> {
+	const { box, data, height, width } = await maskOut(photo, found);
+	const { left, side, top } = faceSquare(box, width, height);
 	const png = await sharp(data, { raw: { channels: 4, height, width } })
 		.extract({ height: side, left, top, width: side })
 		.resize(FACE_SIZE, FACE_SIZE)
+		.png()
+		.toBuffer();
+	return new Uint8Array(png);
+}
+
+/** Margin kept around a cut-out object, as a share of its longer side. */
+const OBJECT_MARGIN = 0.04;
+
+/**
+ * The masked object on a transparent background, cropped to its box with a
+ * small margin, at its own size: a picture with no background.
+ */
+export async function objectCutout(
+	image: Uint8Array,
+	found: Found
+): Promise<Uint8Array> {
+	const { box, data, height, width } = await maskOut(image, found);
+	const pad = Math.round(
+		Math.max(box.x2 - box.x1, box.y2 - box.y1) * OBJECT_MARGIN
+	);
+	const left = Math.max(0, box.x1 - pad);
+	const top = Math.max(0, box.y1 - pad);
+	const png = await sharp(data, { raw: { channels: 4, height, width } })
+		.extract({
+			height: Math.min(height, box.y2 + pad) - top,
+			left,
+			top,
+			width: Math.min(width, box.x2 + pad) - left,
+		})
 		.png()
 		.toBuffer();
 	return new Uint8Array(png);
