@@ -73,7 +73,9 @@ export default function Layout() {
 											<ThemeProvider value={clearTheme}>
 												<Stack
 													screenOptions={{
-														animation: "fade",
+														// No native cross-fade: like the web preview, the old screen goes at
+														// once and the new one's own enter (fade and rise) is the transition.
+														animation: "none",
 														contentStyle: { backgroundColor: "transparent" },
 														headerShown: false,
 													}}
