@@ -191,15 +191,7 @@ export default function Account() {
 		return (
 			<Screen
 				bodyStyle={styles.fieldBody}
-				dock={
-					<>
-						<PrimaryButton label="Sign in" onPress={signIn} />
-						<View>
-							<QuietLink label="Send a new code" onPress={resend} />
-							<QuietLink label="Use a different email" onPress={changeEmail} />
-						</View>
-					</>
-				}
+				dock={<PrimaryButton label="Sign in" onPress={signIn} />}
 				title={"Hi,\ngrown-up"}
 			>
 				<Controller
@@ -229,6 +221,10 @@ export default function Account() {
 						/>
 					)}
 				/>
+				<View style={styles.links}>
+					<QuietLink label="Send a new code" onPress={resend} />
+					<QuietLink label="Use a different email" onPress={changeEmail} />
+				</View>
 			</Screen>
 		);
 	}
@@ -237,28 +233,11 @@ export default function Account() {
 		<Screen
 			bodyStyle={styles.body}
 			dock={
-				<>
-					<PrimaryButton
-						label="Continue with Google"
-						leading={<GoogleMark />}
-						onPress={google}
-					/>
-					<SecondaryButton
-						label="Continue with email"
-						onPress={() => {
-							setNote(null);
-							setStep("email");
-						}}
-					/>
-					<ClayText
-						align="center"
-						color={colors.cream}
-						style={QUIET}
-						variant="label"
-					>
-						Kids, ask a grown-up to help.
-					</ClayText>
-				</>
+				<PrimaryButton
+					label="Continue with Google"
+					leading={<GoogleMark />}
+					onPress={google}
+				/>
 			}
 			title={"Hi,\ngrown-up"}
 		>
@@ -269,6 +248,23 @@ export default function Account() {
 				variant="body"
 			>
 				Your account keeps your child's adventures safe.
+			</ClayText>
+			<View style={styles.email}>
+				<SecondaryButton
+					label="Continue with email"
+					onPress={() => {
+						setNote(null);
+						setStep("email");
+					}}
+				/>
+			</View>
+			<ClayText
+				align="center"
+				color={colors.cream}
+				style={[styles.kids, QUIET]}
+				variant="label"
+			>
+				Kids, ask a grown-up to help.
 			</ClayText>
 			{note ? (
 				<ClayText
@@ -287,7 +283,14 @@ export default function Account() {
 
 const styles = StyleSheet.create({
 	body: { paddingTop: spacing.lg },
+	email: { marginTop: spacing.lg },
 	fieldBody: { paddingTop: spacing.xl },
+	kids: { marginTop: spacing.md },
 	lead: { paddingHorizontal: spacing.md },
+	links: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "space-between",
+	},
 	note: { marginTop: spacing.lg },
 });

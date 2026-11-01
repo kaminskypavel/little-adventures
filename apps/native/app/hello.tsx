@@ -96,13 +96,10 @@ export default function Hello() {
 		<Screen
 			bodyStyle={styles.body}
 			dock={
-				<>
-					<PrimaryButton
-						label="Add your child"
-						onPress={() => router.push("/child")}
-					/>
-					<QuietLink label="Sign out" onPress={leave} />
-				</>
+				<PrimaryButton
+					label="Add your child"
+					onPress={() => router.push("/child")}
+				/>
 			}
 		>
 			<View style={styles.star}>
@@ -118,6 +115,9 @@ export default function Hello() {
 				>
 					{title}
 				</ClayText>
+			</FadeUp>
+			<FadeUp step={2}>
+				<QuietLink label="Sign out" onPress={leave} />
 			</FadeUp>
 			<FadeUp step={2} style={styles.line}>
 				<ClayText

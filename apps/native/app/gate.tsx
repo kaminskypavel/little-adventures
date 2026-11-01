@@ -1,4 +1,3 @@
-import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { HoldGate } from "@little-adventures/native-ui/hold-gate";
 import { Screen } from "@little-adventures/native-ui/screen";
@@ -15,10 +14,7 @@ export default function Gate() {
 	const router = useRouter();
 
 	return (
-		<Screen
-			dock={<SecondaryButton label="Back" onPress={() => router.back()} />}
-			title={"For\ngrown-ups"}
-		>
+		<Screen title={"For\ngrown-ups"}>
 			<ClayText
 				align="center"
 				color={colors.cream}
