@@ -7,8 +7,14 @@ import {
 	setAudioModeAsync,
 	useAudioRecorder,
 } from "expo-audio";
-import { useCallback, useEffect, useRef } from "react";
-import { MAX_RECORD_MS, type Recorder, SAMPLE_RATE } from "./voice-rules";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	levelFromDb,
+	MAX_RECORD_MS,
+	METER_MS,
+	type Recorder,
+	SAMPLE_RATE,
+} from "./voice-rules";
 
 const options: RecordingOptions = {
 	...RecordingPresets.HIGH_QUALITY,
@@ -22,6 +28,7 @@ const options: RecordingOptions = {
 		outputFormat: IOSOutputFormat.LINEARPCM,
 		sampleRate: SAMPLE_RATE,
 	},
+	isMeteringEnabled: true,
 	numberOfChannels: 1,
 	sampleRate: SAMPLE_RATE,
 };
@@ -29,6 +36,13 @@ const options: RecordingOptions = {
 export function useRecorder(): Recorder {
 	const recorder = useAudioRecorder(options);
 	const limit = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const meter = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+	const [level, setLevel] = useState(0);
+
+	const stopMeter = useCallback(() => {
+		clearInterval(meter.current);
+		setLevel(0);
+	}, []);
 
 	const start = useCallback(
 		async (onLimit: () => void) => {
@@ -38,6 +52,10 @@ export function useRecorder(): Recorder {
 			});
 			await recorder.prepareToRecordAsync();
 			recorder.record();
+			meter.current = setInterval(
+				() => setLevel(levelFromDb(recorder.getStatus().metering)),
+				METER_MS
+			);
 			limit.current = setTimeout(onLimit, MAX_RECORD_MS);
 		},
 		[recorder]
@@ -45,15 +63,22 @@ export function useRecorder(): Recorder {
 
 	const stop = useCallback(async () => {
 		clearTimeout(limit.current);
+		stopMeter();
 		await recorder.stop();
 		await setAudioModeAsync({ allowsRecording: false });
 		if (!recorder.uri) {
 			return new Uint8Array(0);
 		}
 		return new Uint8Array(await (await fetch(recorder.uri)).arrayBuffer());
-	}, [recorder]);
+	}, [recorder, stopMeter]);
 
-	useEffect(() => () => clearTimeout(limit.current), []);
+	useEffect(
+		() => () => {
+			clearTimeout(limit.current);
+			clearInterval(meter.current);
+		},
+		[]
+	);
 
-	return { start, stop };
+	return { level, start, stop };
 }

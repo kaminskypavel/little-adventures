@@ -9,9 +9,25 @@ export const SAMPLE_RATE = 16_000;
 export type MicStatus = `${PermissionStatus}`;
 
 export interface Recorder {
+	/** How loud the child is right now, 0 (quiet) to 1 (loud). Read about every METER_MS while recording. */
+	level: number;
 	start: (onLimit: () => void) => Promise<void>;
 	stop: () => Promise<Uint8Array>;
 }
+
+/** How often the voice level is read while recording. */
+export const METER_MS = 60;
+
+const QUIET_DB = -50;
+const LOUD_DB = -10;
+
+/** Maps a metering value in dB (about -160 to 0) to 0..1: speech sits between -50 and -10 dB. */
+export const levelFromDb = (db: number | undefined): number => {
+	if (db === undefined || !Number.isFinite(db)) {
+		return 0;
+	}
+	return Math.min(1, Math.max(0, (db - QUIET_DB) / (LOUD_DB - QUIET_DB)));
+};
 
 export const canRecord = (permission: MicStatus): boolean =>
 	permission === "granted";
