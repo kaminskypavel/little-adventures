@@ -2,7 +2,8 @@ import { colors } from "@little-adventures/native-ui/tokens";
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { useIsAdmin } from "./use-is-admin";
+import { isAdminMe } from "./use-is-admin";
+import { useMe } from "./use-me";
 
 const CROWN = 18;
 
@@ -10,10 +11,20 @@ const CROWN = 18;
  * Renders its children only for admins, with a small yellow crown at the top right to mark
  * them as admin-only. Nothing shows for anyone else, or while the engine has not answered.
  */
-export function AdminOnly({ children }: { children: ReactNode }) {
-	const isAdmin = useIsAdmin();
-	if (!isAdmin) {
+export function AdminOnly({
+	children,
+	crown = true,
+}: {
+	children: ReactNode;
+	/** False for a full-screen overlay that should not wear the crown. */
+	crown?: boolean;
+}) {
+	const me = useMe();
+	if (!isAdminMe(me)) {
 		return null;
+	}
+	if (!crown) {
+		return <>{children}</>;
 	}
 	return (
 		<View>

@@ -10,21 +10,18 @@ import {
 	radii,
 	spacing,
 } from "@little-adventures/native-ui/tokens";
-import { useState } from "react";
-import {
-	Modal,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Switch,
-	useWindowDimensions,
-	View,
-} from "react-native";
+import { Fragment, useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import Animated, { cubicBezier } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+	useSafeAreaFrame,
+	useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { setLive, setSteps } from "@/src/data/adventure-client";
 import type { EngineMe } from "@/src/data/engine-client";
-import { useMe } from "./use-is-admin";
+import { AdminOnly } from "./admin-only";
+import { useAdminPanel } from "./admin-panel-store";
+import { useMe } from "./use-me";
 
 type Key = "live" | "pictures" | "story" | "video" | "voice";
 type Values = Record<Key, boolean>;
@@ -54,32 +51,72 @@ const ROWS: { key: Key; note: string; title: string }[] = [
 
 const fromMe = (me: EngineMe): Values => ({ live: me.live, ...me.steps });
 
-/** A step only matters when everything it depends on is on. Dimmed rows still toggle. */
-const dimmed = (v: Values): Record<Key, boolean> => ({
-	live: false,
-	pictures: !(v.live && v.story),
-	story: !v.live,
-	video: !(v.live && v.story && v.pictures),
-	voice: !(v.live && v.story),
-});
+/** Floating round admin button, mounted once in the root layout inside the app field. Admins only. */
+export function AdminButton() {
+	const insets = useSafeAreaInsets();
+	const setOpen = useAdminPanel((s) => s.setOpen);
+	return (
+		<View
+			pointerEvents="box-none"
+			style={{
+				bottom:
+					insets.bottom +
+					layout.dockBottom +
+					layout.primaryHeight +
+					layout.gapTight,
+				position: "absolute",
+				right: layout.sideMargin,
+			}}
+		>
+			<AdminOnly>
+				<IconButton
+					accessibilityLabel="Admin switches"
+					icon="sliders"
+					onPress={() => setOpen(true)}
+					style={{ height: BUTTON, width: BUTTON }}
+				/>
+			</AdminOnly>
+		</View>
+	);
+}
 
-/** Round admin button (wrap in AdminOnly) that opens the switches for each paid model step. */
-export function AdminSwitches() {
+/**
+ * The switches as a bottom sheet over the app field (inside the phone frame, not a window
+ * modal). Mounted once in the root layout, admins only.
+ */
+export function AdminPanel() {
+	return (
+		<AdminOnly crown={false}>
+			<Overlay />
+		</AdminOnly>
+	);
+}
+
+function Overlay() {
 	const calm = useCalm();
-	// `shown` keeps the modal mounted while it fades out; `entered` drives the transitions.
+	const open = useAdminPanel((s) => s.open);
+	const setOpen = useAdminPanel((s) => s.setOpen);
+	// `shown` keeps the sheet mounted while it fades out; `entered` drives the transitions.
 	const [shown, setShown] = useState(false);
 	const [entered, setEntered] = useState(false);
 	const insets = useSafeAreaInsets();
 
-	const open = () => {
-		setShown(true);
-		requestAnimationFrame(() => setEntered(true));
-	};
-	const close = () => {
+	useEffect(() => {
+		if (open) {
+			setShown(true);
+			const raf = requestAnimationFrame(() => setEntered(true));
+			return () => cancelAnimationFrame(raf);
+		}
 		setEntered(false);
-		setTimeout(() => setShown(false), calm ? 0 : motion.exit);
-	};
+		const timer = setTimeout(() => setShown(false), calm ? 0 : motion.exit);
+		return () => clearTimeout(timer);
+	}, [open, calm]);
 
+	if (!shown) {
+		return null;
+	}
+
+	const close = () => setOpen(false);
 	const ms = entered ? motion.enter : motion.exit;
 	const duration = calm ? motion.reducedReveal : ms;
 	const fade = {
@@ -90,52 +127,37 @@ export function AdminSwitches() {
 	} as const;
 
 	return (
-		<>
-			<IconButton
-				accessibilityLabel="Admin switches"
-				icon="sliders"
-				onPress={open}
-				style={{ height: BUTTON, width: BUTTON }}
-			/>
-			<Modal
-				animationType="none"
-				onRequestClose={close}
-				statusBarTranslucent
-				transparent
-				visible={shown}
+		<View pointerEvents="box-none" style={styles.fill}>
+			<Animated.View style={[styles.scrim, fade]}>
+				<Pressable
+					accessibilityLabel="Close admin switches"
+					onPress={close}
+					style={styles.fill}
+				/>
+			</Animated.View>
+			<Animated.View
+				pointerEvents="box-none"
+				style={[
+					styles.sheetWrap,
+					{ paddingBottom: Math.max(insets.bottom, layout.dockBottom) },
+					fade,
+					{
+						transform: [
+							{ translateY: entered || calm ? 0 : motion.enterRise * 3 },
+						],
+						transitionProperty: ["opacity", "transform"],
+					},
+				]}
 			>
-				<View style={styles.fill}>
-					<Animated.View style={[styles.scrim, fade]}>
-						<Pressable
-							accessibilityLabel="Close admin switches"
-							onPress={close}
-							style={styles.fill}
-						/>
-					</Animated.View>
-					<Animated.View
-						style={[
-							styles.sheetWrap,
-							{ paddingBottom: Math.max(insets.bottom, layout.dockBottom) },
-							fade,
-							{
-								transform: [
-									{ translateY: entered || calm ? 0 : motion.enterRise * 3 },
-								],
-								transitionProperty: ["opacity", "transform"],
-							},
-						]}
-					>
-						<Sheet onClose={close} />
-					</Animated.View>
-				</View>
-			</Modal>
-		</>
+				<Sheet onClose={close} />
+			</Animated.View>
+		</View>
 	);
 }
 
 function Sheet({ onClose }: { onClose: () => void }) {
 	const me = useMe();
-	const { height } = useWindowDimensions();
+	const { height } = useSafeAreaFrame();
 	const [values, setValues] = useState<Values | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [failed, setFailed] = useState<Key | null>(null);
@@ -163,8 +185,6 @@ function Sheet({ onClose }: { onClose: () => void }) {
 		}
 	};
 
-	const off = current ? dimmed(current) : null;
-
 	return (
 		<ClaySurface radius={radii.card} tone="field">
 			<View style={styles.sheet}>
@@ -177,34 +197,41 @@ function Sheet({ onClose }: { onClose: () => void }) {
 					style={{ maxHeight: height * 0.5 }}
 				>
 					{ROWS.map(({ key, note, title }) => (
-						<View
-							key={key}
-							style={[styles.row, off?.[key] ? styles.dim : null]}
-						>
-							<View style={styles.text}>
-								<ClayText variant="label">{title}</ClayText>
+						<Fragment key={key}>
+							{key === "story" ? (
 								<ClayText style={styles.note} variant="body">
-									{note}
+									Used when live adventures are on
 								</ClayText>
-								{failed === key ? (
-									<ClayText
-										accessibilityLiveRegion="polite"
-										role="alert"
-										variant="fieldError"
-									>
-										Could not change it. Try again.
+							) : null}
+							<View style={styles.row}>
+								<View style={styles.text}>
+									<ClayText variant="label">{title}</ClayText>
+									<ClayText style={styles.note} variant="body">
+										{note}
 									</ClayText>
-								) : null}
+									{failed === key ? (
+										<ClayText
+											accessibilityLiveRegion="polite"
+											role="alert"
+											variant="fieldError"
+										>
+											Could not change it. Try again.
+										</ClayText>
+									) : null}
+								</View>
+								<Switch
+									accessibilityLabel={title}
+									disabled={saving || !current}
+									onValueChange={(next) => toggle(key, next)}
+									thumbColor={colors.star}
+									trackColor={{
+										false: colors.toggleOff,
+										true: colors.deepNavy,
+									}}
+									value={current?.[key] ?? false}
+								/>
 							</View>
-							<Switch
-								accessibilityLabel={title}
-								disabled={saving || !current}
-								onValueChange={(next) => toggle(key, next)}
-								thumbColor={colors.star}
-								trackColor={{ false: colors.toggleOff, true: colors.deepNavy }}
-								value={current?.[key] ?? false}
-							/>
-						</View>
+						</Fragment>
 					))}
 				</ScrollView>
 				<SecondaryButton label="Close" onPress={onClose} />
@@ -214,7 +241,6 @@ function Sheet({ onClose }: { onClose: () => void }) {
 }
 
 const styles = StyleSheet.create({
-	dim: { opacity: 0.45 },
 	fill: { flex: 1 },
 	note: { fontSize: 16, lineHeight: 20, opacity: 0.8 },
 	row: { alignItems: "center", flexDirection: "row", gap: layout.gap },

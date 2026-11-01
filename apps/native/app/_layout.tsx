@@ -18,6 +18,7 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PhoneFrame } from "@/components/phone-frame";
+import { AdminButton, AdminPanel } from "@/src/admin/admin-switches";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { useBack } from "@/src/use-back";
 
@@ -68,6 +69,8 @@ export default function Layout() {
 										}}
 									/>
 								</ThemeProvider>
+								<AdminButton />
+								<AdminPanel />
 							</View>
 						</BackProvider>
 					</FallbackArtProvider>

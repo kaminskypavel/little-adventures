@@ -26,8 +26,6 @@ import {
 	type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AdminOnly } from "@/src/admin/admin-only";
-import { AdminSwitches } from "@/src/admin/admin-switches";
 import {
 	devFlags,
 	getAvatarUrl,
@@ -297,9 +295,6 @@ export default function Home() {
 					takeRun={run}
 					title={data ? `Hi ${data.name}!` : ""}
 				/>
-				<AdminOnly>
-					<AdminSwitches />
-				</AdminOnly>
 			</View>
 		</Screen>
 	);
