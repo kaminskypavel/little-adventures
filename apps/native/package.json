@@ -22,6 +22,7 @@
     "@hookform/resolvers": "^6.0.2",
     "@little-adventures/native-ui": "workspace:*",
     "@little-adventures/validation": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@tanstack/react-query": "^5.105.1",
     "@trpc/client": "catalog:",

@@ -13,7 +13,10 @@ import { VideoConfirm } from "@/src/admin/live-confirm";
 import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
 import { setStepsOptions } from "@/src/data/engine-queries";
-import { getShortSpokenQuestion } from "@/src/data/spoken-question";
+import {
+	useSpokenHydrated,
+	useSpokenQuestion,
+} from "@/src/data/spoken-question";
 
 // Round 7 09b at 0.72 scale (px / 0.72). The star is centered.
 const STAR_SIZE = 128;
@@ -31,7 +34,8 @@ export default function Verify() {
 	const router = useRouter();
 	// The words stay in memory, never in the address. Listening opens this screen only once the
 	// short version is back, so the card has its words at once.
-	const [short] = useState(getShortSpokenQuestion);
+	const short = useSpokenQuestion((spoken) => spoken.short);
+	const hydrated = useSpokenHydrated();
 	const me = useMe();
 	const client = useQueryClient();
 	const steps = useMutation(setStepsOptions(client));
@@ -42,11 +46,11 @@ export default function Verify() {
 	const start = () => (asksFirst ? setConfirming(true) : go());
 
 	useEffect(() => {
-		if (!short) {
-			// Opened without a recording (a reload on the web): nothing to check.
+		if (hydrated && !short) {
+			// Nothing was asked yet (or it was already started): ask again.
 			router.replace("/listening");
 		}
-	}, [short, router]);
+	}, [hydrated, short, router]);
 
 	return (
 		<View style={styles.root}>

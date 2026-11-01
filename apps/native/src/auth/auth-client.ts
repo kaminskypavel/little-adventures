@@ -1,6 +1,7 @@
 import { openAuthSessionAsync, openBrowserAsync } from "expo-web-browser";
 import { Platform } from "react-native";
 import { queryClient } from "@/src/data/query-client";
+import { clearSpokenQuestion } from "@/src/data/spoken-question";
 import { ENV } from "@/src/env";
 import { withRetryOn401 } from "./retry-on-401";
 import { clearToken, readToken, writeToken } from "./token-store";
@@ -192,8 +193,9 @@ export async function signOut() {
 	token = null;
 	await clearToken().catch(() => undefined);
 	setSession(SIGNED_OUT);
-	// The cache holds this account's data: the next one must not see it.
+	// The cache and the pending question hold this account's data: the next one must not see it.
 	queryClient.clear();
+	clearSpokenQuestion();
 	await post("/api/auth/sign-out", {}).catch(() => undefined);
 }
 

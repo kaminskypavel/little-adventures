@@ -37,7 +37,11 @@ import {
 	startAdventure,
 	watchMaking,
 } from "@/src/data/adventure-client";
-import { getSpokenQuestion } from "@/src/data/spoken-question";
+import {
+	clearSpokenQuestion,
+	getSpokenQuestion,
+	useSpokenHydrated,
+} from "@/src/data/spoken-question";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -207,8 +211,16 @@ export default function Making() {
 	}>();
 	// Read once: the id this screen writes into the address must not start it again.
 	const [resumeId] = useState(madeId);
-	// A picked idea arrives in the address; the child's own spoken question never does.
-	const question = picked || getSpokenQuestion();
+	// A picked idea arrives in the address; the child's own spoken question never does (it waits
+	// on the device). Read once, after the device storage is back, so clearing it later changes
+	// nothing here.
+	const hydrated = useSpokenHydrated();
+	const [question, setQuestion] = useState<string | null>(null);
+	useEffect(() => {
+		if (hydrated && question === null) {
+			setQuestion(picked || getSpokenQuestion());
+		}
+	}, [hydrated, picked, question]);
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);
@@ -227,7 +239,10 @@ export default function Making() {
 			const timer = setTimeout(() => router.replace("/oops"), FAIL_AFTER_MS);
 			return () => clearTimeout(timer);
 		}
-		// A reload before the adventure was started has no question to start it with: go Home.
+		if (question === null) {
+			return; // still reading the device storage
+		}
+		// Nothing to start and nothing started: go Home.
 		if (!(question || resumeId)) {
 			router.replace("/home");
 			return;
@@ -256,8 +271,10 @@ export default function Making() {
 					}
 					return;
 				}
-				// The adventure lives in the database now; its id in the address survives a refresh.
+				// The adventure lives in the database now; its id in the address survives a refresh,
+				// and the child's words are no longer needed on the device.
 				router.setParams({ id });
+				clearSpokenQuestion();
 			}
 			if (!live) {
 				return;
