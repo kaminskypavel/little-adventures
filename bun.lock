@@ -35,6 +35,7 @@
         "@react-native-masked-view/masked-view": "0.3.2",
         "@tanstack/react-query": "^5.105.1",
         "@trpc/client": "catalog:",
+        "@trpc/tanstack-react-query": "^11.22.1",
         "@varlock/expo-integration": "1.2.2",
         "expo": "~58.0.12",
         "expo-audio": "~58.0.11",
@@ -1107,6 +1108,8 @@
     "@trpc/client": ["@trpc/client@11.22.1", "", { "peerDependencies": { "@trpc/server": "11.22.1", "typescript": ">=5.7.2" }, "bin": { "intent": "bin/intent.js" } }, "sha512-flkAwF8bzzNCVJ5xcTMS+Az6Go/XK30ZIOGT94UJBYAmMq1w2tY7gk7+CIMiRUdvHzOYAVPitX2H+20qcIIomA=="],
 
     "@trpc/server": ["@trpc/server@11.22.1", "", { "peerDependencies": { "typescript": ">=5.7.2" }, "bin": { "intent": "bin/intent.js" } }, "sha512-9SjWTS5iwENHOVPqpTjm0I1Os/CtuT6p8kDlovyEm00pXhpHX55tQM2vszJTEpcQhm/JfUz4ut/7Y9JZZQZo6A=="],
+
+    "@trpc/tanstack-react-query": ["@trpc/tanstack-react-query@11.22.1", "", { "peerDependencies": { "@tanstack/react-query": "^5.80.3", "@trpc/client": "11.22.1", "@trpc/server": "11.22.1", "react": ">=18.2.0", "typescript": ">=5.7.2" }, "bin": { "intent": "bin/intent.js" } }, "sha512-p+pWb3BNE0drNC/s2zuBWSyAwVTbxVFVj/t5Ik82e3fh9v5O0ZCGXndwPukIw6IaSzI2GFulLlZxugNu1pyStg=="],
 
     "@ts-morph/common": ["@ts-morph/common@0.27.0", "", { "dependencies": { "fast-glob": "^3.3.3", "minimatch": "^10.0.1", "path-browserify": "^1.0.1" } }, "sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ=="],
 
