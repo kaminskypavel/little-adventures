@@ -2,6 +2,8 @@
 
 Product docs, wireframes and design decisions live in `docs/`. The folder is local only (excluded from git), so it may be missing in a fresh clone. Read it before UI or product work when it exists. Never commit it, and never copy its contents into committed files or commit messages.
 
+`docs/solutions/` holds learnings from past work (bugs, design patterns, tooling choices, workflows), one Markdown file each, in category folders with YAML frontmatter (`module`, `tags`, `problem_type`). It is local only for the same reason, and relevant when building or debugging in an area it covers.
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
