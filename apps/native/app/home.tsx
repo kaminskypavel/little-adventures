@@ -183,7 +183,15 @@ export default function Home() {
 		<ScrollView
 			contentContainerStyle={[
 				styles.content,
-				{ paddingTop: barBottom + spacing.lg },
+				{
+					// The dock floats over the shelf: room to scroll the last row above it.
+					paddingBottom:
+						insets.bottom +
+						layout.dockBottom +
+						layout.secondaryHeight +
+						spacing.lg,
+					paddingTop: barBottom + spacing.lg,
+				},
 			]}
 			onScroll={(e) =>
 				setScrolled(
@@ -272,7 +280,7 @@ export default function Home() {
 	);
 
 	return (
-		<Screen dock={dock}>
+		<Screen dock={dock} floatDock>
 			{IS_WEB ? (
 				scroll
 			) : (
@@ -320,7 +328,7 @@ function dockFor(data: HomeData | null, onPress: () => void) {
 
 const styles = StyleSheet.create({
 	// The body has side padding; the scroll view undoes it so the shelf can bleed to the edge.
-	content: { paddingBottom: spacing.sm, paddingHorizontal: layout.sideMargin },
+	content: { paddingHorizontal: layout.sideMargin },
 	dockSkeleton: {
 		backgroundColor: colors.sand,
 		borderRadius: layout.secondaryHeight / 2,

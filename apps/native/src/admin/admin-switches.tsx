@@ -27,7 +27,10 @@ import { useMe } from "./use-me";
 type Key = "live" | "pictures" | "story" | "video" | "voice";
 type Values = Record<Key, boolean>;
 
-const BUTTON = 48;
+const BUTTON = 40;
+/** Under the dock in the home indicator's band, inset so the phone's rounded corner never clips it. */
+const EDGE_SIDE = 22;
+const EDGE_BOTTOM = 8;
 const easeOut = cubicBezier(...motion.easeOut);
 
 const ROWS: { key: Key; note: string; title: string }[] = [
@@ -54,19 +57,15 @@ const fromMe = (me: EngineMe): Values => ({ live: me.live, ...me.steps });
 
 /** Floating round admin button, mounted once in the root layout inside the app field. Admins only. */
 export function AdminButton() {
-	const insets = useSafeAreaInsets();
 	const setOpen = useAdminPanel((s) => s.setOpen);
 	return (
 		<View
 			pointerEvents="box-none"
+			// In the strip under the dock buttons (the home indicator's band), clear of content.
 			style={{
-				bottom:
-					insets.bottom +
-					layout.dockBottom +
-					layout.primaryHeight +
-					layout.gapTight,
+				bottom: EDGE_BOTTOM,
 				position: "absolute",
-				right: layout.sideMargin,
+				right: EDGE_SIDE,
 			}}
 		>
 			<AdminOnly>

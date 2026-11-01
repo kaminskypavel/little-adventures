@@ -47,6 +47,7 @@ export function Screen({
 	compactTitle = false,
 	dim = false,
 	dock,
+	floatDock = false,
 	title,
 	titleTop = layout.titleTop,
 	topBar,
@@ -59,6 +60,8 @@ export function Screen({
 	dim?: boolean;
 	/** Bottom actions, stacked 14 apart (primary 88, secondary 80). */
 	dock?: ReactNode;
+	/** The dock floats over the body, which then runs to the bottom (for scrolling screens). */
+	floatDock?: boolean;
 	title?: string;
 	/** Distance of the headline from the screen top. */
 	titleTop?: number;
@@ -116,8 +119,10 @@ export function Screen({
 			</Animated.View>
 			{dock ? (
 				<Animated.View
+					pointerEvents={floatDock ? "box-none" : "auto"}
 					style={[
 						styles.dock,
+						floatDock && styles.floatDock,
 						{ paddingBottom: insets.bottom + layout.dockBottom },
 						enter(2, calm),
 					]}
@@ -140,6 +145,7 @@ const styles = StyleSheet.create({
 	body: { flex: 1, paddingHorizontal: layout.sideMargin },
 	dock: { gap: layout.gap, paddingHorizontal: layout.sideMargin },
 	floatBack: { left: layout.sideMargin, position: "absolute" },
+	floatDock: { bottom: 0, left: 0, position: "absolute", right: 0 },
 	root: { flex: 1 },
 	title: { paddingHorizontal: layout.sideMargin },
 	topBar: {
