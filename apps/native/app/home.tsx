@@ -16,7 +16,14 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import {
+	Platform,
+	ScrollView,
+	StyleSheet,
+	View,
+	type ViewStyle,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	devFlags,
 	getAvatarUrl,
@@ -43,6 +50,26 @@ const MIC_MSG_LINE = 28;
 // The Ask your own card pulses once, after the avatar star has waved.
 const HERO_PULSE_DELAY = motion.pulseOffset + 200;
 const SKELETON_FADE = 0.15;
+// Soft fade under the avatar and lock: content is gone above the bar's bottom edge and clear this
+// far below it. The fade turns on over the first FADE_ON_SCROLL pt of scroll, so Home at rest is
+// untouched.
+const FADE_BAND = 52;
+const FADE_ON_SCROLL = 24;
+const IS_WEB = Platform.OS === "web";
+
+// A fixed mask over the scroll view: transparent at `gone`, solid at `gone + FADE_BAND`; `on` (0 to 1)
+// is how far the fade has turned on.
+// ponytail: web only. Native needs @react-native-masked-view/masked-view (a new dependency, so not
+// added); until then native keeps today's hard clip under the bar.
+function fadeMask(gone: number, on: number): ViewStyle | undefined {
+	if (on <= 0) {
+		return undefined;
+	}
+	const top = `rgba(0,0,0,${(1 - on).toFixed(3)})`;
+	return {
+		maskImage: `linear-gradient(to bottom, ${top} ${gone}px, #000 ${gone + FADE_BAND}px)`,
+	} as ViewStyle;
+}
 
 interface HomeData {
 	avatarUrl: string | null;
@@ -53,6 +80,10 @@ interface HomeData {
 
 export default function Home() {
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
+	// Bottom edge of the avatar and lock row, from the screen top (119 pt on a 47 pt inset).
+	const barBottom = insets.top + layout.topBarOffset + layout.topBarHeight;
+	const [scrolled, setScrolled] = useState(0);
 	const params = useLocalSearchParams<{ first?: string; mic?: string }>();
 	// Dev only: production builds ignore the queries.
 	const first = dev(params.first);
@@ -128,27 +159,25 @@ export default function Home() {
 	const latest = data?.latest ?? null;
 
 	return (
-		<Screen
-			dock={dock}
-			topBar={
-				<TopBar
-					action={{
-						accessibilityLabel: "Grown-ups",
-						icon: "lock",
-						onPress: () => router.push("/gate"),
-					}}
-					avatar={data !== null}
-					avatarUrl={data?.avatarUrl}
-					take="wave"
-					takeRun={run}
-					title={data ? `Hi ${data.name}!` : ""}
-				/>
-			}
-		>
+		<Screen dock={dock}>
 			<ScrollView
-				contentContainerStyle={styles.content}
+				contentContainerStyle={[
+					styles.content,
+					{ paddingTop: IS_WEB ? barBottom + spacing.lg : spacing.lg },
+				]}
+				onScroll={(e) =>
+					setScrolled(
+						Math.round(Math.min(FADE_ON_SCROLL, e.nativeEvent.contentOffset.y))
+					)
+				}
+				scrollEventThrottle={16}
 				showsVerticalScrollIndicator={false}
-				style={styles.scroll}
+				style={[
+					styles.scroll,
+					IS_WEB
+						? fadeMask(barBottom, scrolled / FADE_ON_SCROLL)
+						: { marginTop: barBottom },
+				]}
 			>
 				<ClayText
 					accessibilityRole="header"
@@ -220,6 +249,24 @@ export default function Home() {
 						: [0, 1, 2].map((n) => <View key={n} style={styles.skeleton} />)}
 				</StoryShelf>
 			</ScrollView>
+			{/* No bar behind them: the avatar and lock float on the sky, over the scroll area. */}
+			<View
+				pointerEvents="box-none"
+				style={[styles.topBar, { top: insets.top + layout.topBarOffset }]}
+			>
+				<TopBar
+					action={{
+						accessibilityLabel: "Grown-ups",
+						icon: "lock",
+						onPress: () => router.push("/gate"),
+					}}
+					avatar={data !== null}
+					avatarUrl={data?.avatarUrl}
+					take="wave"
+					takeRun={run}
+					title={data ? `Hi ${data.name}!` : ""}
+				/>
+			</View>
 		</Screen>
 	);
 }
@@ -264,5 +311,15 @@ const styles = StyleSheet.create({
 		lineHeight: TITLE_LINE,
 		marginTop: TITLE_GAP,
 		minHeight: TITLE_LINE * TITLE_LINES,
+	},
+	// Same row as Screen's top bar, drawn over the scroll area (the body adds the side margins).
+	topBar: {
+		alignItems: "center",
+		flexDirection: "row",
+		gap: layout.gap,
+		height: layout.topBarHeight,
+		left: 0,
+		position: "absolute",
+		right: 0,
 	},
 });
