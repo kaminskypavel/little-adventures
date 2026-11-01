@@ -26,8 +26,8 @@ export const childOptions = () =>
 				? POLL_MS
 				: false,
 	});
-// A new grown-up photo is cut out in the background: read it again until its face is in, for a
-// minute at most (a photo with no person found never gets one).
+// A new grown-up photo is cut out and drawn in the background: read it again until the face and
+// the drawn cut-out are in, for a minute at most (a photo with no person found never gets them).
 const FACE_WAIT_MS = 60_000;
 export const grownUpOptions = () =>
 	trpc.grownUp.mine.queryOptions(undefined, {
@@ -35,7 +35,7 @@ export const grownUpOptions = () =>
 			const row = query.state.data;
 			const fresh =
 				row && Date.now() - new Date(row.updatedAt).getTime() < FACE_WAIT_MS;
-			return row && !row.faceUrl && fresh ? POLL_MS : false;
+			return row && !(row.faceUrl && row.cutUrl) && fresh ? POLL_MS : false;
 		},
 	});
 

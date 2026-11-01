@@ -34,6 +34,7 @@ describe("profile map", () => {
 	test("no row gives the empty profile", () => {
 		expect(toChild([])).toEqual({
 			avatarUrl: null,
+			cutUrl: null,
 			profile: emptyProfile,
 		});
 	});
@@ -58,9 +59,10 @@ describe("profile map", () => {
 		expect(a?.artStatus).toBe("idle");
 	});
 
-	test("the grown-up photo maps a missing face to null", () => {
+	test("the grown-up photo maps a missing face and cut-out to null", () => {
 		expect(toGrownUpPhoto(null)).toBe(null);
 		expect(toGrownUpPhoto({ photoUrl: "p" })).toEqual({
+			cutUrl: null,
 			faceUrl: null,
 			lookUrl: null,
 			photoUrl: "p",

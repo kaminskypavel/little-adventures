@@ -6,6 +6,8 @@ import type { ArtStatus, Profile } from "./types";
 export interface ChildRow {
 	age: number;
 	artStatus: ArtStatus;
+	/** The drawn look cut out of its backdrop; older servers leave it out. */
+	cutUrl?: string | null;
 	drawingUrls: { clay?: string };
 	faceUrl: string | null;
 	grownUp: boolean;
@@ -55,6 +57,8 @@ export const rowToProfile = (row: ChildRow): Profile => ({
 export interface Child {
 	/** The clay picture drawn of the child; null until one is drawn. */
 	avatarUrl: string | null;
+	/** That picture cut out of its backdrop; null until it is cut. */
+	cutUrl: string | null;
 	/** Absent until the first child is saved. */
 	id?: string;
 	profile: Profile;
@@ -66,10 +70,11 @@ export const toChild = (rows: ChildRow[]): Child => {
 	return row
 		? {
 				avatarUrl: row.drawingUrls.clay ?? null,
+				cutUrl: row.cutUrl ?? null,
 				id: row.id,
 				profile: rowToProfile(row),
 			}
-		: { avatarUrl: null, profile: { ...emptyProfile } };
+		: { avatarUrl: null, cutUrl: null, profile: { ...emptyProfile } };
 };
 
 /** The cache after `child.save` would have succeeded. A new child waits for the server's row. */
@@ -101,6 +106,7 @@ export const clearChildPhoto = <R extends ChildRow>(
 			? {
 					...row,
 					artStatus: "idle",
+					cutUrl: null,
 					drawingUrls: {},
 					faceUrl: null,
 					photoKey: null,
@@ -109,6 +115,8 @@ export const clearChildPhoto = <R extends ChildRow>(
 	);
 
 export interface GrownUpPhoto {
+	/** The drawn look cut out of its backdrop; the server adds it after the look. */
+	cutUrl?: string | null;
 	faceUrl: string | null;
 	/** The drawn look of the grown-up; the server adds it, so it may be missing for now. */
 	lookUrl?: string | null;
@@ -122,6 +130,7 @@ export const grownUpPicture = (photo: GrownUpPhoto) =>
 /** The grown-up's own photo (signed url), or null when none is saved. */
 export const toGrownUpPhoto = (
 	row: {
+		cutUrl?: string | null;
 		faceUrl?: string | null;
 		lookUrl?: string | null;
 		photoUrl: string;
@@ -129,6 +138,7 @@ export const toGrownUpPhoto = (
 ): GrownUpPhoto | null =>
 	row
 		? {
+				cutUrl: row.cutUrl ?? null,
 				faceUrl: row.faceUrl ?? null,
 				lookUrl: row.lookUrl ?? null,
 				photoUrl: row.photoUrl,

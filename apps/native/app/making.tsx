@@ -3,6 +3,10 @@ import { characterFilter } from "@little-adventures/native-ui/character";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { FallbackImage } from "@little-adventures/native-ui/fallback-image";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
+import {
+	PeekRidge,
+	type RidgePerson,
+} from "@little-adventures/native-ui/peek-ridge";
 import { Plate } from "@little-adventures/native-ui/plate";
 import { ProgressBar } from "@little-adventures/native-ui/progress-bar";
 import { Screen } from "@little-adventures/native-ui/screen";
@@ -14,16 +18,9 @@ import {
 	spacing,
 } from "@little-adventures/native-ui/tokens";
 import { WaitLoop } from "@little-adventures/native-ui/wait-loop";
-import { WatchHill } from "@little-adventures/native-ui/watch-hill";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-	type ComponentProps,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
 	type StyleProp,
 	StyleSheet,
@@ -258,17 +255,27 @@ function FactTicker({ calm, facts }: { calm: boolean; facts: string[] }) {
 	);
 }
 
-/** Who comes along with the child on the hill: the grown-up's picture or the puppy. */
-function useCompanion(): ComponentProps<typeof WatchHill>["companion"] {
+/**
+ * Who peeks over the ridge: the child, and the grown-up when they come along. The puppy is in
+ * the loop already, so it gets no picture.
+ */
+function useRidgePeople(): {
+	child: RidgePerson;
+	companion: RidgePerson | null;
+} {
 	const { data: grownUpPhoto } = useGrownUpPhoto();
-	const profile = useChild().data?.profile;
-	if (profile?.grownUp) {
-		return {
-			kind: "grownUp",
-			picture: grownUpPhoto ? grownUpPicture(grownUpPhoto) : null,
-		};
+	const { data } = useChild();
+	const child = { cut: data?.cutUrl ?? null, round: data?.avatarUrl ?? null };
+	if (!data?.profile.grownUp) {
+		return { child, companion: null };
 	}
-	return profile?.puppy ? { kind: "puppy" } : null;
+	return {
+		child,
+		companion: {
+			cut: grownUpPhoto?.cutUrl ?? null,
+			round: grownUpPhoto ? grownUpPicture(grownUpPhoto) : null,
+		},
+	};
 }
 
 /** 10a Making your adventure, then 10b Ready in place. */
@@ -293,8 +300,7 @@ export default function Making() {
 		style?: string;
 	}>();
 	const style = toStyle(pickedStyle);
-	const child = useChild();
-	const companion = useCompanion();
+	const ridgePeople = useRidgePeople();
 	// Read once: the id this screen writes into the address must not start it again.
 	const [resumeId] = useState(madeId);
 	// A picked idea arrives in the address; the child's own spoken question never does (it waits
@@ -426,10 +432,11 @@ export default function Making() {
 	return (
 		<View style={styles.root}>
 			<WaitLoop away={revealed} fast={serverReady && !full} source={LOADER} />
-			<WatchHill
+			<PeekRidge
 				away={revealed}
-				companion={companion}
-				picture={child.data?.avatarUrl ?? null}
+				child={ridgePeople.child}
+				companion={ridgePeople.companion}
+				stage={engineStage ?? stage}
 			/>
 			<Screen
 				bodyStyle={styles.body}
