@@ -58,7 +58,7 @@ const SECOND_STATUS_END = 0.7;
 const BAR_TOP = 508;
 const STATUS_TOP = 539;
 
-// Ready column: headline, question, goal picture, name plate, then Start in the dock. Only the
+// Ready column: headline, question, goal picture, then Start in the dock. Only the
 // goal picture flexes: 319 x 328 at most, about 150 tall at the least.
 const GOAL_WIDTH = 319;
 const GOAL_HEIGHT = 328;
@@ -367,23 +367,15 @@ export default function Making() {
 						</Animated.View>
 					) : null}
 				</View>
-				<Fade ms={fadeMs} show={revealed} style={styles.rowCentered}>
-					<Plate
-						label={adventure?.endGoal.name ?? ""}
-						style={styles.bigPlate}
-						variant="big"
-					/>
-				</Fade>
 			</Screen>
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
-	bigPlate: { alignSelf: "center" },
 	body: {
 		gap: COLUMN_GAP,
-		paddingBottom: spacing.lg, // the 22 pt between the name plate and Start
+		paddingBottom: spacing.lg, // the 22 pt between the goal picture and Start
 		paddingHorizontal: layout.sideMargin,
 		paddingTop: layout.titleTop,
 	},
@@ -408,5 +400,4 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: layout.sideMargin,
 	},
-	rowCentered: { alignItems: "center" },
 });
