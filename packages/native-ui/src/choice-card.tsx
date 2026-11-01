@@ -1,5 +1,5 @@
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
-import { Image, type ImageSource } from "expo-image";
+import type { ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -18,6 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
+import { FallbackImage } from "./fallback-image";
 import { Icon } from "./icons";
 import { useCalm } from "./motion-provider";
 import { Placeholder } from "./placeholder";
@@ -41,15 +42,17 @@ const TONES = { drawing: "drawing", locked: "locked", open: "sage" } as const;
 function Art({
 	blur,
 	kind,
+	locked,
 	picture,
 }: {
 	blur: number;
 	kind: "goal" | "place";
+	locked: boolean;
 	picture: ImageSource | number | null;
 }) {
-	if (picture === null) {
-		return <Placeholder icon="image" style={StyleSheet.absoluteFill} />;
-	}
+	const placeholder = (
+		<Placeholder icon="image" style={StyleSheet.absoluteFill} />
+	);
 	if (kind === "goal") {
 		return (
 			<View
@@ -63,9 +66,11 @@ function Art({
 					},
 				]}
 			>
-				<Image
+				<FallbackImage
 					blurRadius={blur}
 					contentFit="contain"
+					kind={locked ? "goalClosed" : "goalOpen"}
+					placeholder={placeholder}
 					source={picture}
 					style={{ height: choice.goalHeight, width: "100%" }}
 				/>
@@ -73,9 +78,11 @@ function Art({
 		);
 	}
 	return (
-		<Image
+		<FallbackImage
 			blurRadius={blur}
 			contentFit="cover"
+			kind="place"
+			placeholder={placeholder}
 			source={picture}
 			style={StyleSheet.absoluteFill}
 		/>
@@ -275,6 +282,7 @@ export function ChoiceCard({
 						<Art
 							blur={drawing ? choice.drawingBlur : 0}
 							kind={kind}
+							locked={locked}
 							picture={picture}
 						/>
 						{drawing ? (

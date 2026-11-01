@@ -9,6 +9,7 @@ import {
 import { motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { ScrollView } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { getProfile } from "@/src/data/adventure-client";
 import { useAdventure } from "@/src/data/use-adventure";
@@ -47,15 +48,18 @@ export default function End() {
 					entering={FadeIn.duration(
 						calm ? motion.reducedReveal : motion.enter
 					).reduceMotion(ReduceMotion.Never)}
-					style={{ marginTop: spacing.sm }}
+					style={{ flex: 1, marginTop: spacing.sm }}
 				>
-					<EndMap goal={adventure.endGoal.open} places={adventure.places} />
-					<FoundPanel
-						items={PLACES.map((node) => adventure.places[node].fact).filter(
-							Boolean
-						)}
-						style={{ marginTop: PANEL_GAP }}
-					/>
+					{/* Bounded by the body, so the panel never runs under the Home button: it scrolls instead. */}
+					<ScrollView showsVerticalScrollIndicator={false}>
+						<EndMap goal={adventure.endGoal.open} places={adventure.places} />
+						<FoundPanel
+							items={PLACES.map((node) => adventure.places[node].fact).filter(
+								Boolean
+							)}
+							style={{ marginTop: PANEL_GAP }}
+						/>
+					</ScrollView>
 				</Animated.View>
 			) : null}
 		</Screen>

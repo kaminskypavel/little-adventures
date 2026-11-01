@@ -1,7 +1,8 @@
-import { Image, type ImageSource } from "expo-image";
+import type { ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
+import { FallbackImage } from "./fallback-image";
 import { Icon } from "./icons";
 import { Placeholder } from "./placeholder";
 import {
@@ -63,21 +64,21 @@ function Disc({
 				overflow: "hidden",
 			}}
 		>
-			{picture === null ? (
-				<Placeholder
-					icon="image"
-					iconSize={Math.round(size * mapMedallion.iconRatio)}
-					style={StyleSheet.absoluteFill}
-				/>
-			) : (
-				<Image
-					accessibilityIgnoresInvertColors
-					blurRadius={drawing ? mapMedallion.drawingBlur : 0}
-					contentFit="cover"
-					source={picture}
-					style={StyleSheet.absoluteFill}
-				/>
-			)}
+			<FallbackImage
+				accessibilityIgnoresInvertColors
+				blurRadius={drawing ? mapMedallion.drawingBlur : 0}
+				contentFit="cover"
+				kind="place"
+				placeholder={
+					<Placeholder
+						icon="image"
+						iconSize={Math.round(size * mapMedallion.iconRatio)}
+						style={StyleSheet.absoluteFill}
+					/>
+				}
+				source={picture}
+				style={StyleSheet.absoluteFill}
+			/>
 			{drawing ? (
 				<View
 					pointerEvents="none"

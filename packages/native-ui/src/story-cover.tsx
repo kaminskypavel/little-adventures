@@ -1,6 +1,7 @@
-import { Image, type ImageSource } from "expo-image";
+import type { ImageSource } from "expo-image";
 import { type StyleProp, Text, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
+import { FallbackImage } from "./fallback-image";
 import { Icon } from "./icons";
 import { Placeholder } from "./placeholder";
 import { colors, fonts, radii, storyCover } from "./tokens";
@@ -33,7 +34,7 @@ export function StoryCover({
 	caption?: string;
 	done?: boolean;
 	onPress?: () => void;
-	/** A required module or an image source, or null for the neutral placeholder. */
+	/** A required module or an image source, or null for the stand-in picture. */
 	picture: ImageSource | number | null;
 	size: "grid" | "shelf";
 	style?: StyleProp<ViewStyle>;
@@ -49,20 +50,18 @@ export function StoryCover({
 			style={[{ height: dims.height, padding: pad, width }, style]}
 			tone="sage"
 		>
-			{picture === null ? (
-				<Placeholder style={{ borderRadius: pictureRadius, flex: 1 }} />
-			) : (
-				<View
-					style={{ borderRadius: pictureRadius, flex: 1, overflow: "hidden" }}
-				>
-					<Image
-						accessible={false}
-						contentFit="cover"
-						source={picture}
-						style={{ height: "100%", width: "100%" }}
-					/>
-				</View>
-			)}
+			<View
+				style={{ borderRadius: pictureRadius, flex: 1, overflow: "hidden" }}
+			>
+				<FallbackImage
+					accessible={false}
+					contentFit="cover"
+					kind="place"
+					placeholder={<Placeholder style={{ flex: 1 }} />}
+					source={picture}
+					style={{ height: "100%", width: "100%" }}
+				/>
+			</View>
 			{done ? (
 				<View
 					style={{

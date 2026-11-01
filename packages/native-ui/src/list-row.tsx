@@ -1,13 +1,14 @@
-import { Image, type ImageSource } from "expo-image";
+import type { ImageSource } from "expo-image";
 import { type StyleProp, View, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
+import { FallbackImage } from "./fallback-image";
 import { Placeholder } from "./placeholder";
 import { listCards } from "./tokens";
 
 const { list } = listCards;
 
-/** A picture (a required module or an image source) or, when there is none, the neutral placeholder. */
+/** A picture (a required module or an image source) or, when there is none or it fails, the stand-in picture. */
 export function CardPicture({
 	height,
 	picture,
@@ -20,15 +21,15 @@ export function CardPicture({
 	width: number;
 }) {
 	const box = { borderRadius: radius, flexShrink: 0, height, width } as const;
-	if (picture === null) {
-		return <Placeholder icon="image" style={box} />;
-	}
+	const fill = { height: "100%", width: "100%" } as const;
 	return (
 		<View style={[box, { overflow: "hidden" }]}>
-			<Image
+			<FallbackImage
 				contentFit="cover"
+				kind="place"
+				placeholder={<Placeholder icon="image" style={fill} />}
 				source={picture}
-				style={{ height: "100%", width: "100%" }}
+				style={fill}
 			/>
 		</View>
 	);

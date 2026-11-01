@@ -1,4 +1,5 @@
 import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
+import { FallbackImage } from "@little-adventures/native-ui/fallback-image";
 import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { Icon } from "@little-adventures/native-ui/icons";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
@@ -7,7 +8,6 @@ import { Placeholder } from "@little-adventures/native-ui/placeholder";
 import { colors, layout, radii } from "@little-adventures/native-ui/tokens";
 import { useEventListener } from "expo";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -408,13 +408,12 @@ function PlaceFrame({
 	onError?: () => void;
 	picture: Picture | null;
 }) {
-	if (picture === null) {
-		return <Placeholder icon="image" style={StyleSheet.absoluteFill} />;
-	}
 	return (
-		<Image
+		<FallbackImage
 			contentFit="cover"
+			kind="place"
 			onError={onError}
+			placeholder={<Placeholder icon="image" style={StyleSheet.absoluteFill} />}
 			source={picture}
 			style={StyleSheet.absoluteFill}
 		/>
@@ -435,8 +434,9 @@ function GoodnightFrame({ adventure }: { adventure: Adventure }) {
 				},
 			]}
 		>
-			<Image
+			<FallbackImage
 				contentFit="contain"
+				kind="goalOpen"
 				source={adventure.endGoal.open}
 				style={{ aspectRatio: GOAL_RATIO, width: GOAL_WIDTH }}
 			/>

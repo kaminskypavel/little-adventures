@@ -8,6 +8,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
+import { FallbackImage } from "./fallback-image";
 import { Medallion, type MedallionState } from "./medallion";
 import { useCalm } from "./motion-provider";
 import { Plate } from "./plate";
@@ -304,12 +305,14 @@ function Goal({
 	filter,
 	height,
 	image,
+	kind,
 	x,
 	y,
 }: {
 	filter: string;
 	height: number;
 	image: ImageSource | number | null;
+	kind: "goalClosed" | "goalOpen";
 	x: number;
 	y: number;
 }) {
@@ -325,9 +328,10 @@ function Goal({
 				width: height,
 			}}
 		>
-			<Image
+			<FallbackImage
 				accessibilityIgnoresInvertColors
 				contentFit="contain"
+				kind={kind}
 				source={image}
 				style={{ height: "100%", width: "100%" }}
 			/>
@@ -582,6 +586,7 @@ export function StoryMap({
 						filter={goalFilter}
 						height={goalHeight}
 						image={goodnight.image}
+						kind={goodnight.locked ? "goalClosed" : "goalOpen"}
 						x={frame.x(GOAL_X)}
 						y={goalFoot}
 					/>
@@ -701,6 +706,7 @@ export function EndMap({
 						filter={moonFilter}
 						height={END_GOAL.width * END_GOAL.ratio * e}
 						image={goal}
+						kind="goalOpen"
 						x={END_GOAL.x * e}
 						y={END_GOAL.foot * e}
 					/>

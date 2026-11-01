@@ -1,6 +1,7 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { characterFilter } from "@little-adventures/native-ui/character";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { FallbackImage } from "@little-adventures/native-ui/fallback-image";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { Plate } from "@little-adventures/native-ui/plate";
 import { ProgressBar } from "@little-adventures/native-ui/progress-bar";
@@ -10,7 +11,6 @@ import { colors, layout, motion } from "@little-adventures/native-ui/tokens";
 import { WaitLoop } from "@little-adventures/native-ui/wait-loop";
 import { WatchHill } from "@little-adventures/native-ui/watch-hill";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
-import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
@@ -343,9 +343,10 @@ export default function Making() {
 								goalMotion,
 							]}
 						>
-							<Image
+							<FallbackImage
 								accessibilityIgnoresInvertColors
 								contentFit="contain"
+								kind="goalClosed"
 								source={adventure.endGoal.closed}
 								style={styles.goal}
 							/>
