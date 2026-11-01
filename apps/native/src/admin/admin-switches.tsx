@@ -122,7 +122,7 @@ function Overlay() {
 	} as const;
 
 	return (
-		<View pointerEvents="box-none" style={styles.fill}>
+		<View pointerEvents="box-none" style={styles.overlay}>
 			<Animated.View style={[styles.scrim, fade]}>
 				<Pressable
 					accessibilityLabel="Close admin switches"
@@ -216,6 +216,8 @@ function Sheet({ onClose }: { onClose: () => void }) {
 const styles = StyleSheet.create({
 	fill: { flex: 1 },
 	note: { fontSize: 16, lineHeight: 20, opacity: 0.8 },
+	// Over the app, never in its layout: the screen under it keeps its size.
+	overlay: { ...StyleSheet.absoluteFill },
 	row: { alignItems: "center", flexDirection: "row", gap: layout.gap },
 	rows: { gap: spacing.md },
 	scrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.scrim },
