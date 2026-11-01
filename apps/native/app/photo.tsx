@@ -67,22 +67,22 @@ function PhotoStep({ profile }: { profile: Profile }) {
 		<Screen
 			bodyStyle={styles.body}
 			dock={
-				<>
-					<PrimaryButton
-						icon="camera"
-						label="Take a photo"
-						onPress={() => choose("camera")}
-					/>
-					<SecondaryButton
-						icon="image"
-						label="Choose a photo"
-						onPress={() => choose("library")}
-					/>
-				</>
+				<PrimaryButton
+					icon="camera"
+					label="Take a photo"
+					onPress={() => choose("camera")}
+				/>
 			}
-			title={`Add a photo\nof ${profile.childName}`}
+			title={`Add a\nphoto of ${profile.childName}`}
 		>
 			<PhotoRing done={done} photoUri={photoUri} />
+			<SecondaryButton
+				icon="image"
+				label="Choose a photo"
+				onPress={() => choose("library")}
+				size="md"
+				style={styles.chip}
+			/>
 			<ClayText
 				align="center"
 				color={colors.cream}
@@ -113,6 +113,7 @@ export default function Photo() {
 
 const styles = StyleSheet.create({
 	body: { alignItems: "center", paddingTop: 44 },
-	line: { marginTop: 45, paddingHorizontal: 14 },
+	chip: { alignSelf: "center", marginTop: spacing.lg, paddingHorizontal: 28 },
+	line: { marginTop: spacing.lg, paddingHorizontal: 14 },
 	note: { marginTop: spacing.md, paddingHorizontal: spacing.md },
 });

@@ -3,6 +3,7 @@ import { Chip } from "@little-adventures/native-ui/chip";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
+import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { RowCard } from "@little-adventures/native-ui/row-card";
 import { Screen } from "@little-adventures/native-ui/screen";
 import {
@@ -22,6 +23,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
+import { useSession } from "@/src/auth/use-session";
 import { getAdventures } from "@/src/data/adventure-client";
 import {
 	useChild,
@@ -32,14 +34,13 @@ import {
 import type { AdventureSummary } from "@/src/data/types";
 
 // 18 Grown-ups. Round 7 (pt = px / 0.72): portrait 92 with a 4 border, name 36,
-// sub 19.5, profile row inset 6 more than the cards, "Add a child" 42 below the list.
+// sub 19.5, profile row inset 6 more than the cards, "Add a child" beside the Children label.
 const PORTRAIT = 92;
 const PORTRAIT_BORDER = 4;
 const NAME_FONT = 36;
 const SUB_FONT = 19.5;
 const PROFILE_INSET = 6;
 const PROFILE_GAP = 19.5;
-const ADD_GAP = 42;
 const NOW_FONT = 17;
 const NOW_DOT = 10;
 const NOW_GAP = 8;
@@ -116,6 +117,8 @@ const subtitle = (a: AdventureSummary) =>
 export default function Grownups() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
+	const { user } = useSession();
+	const who = user?.name?.trim() || user?.email;
 	// The cache asks again while the art is drawn, and after every save (see profile-queries.ts).
 	const { data: child } = useChild();
 	const profile = child?.profile ?? null;
@@ -162,6 +165,33 @@ export default function Grownups() {
 			>
 				{profile && adventures ? (
 					<>
+						<View style={styles.signed}>
+							<ClayText
+								color={colors.cream}
+								numberOfLines={1}
+								style={styles.signedText}
+								variant="label"
+							>
+								{who ? `Signed in as ${who}` : "Signed in"}
+							</ClayText>
+							<QuietLink label="Sign out" onPress={signOut} />
+						</View>
+						<View style={styles.childrenRow}>
+							<ClayText
+								color={colors.cream}
+								style={styles.childrenLabel}
+								variant="label"
+							>
+								Children
+							</ClayText>
+							<SecondaryButton
+								icon="plus"
+								label="Add a child"
+								onPress={() => router.push("/child")}
+								size="sm"
+								style={styles.add}
+							/>
+						</View>
 						<View style={styles.profile}>
 							<Avatar
 								drawing={profile.artStatus === "working"}
@@ -225,7 +255,7 @@ export default function Grownups() {
 									<Image
 										accessibilityLabel="Your photo"
 										contentFit="cover"
-										source={grownUpPhoto.photoUrl}
+										source={grownUpPhoto.faceUrl ?? grownUpPhoto.photoUrl}
 										style={styles.portrait}
 									/>
 									<View style={styles.ownChips}>
@@ -267,14 +297,6 @@ export default function Grownups() {
 								/>
 							))}
 						</View>
-						<View style={styles.actions}>
-							<SecondaryButton
-								icon="plus"
-								label="Add a child"
-								onPress={() => router.push("/child")}
-							/>
-							<SecondaryButton label="Sign out" onPress={signOut} />
-						</View>
 					</>
 				) : null}
 			</ScrollView>
@@ -283,8 +305,17 @@ export default function Grownups() {
 }
 
 const styles = StyleSheet.create({
-	actions: { gap: layout.gap, marginTop: ADD_GAP },
+	add: { alignSelf: "auto", paddingHorizontal: 18 },
 	age: { fontSize: SUB_FONT, lineHeight: SUB_FONT * 1.25, opacity: 0.8 },
+	childrenLabel: { opacity: 0.85 },
+	childrenRow: {
+		alignItems: "center",
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginTop: spacing.sm,
+		paddingBottom: spacing.sm,
+		paddingLeft: spacing.sm,
+	},
 	chips: { flexDirection: "row", gap: layout.gapTight, marginTop: spacing.md },
 	dot: {
 		backgroundColor: colors.sun,
@@ -322,6 +353,14 @@ const styles = StyleSheet.create({
 		gap: PROFILE_GAP,
 		paddingHorizontal: PROFILE_INSET,
 	},
+	signed: {
+		alignItems: "center",
+		flexDirection: "row",
+		gap: spacing.md,
+		justifyContent: "space-between",
+		paddingLeft: spacing.sm,
+	},
+	signedText: { flex: 1, opacity: 0.85 },
 	who: { flex: 1, gap: 4 },
 	wide: { flex: 1.6 },
 });

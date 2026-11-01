@@ -1,6 +1,6 @@
-import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClaySurface } from "@little-adventures/native-ui/clay-surface";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import {
 	colors,
@@ -139,9 +139,16 @@ function Sheet({ onClose }: { onClose: () => void }) {
 	return (
 		<ClaySurface radius={radii.card} tone="field">
 			<View style={styles.sheet}>
-				<ClayText accessibilityRole="header" variant="title">
-					Admin switches
-				</ClayText>
+				<View style={styles.head}>
+					<ClayText
+						accessibilityRole="header"
+						style={styles.fill}
+						variant="title"
+					>
+						Admin switches
+					</ClayText>
+					<IconButton accessibilityLabel="Close" icon="x" onPress={onClose} />
+				</View>
 				<ScrollView
 					contentContainerStyle={styles.rows}
 					showsVerticalScrollIndicator={false}
@@ -186,7 +193,6 @@ function Sheet({ onClose }: { onClose: () => void }) {
 						</View>
 					))}
 				</ScrollView>
-				<SecondaryButton label="Close" onPress={onClose} />
 			</View>
 		</ClaySurface>
 	);
@@ -194,6 +200,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
 
 const styles = StyleSheet.create({
 	fill: { flex: 1 },
+	head: { alignItems: "center", flexDirection: "row", gap: layout.gap },
 	note: { fontSize: 16, lineHeight: 20, opacity: 0.8 },
 	// Over the app, never in its layout: the screen under it keeps its size.
 	overlay: { ...StyleSheet.absoluteFill },

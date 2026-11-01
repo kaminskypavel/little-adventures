@@ -3,7 +3,6 @@ import {
 	SecondaryButton,
 } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { colors, spacing } from "@little-adventures/native-ui/tokens";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
@@ -101,49 +100,34 @@ export default function GrownUpPhoto() {
 		busy.current = false;
 	};
 
-	// You needs a photo: without one, go back to pick again.
-	const skip = () => {
-		if (!busy.current) {
-			router.back();
-		}
-	};
-
 	return (
 		<Screen
 			bodyStyle={styles.body}
 			dock={
 				pending ? (
-					<>
-						<PrimaryButton
-							icon="check"
-							label="Use this photo"
-							onPress={approvePhoto}
-						/>
-						<SecondaryButton
-							icon="image"
-							label="Pick another"
-							onPress={() => choose(lastSource.current)}
-						/>
-					</>
+					<PrimaryButton
+						icon="check"
+						label="Use this photo"
+						onPress={approvePhoto}
+					/>
 				) : (
-					<>
-						<PrimaryButton
-							icon="camera"
-							label="Take a photo"
-							onPress={() => choose("camera")}
-						/>
-						<SecondaryButton
-							icon="image"
-							label="Choose a photo"
-							onPress={() => choose("library")}
-						/>
-						{replacing ? null : <QuietLink label="Not now" onPress={skip} />}
-					</>
+					<PrimaryButton
+						icon="camera"
+						label="Take a photo"
+						onPress={() => choose("camera")}
+					/>
 				)
 			}
 			title={"Add a\nphoto of you"}
 		>
 			<PhotoRing done={done} photoUri={pending ?? photoUri} />
+			<SecondaryButton
+				icon="image"
+				label={pending ? "Pick another" : "Choose a photo"}
+				onPress={() => choose(pending ? lastSource.current : "library")}
+				size="md"
+				style={styles.chip}
+			/>
 			<ClayText
 				align="center"
 				color={colors.cream}
@@ -169,6 +153,7 @@ export default function GrownUpPhoto() {
 
 const styles = StyleSheet.create({
 	body: { alignItems: "center", paddingTop: 44 },
-	line: { marginTop: 45, paddingHorizontal: 14 },
+	chip: { alignSelf: "center", marginTop: spacing.lg, paddingHorizontal: 22 },
+	line: { marginTop: spacing.lg, paddingHorizontal: 14 },
 	note: { marginTop: spacing.md, paddingHorizontal: spacing.md },
 });
