@@ -62,7 +62,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 			ogLocale: "en_US",
 			shareDescription:
 				"Your child asks a question out loud. A short illustrated story answers it, starring your child, then says goodnight.",
-			title: "Little Adventures: bedtime stories sparked by your child",
+			title: "Little Adventures: stories born from your child's curiosity",
 		},
 		quote: ["“", "”"],
 		scenes: {
@@ -83,7 +83,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 				question: "What's under the ocean?",
 			},
 			playroom: {
-				line: "Bedtime stories that start with your child's own questions.",
+				line: "Little adventures that start with your child's own questions.",
 			},
 			saturn: {
 				line: "Your child is the hero, drawn from a photo you add.",

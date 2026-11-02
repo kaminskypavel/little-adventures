@@ -4,7 +4,8 @@ import { expect, type Page, test } from "@playwright/test";
 const LOADER_TIMEOUT = 45_000;
 const LOAD_TEST_TIMEOUT = 90_000;
 
-const HOME_LINE = "Bedtime stories that start with your child's own questions.";
+const HOME_LINE =
+	"Little adventures that start with your child's own questions.";
 const SCENE_1_TITLE = "Children are curious. Help them learn.";
 
 const ES_TITLE = /cuentos que nacen de la curiosidad/u;
