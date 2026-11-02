@@ -123,7 +123,11 @@ function PlayerChrome({
 					icon="map"
 					onPress={onBack}
 				/>
-				<NamePill text={name} />
+				<View style={styles.name}>
+					<NamePill style={styles.pill} text={name} />
+				</View>
+				{/* Balances the map button, so the name sits in the middle like every title. */}
+				<View style={styles.balance} />
 			</View>
 			<NarrationBar
 				current={current - start}
@@ -530,6 +534,7 @@ export default function Place() {
 }
 
 const styles = StyleSheet.create({
+	balance: { width: layout.minTarget },
 	control: {
 		alignItems: "center",
 		left: 0,
