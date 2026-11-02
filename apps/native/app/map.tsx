@@ -120,6 +120,7 @@ export default function StoryMapScreen() {
 		<>
 			<MapBackdrop />
 			<Screen
+				bodyFade={false}
 				dock={
 					<PrimaryButton
 						disabled={!progress || walkTo !== undefined}

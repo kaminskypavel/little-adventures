@@ -48,6 +48,8 @@ const DRAWN_PT = 1 / 0.72;
 /** Round 7 px where the top bar ends and where the dock starts: the map lives between them. */
 const ZONE_TOP = 98;
 const ZONE_BOTTOM = 542;
+/** Points kept clear above and below the map inside the band. */
+const BAND_MARGIN = 18;
 
 const MEADOW = require("../assets/map/meadow.jpg");
 const MEADOW_RATIO = 1688 / 780;
@@ -249,7 +251,8 @@ interface Frame {
 function makeFrame(width: number, height: number): Frame {
 	const across = width / DRAWN_WIDTH;
 	const drawn = ZONE_BOTTOM - ZONE_TOP;
-	const down = Math.min(across, height / drawn);
+	// Round 7 fills the band to its edges; keep the goal off the top bar and the start off the dock.
+	const down = Math.min(across, (height - 2 * BAND_MARGIN) / drawn);
 	const top = (height - drawn * down) / 2;
 	return {
 		x: (px) => px * across,

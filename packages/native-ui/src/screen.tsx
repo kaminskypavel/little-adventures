@@ -93,6 +93,7 @@ function FadedBody({
  * scroll view needs `BODY_SCROLL_END` bottom padding above a faded dock.
  */
 export function Screen({
+	bodyFade = true,
 	bodyStyle,
 	children,
 	compactTitle = false,
@@ -105,6 +106,8 @@ export function Screen({
 	titleTop,
 	topBar,
 }: {
+	/** False for a body that never scrolls (the map): nothing fades out above the dock. */
+	bodyFade?: boolean;
 	bodyStyle?: StyleProp<ViewStyle>;
 	children?: ReactNode;
 	/** 37 pt headline, for two long lines. */
@@ -131,7 +134,7 @@ export function Screen({
 	// Without a top bar the back button floats in the top left corner over the content, so the
 	// headline sits where it always did (titleTop below the top of the screen).
 	const floatBack = topBar ? null : onBack;
-	const fadeBottom = dock && !floatDock ? BODY_FADE : 0;
+	const fadeBottom = dock && !floatDock && bodyFade ? BODY_FADE : 0;
 	const fadeTop = scrolls ? BODY_FADE_TOP : 0;
 	const body = (
 		<Animated.View style={[styles.body, bodyStyle, enter(1, calm)]}>
