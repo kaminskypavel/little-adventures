@@ -46,17 +46,12 @@
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
-  "dependencies": {
-    "@hookform/resolvers": "^6.0.2",
-    "react-hook-form": "^7.91.0",
-    "zod": "catalog:"
-  },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
     "@little-adventures/config": "workspace:*",
     "@types/node": "catalog:",
-    "husky": "latest",
-    "lint-staged": "latest",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "turbo": "^2.11.7",
     "typescript": "^6.0.3",
     "ultracite": "8.1.0",
