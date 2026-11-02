@@ -6,6 +6,7 @@ import { WaitlistForm } from "@/components/waitlist/waitlist-form";
 import { Wordmark } from "@/components/wordmark";
 import type { Dictionary, Locale, SceneId } from "@/i18n/dictionaries";
 import { gsap, Observer, useGSAP } from "@/lib/gsap";
+import { createFlickSensor } from "./flick";
 import { GATE, loadPlan, type Screen, storyUrls } from "./story-plan";
 import { createStoryStore } from "./story-store";
 
@@ -25,8 +26,6 @@ const N = SCENE_IDS.length;
 const MOVE_SPEED = 1.2;
 // A scroll made during a move: the move speeds up to this, then the next one plays.
 const HURRY_SPEED = 2.5;
-// A pause this long (seconds) in wheel input ends a gesture; the next scroll is a new one.
-const GESTURE_GAP = 0.15;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
 const CUE_ARROWS = ["first", "second", "third"] as const;
@@ -227,6 +226,13 @@ export function VideoStory({
 				}
 			};
 			const story = createStoryStore();
+			// Each new trackpad flick is a new gesture, even one made during the last one's momentum.
+			const flick = createFlickSensor();
+			const onWheel = (e: WheelEvent) => {
+				if (flick.sense(Math.abs(e.deltaY), e.timeStamp)) {
+					story.getState().press();
+				}
+			};
 			const sceneNow = () => story.getState().at;
 			// A move that just ended keeps its last frame on screen until the loop's first frame
 			// replaces it, so no still flashes in between.
@@ -348,7 +354,7 @@ export function VideoStory({
 			};
 
 			// `step` is +1 or -1. A touch swipe skips the trackpad calm window. A new gesture
-			// made during a move (a new swipe, or a scroll after a pause) is kept and played
+			// made during a move (a new swipe or trackpad flick) is kept and played
 			// when the move lands, and the move speeds up so it lands sooner.
 			const go = (step: number, touch = false) => {
 				const state = story.getState();
@@ -366,6 +372,7 @@ export function VideoStory({
 					return;
 				}
 				state.leave();
+				flick.claim(performance.now());
 				warmBack(to);
 				cueLoop.kill();
 				gsap.to(hint, {
@@ -486,14 +493,12 @@ export function VideoStory({
 				ignore: "[data-waitlist], [data-early], dialog",
 				onDown: (self) => go(-1, self.event.type !== "wheel"),
 				onPress: () => story.getState().press(),
-				// A wheel has no press, so a pause ends its gesture instead.
-				onStop: () => story.getState().press(),
-				onStopDelay: GESTURE_GAP,
 				onUp: (self) => go(1, self.event.type !== "wheel"),
 				preventDefault: true,
 				target: window,
 				tolerance: 10,
-				type: "wheel,touch,pointer",
+				// No "pointer": a trackpad click while scrolling is not a swipe.
+				type: "wheel,touch",
 				wheelSpeed: -1,
 			});
 			const onKey = (e: KeyboardEvent) => {
@@ -514,6 +519,8 @@ export function VideoStory({
 				}
 			};
 			addEventListener("keydown", onKey);
+			// Capture: the sensor sees each event before the Observer's debounced callbacks.
+			addEventListener("wheel", onWheel, { capture: true, passive: true });
 			// The other screen shape needs the other set of files.
 			const shapeQuery = matchMedia("(max-aspect-ratio: 1/1)");
 			const onShape = () => location.reload();
@@ -523,6 +530,7 @@ export function VideoStory({
 				alive = false;
 				observer.kill();
 				removeEventListener("keydown", onKey);
+				removeEventListener("wheel", onWheel, { capture: true });
 				shapeQuery.removeEventListener("change", onShape);
 				for (const b of blobs) {
 					URL.revokeObjectURL(b);
