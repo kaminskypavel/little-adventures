@@ -9,13 +9,18 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.little-adventures"
+      "bundleIdentifier": "com.anonymous.little-adventures",
+      "icon": {
+        "dark": "./assets/images/icon-ios-dark.png",
+        "light": "./assets/images/icon.png",
+        "tinted": "./assets/images/icon-ios-tinted.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#0B1736",
         "backgroundImage": "./assets/images/android-icon-background.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -31,13 +36,17 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#16294F",
+          "android": {
+            "image": "./assets/images/splash-android.png",
+            "imageWidth": 150
+          },
+          "backgroundColor": "#0A1B34",
           "dark": {
-            "backgroundColor": "#16294F"
-          }
+            "backgroundColor": "#0A1B34"
+          },
+          "image": "./assets/images/splash-ios.png",
+          "imageWidth": 343,
+          "resizeMode": "contain"
         }
       ],
       "expo-video",
