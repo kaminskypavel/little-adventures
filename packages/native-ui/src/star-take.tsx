@@ -1,7 +1,7 @@
 import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Character, characterShadow } from "./character";
 import { useCalm } from "./motion-provider";
 import { starSource } from "./star-source";
@@ -208,7 +208,9 @@ function StarSlot({ active, id, onEnd, onReady, take }: StarSlotProps) {
 			style={[
 				videoBox,
 				{ opacity: active ? 1 : HIDDEN_OPACITY },
-				active ? characterShadow : null,
+				// No shadow on iOS: it is worked out from the video's pixels on every frame (the
+				// biggest drawing cost left on Home) and barely shows on the dark sky.
+				active && Platform.OS !== "ios" ? characterShadow : null,
 			]}
 			surfaceType="textureView"
 		/>
