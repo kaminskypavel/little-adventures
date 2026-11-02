@@ -45,9 +45,12 @@ export interface MapGoodnight {
 
 const DRAWN_WIDTH = 282;
 const DRAWN_PT = 1 / 0.72;
-/** Round 7 px where the top bar ends and where the dock starts: the map lives between them. */
+/**
+ * Round 7 px where the top bar ends and where the map ends: the map lives between them. Round 7
+ * ends at 542 (the dock); with the rows raised, the start's name ends near 508.
+ */
 const ZONE_TOP = 98;
-const ZONE_BOTTOM = 542;
+const ZONE_BOTTOM = 508;
 /** Points kept clear above and below the map inside the band. */
 const BAND_MARGIN = 18;
 
@@ -65,32 +68,36 @@ const mapDim = {
 	locations: [0, 0.22, 0.74, 1],
 } as const;
 
-/** Place centers. `outro` is the foot of the gate, where the star stops. */
+/**
+ * Place centers. `outro` is the foot of the gate, where the star stops. The rows sit higher than
+ * round 7 drew them (the user's call, 2026-11-02): the upper pair beside the goodnight hill, so the
+ * start has room for its name under it.
+ */
 const NODES: Record<MapNode, { x: number; y: number }> = {
-	intro: { x: 141, y: 496 },
+	intro: { x: 141, y: 440 },
 	outro: { x: 141, y: 215 },
-	p1: { x: 50, y: 400 },
-	p1a: { x: 50, y: 280 },
-	p2: { x: 232, y: 400 },
-	p2a: { x: 232, y: 280 },
+	p1: { x: 50, y: 340 },
+	p1a: { x: 50, y: 222 },
+	p2: { x: 232, y: 340 },
+	p2a: { x: 232, y: 222 },
 };
 
 /** Round 7 `.stone` elements of screen 11, in markup order. Widths are pt (34 px, 30 px). */
 const STONES = [
-	{ rotate: 24, variant: 2, width: 47, x: 109.2, y: 455.5 },
-	{ rotate: 30, variant: 2, width: 47, x: 172.8, y: 455.5 },
-	{ rotate: -11, variant: 3, width: 47, x: 106.9, y: 412 },
-	{ rotate: 30, variant: 1, width: 42, x: 143.3, y: 414 },
-	{ rotate: -12, variant: 2, width: 47, x: 179.7, y: 411.5 },
-	{ rotate: 22, variant: 1, width: 42, x: 50, y: 337 },
-	{ rotate: -17, variant: 2, width: 47, x: 232, y: 340 },
-	{ rotate: 33, variant: 1, width: 42, x: 97.8, y: 355.3 },
-	{ rotate: -30, variant: 3, width: 47, x: 141, y: 323 },
-	{ rotate: 15, variant: 3, width: 47, x: 177.4, y: 301.7 },
-	{ rotate: -15, variant: 2, width: 47, x: 186.5, y: 357.2 },
-	{ rotate: -34, variant: 3, width: 47, x: 104.6, y: 301.7 },
-	{ rotate: -27, variant: 3, width: 47, x: 110.4, y: 261.3 },
-	{ rotate: -31, variant: 1, width: 42, x: 171.6, y: 261.3 },
+	{ rotate: 24, variant: 2, width: 47, x: 109.2, y: 397.8 },
+	{ rotate: 30, variant: 2, width: 47, x: 172.8, y: 397.8 },
+	{ rotate: -11, variant: 3, width: 47, x: 106.9, y: 352.5 },
+	{ rotate: 30, variant: 1, width: 42, x: 143.3, y: 354.6 },
+	{ rotate: -12, variant: 2, width: 47, x: 179.7, y: 352.0 },
+	{ rotate: 22, variant: 1, width: 42, x: 50, y: 278.1 },
+	{ rotate: -17, variant: 2, width: 47, x: 232, y: 281.0 },
+	{ rotate: 33, variant: 1, width: 42, x: 97.8, y: 296.0 },
+	{ rotate: -30, variant: 3, width: 47, x: 141, y: 264.3 },
+	{ rotate: 15, variant: 3, width: 47, x: 177.4, y: 243.3 },
+	{ rotate: -15, variant: 2, width: 47, x: 186.5, y: 297.9 },
+	{ rotate: -34, variant: 3, width: 47, x: 104.6, y: 243.3 },
+	{ rotate: -27, variant: 3, width: 47, x: 110.4, y: 220.0 },
+	{ rotate: -31, variant: 1, width: 42, x: 171.6, y: 220.0 },
 ] as const;
 
 interface Road {
@@ -126,7 +133,7 @@ const GOAL_X = 141;
  * plate once every place is named), to the right of the box.
  */
 const PLATE_SIDE: Record<MapPlaceNode, "above" | "below" | "right"> = {
-	intro: "right",
+	intro: "below",
 	p1: "below",
 	p1a: "below",
 	p2: "below",
