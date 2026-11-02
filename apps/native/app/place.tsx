@@ -45,11 +45,12 @@ import {
 	type EndCause,
 	GRACE_MS,
 	graceDue,
-	graceMs,
 	hasParts,
 	LEAD_FADE_MS,
+	LEAD_HOLD_MS,
 	LEAD_ZOOM_MS,
 	LEAD_ZOOM_TO,
+	leadHolding,
 	leadZoom,
 	neighbourUrls,
 	type PlayEvent,
@@ -59,6 +60,7 @@ import {
 	slotParts,
 	step,
 	upcoming,
+	wordsStart,
 } from "@/src/data/parts";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
@@ -346,6 +348,7 @@ const setupPlayer = (created: VideoPlayer) => {
 const moved = (a: PlayState, b: PlayState) =>
 	a.at !== b.at ||
 	a.phase !== b.phase ||
+	a.speaking !== b.speaking ||
 	a.stall !== b.stall ||
 	a.done !== b.done;
 
@@ -447,11 +450,11 @@ function PartVideo({
 }
 
 /**
- * The player for an engine node: its video parts (muted) play back to back while its narration
- * plays on. The picture stays up until the first part shows a frame. The place ends when the
- * last part and the narration have both ended (see parts.ts); the last frame holds meanwhile.
- * Two part players take turns: one shows the current part, the other loads the next. The words
- * follow the narration.
+ * The player for an engine node: its video parts (muted) play back to back, each whole, and its
+ * narration plays in halves, each centred inside its part (see parts.ts). The picture stays up
+ * until the first part shows a frame. The place ends when the last part and the narration have
+ * both ended; the last frame holds meanwhile. Two part players take turns: one shows the
+ * current part, the other loads the next. The words follow the narration.
  */
 function MediaPlayer({
 	audio,
@@ -496,6 +499,8 @@ function MediaPlayer({
 	const statuses = [status0, status1] as const;
 	const [framed, setFramed] = useState(false);
 	const [playing, setPlaying] = useState(true);
+	// For the machine's callbacks, which must not wait for a repaint to know about a pause.
+	const playingRef = useRef<boolean>(true);
 	const started = useRef<boolean>(false);
 	const begun = useRef<number>(-1);
 	// Set once a tick shows the part part-way in, so a stale tick from the file a player held
@@ -521,6 +526,27 @@ function MediaPlayer({
 		},
 		[node]
 	);
+	// The machine says the narration speaks or pauses: it plays from the start of the half, or stops.
+	const voice = useCallback(
+		(now: PlayState) => {
+			if (!now.speaking) {
+				audioPlayer.pause();
+				return;
+			}
+			const play = () => {
+				if (playingRef.current) {
+					audioPlayer.play();
+				}
+			};
+			const from = wordsStart(now, now.half);
+			if (from > 0) {
+				audioPlayer.seekTo(from).then(play, play);
+			} else {
+				play();
+			}
+		},
+		[audioPlayer]
+	);
 	const send = useCallback(
 		(event: PlayEvent) => {
 			const before = machine.current;
@@ -532,15 +558,12 @@ function MediaPlayer({
 			if (event.type !== "narration-time" || moved(before, next.state)) {
 				setView(next.state);
 			}
-			for (const {
-				cutMs,
-				holdMs,
-				leadMs,
-				name: markName,
-				part,
-			} of next.marks) {
+			if (next.state.speaking !== before.speaking) {
+				voice(next.state);
+			}
+			for (const { holdMs, leadMs, name: markName, part, sec } of next.marks) {
 				const detail = Object.fromEntries(
-					Object.entries({ cutMs, holdMs, leadMs }).filter(
+					Object.entries({ holdMs, leadMs, sec }).filter(
 						([, value]) => value !== undefined
 					)
 				);
@@ -554,7 +577,7 @@ function MediaPlayer({
 				fireEnd(next.end);
 			}
 		},
-		[fireEnd, node]
+		[fireEnd, node, voice]
 	);
 	// The picture goes when a part shows its first frame; each part's mark is the first time only.
 	const showFrame = useCallback(
@@ -577,6 +600,11 @@ function MediaPlayer({
 		} else if (currentTime > 0) {
 			inPart.current = true;
 			showFrame(index);
+			send({
+				duration: duration || 0,
+				sec: currentTime,
+				type: "part-time",
+			});
 		}
 	};
 
@@ -626,26 +654,14 @@ function MediaPlayer({
 			send({ type: "narration-ended" });
 		}
 	}, [heard.didJustFinish, node, send]);
-	// The narration leads: its time tells the machine when the next part's words start.
+	// The narration's time tells the machine when a half of the words is over.
 	const heardSec = heard.currentTime;
 	const heardLength = heard.duration;
 	useEffect(() => {
-		if (!hasNarration) {
-			return;
+		if (hasNarration) {
+			send({ length: heardLength, sec: heardSec, type: "narration-time" });
 		}
-		const now = machine.current;
-		let part: VideoPlayer | null = null;
-		if (now.phase === "playing") {
-			part = now.slot === 0 ? player0 : player1;
-		}
-		send({
-			length: heardLength,
-			partLeftSec:
-				part && part.duration > 0 ? part.duration - part.currentTime : null,
-			sec: heardSec,
-			type: "narration-time",
-		});
-	}, [hasNarration, heardLength, heardSec, player0, player1, send]);
+	}, [hasNarration, heardLength, heardSec, send]);
 	// A narration that fails stops holding the place up, after a moment for fresh urls to arrive.
 	useEffect(() => {
 		if (!narrationFailed) {
@@ -654,16 +670,28 @@ function MediaPlayer({
 		const timer = setTimeout(() => send({ type: "narration-ended" }), GRACE_MS);
 		return () => clearTimeout(timer);
 	}, [narrationFailed, send]);
-	// The narration is done and the next part is still not here: wait a little, then move on.
+	// The next part is still not here and the narration is done (or paused for it): wait a
+	// little, then move on (end the place, or talk on over the held frame).
 	const waitingOnPart = graceDue(view);
-	const waitMs = graceMs(view);
 	useEffect(() => {
 		if (!(waitingOnPart && playing)) {
 			return;
 		}
-		const timer = setTimeout(() => send({ type: "grace" }), waitMs);
+		const timer = setTimeout(() => send({ type: "grace" }), GRACE_MS);
 		return () => clearTimeout(timer);
-	}, [playing, send, waitMs, waitingOnPart]);
+	}, [playing, send, waitingOnPart]);
+	// The picture waits for part 1 only so long, then the words play over it.
+	const waitingOnFirst = leadHolding(view);
+	useEffect(() => {
+		if (!(waitingOnFirst && playing)) {
+			return;
+		}
+		const timer = setTimeout(
+			() => send({ type: "lead-timeout" }),
+			LEAD_HOLD_MS
+		);
+		return () => clearTimeout(timer);
+	}, [playing, send, waitingOnFirst]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
 	useEffect(() => {
 		if (narrationFailed) {
@@ -671,8 +699,9 @@ function MediaPlayer({
 		}
 	}, [narrationFailed, onMediaError]);
 
-	// The narration and the first part start together, once both can. Later parts start the
-	// moment they are on screen: the next one has been loading while the last one played.
+	// The place begins once the narration is loaded and the first part can show. The narration
+	// itself waits for its half (see parts.ts). Later parts start the moment they are on screen:
+	// the next one has been loading while the last one played.
 	const videoPending =
 		view.phase === "playing"
 			? statuses[view.slot] !== "readyToPlay"
@@ -688,8 +717,6 @@ function MediaPlayer({
 			}
 			started.current = true;
 			if (hasNarration) {
-				mark("narration-start", { place: node });
-				audioPlayer.play();
 				send({ type: "started" });
 			}
 		}
@@ -699,9 +726,7 @@ function MediaPlayer({
 			(view.slot === 0 ? player0 : player1).play();
 		}
 	}, [
-		audioPlayer,
 		hasNarration,
-		node,
 		player0,
 		player1,
 		playing,
@@ -713,8 +738,9 @@ function MediaPlayer({
 	]);
 
 	const toggle = () => {
+		playingRef.current = !playing;
 		if (started.current) {
-			if (hasNarration) {
+			if (hasNarration && machine.current.speaking) {
 				setPaused(audioPlayer, playing);
 			}
 			if (view.phase === "playing") {
@@ -731,8 +757,9 @@ function MediaPlayer({
 	const zoom = leadZoom(view, useReducedMotion());
 	const spoken = hasNarration ? heard.currentTime : 0;
 	const length = hasNarration ? heard.duration : 0;
+	// The bed ducks only while a half of the words is playing, not in the pauses between halves.
 	usePlayerMusic(
-		hasNarration && audio !== null
+		hasNarration && audio !== null && view.speaking
 			? speakingAt(audio.words, spoken, length, view.narrationEnded)
 			: false,
 		!playing

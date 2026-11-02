@@ -1,6 +1,7 @@
 // The rules for playing a place's video parts back to back, with no player in them: the screen
 // feeds in what its players report and does what comes back. Part numbers in marks count from 1.
-// The narration leads: part N+1 starts when the narration reaches the words that belong to it.
+// Every part plays whole, back to back. The narration is one file with a half of words for each
+// part; half N plays centred inside part N, and the narration pauses between halves.
 import { neighbours } from "./map-rules";
 import type { NodeId, Part, Place } from "./types";
 
@@ -31,7 +32,9 @@ export const LEAD_FADE_MS = 400;
  */
 export interface Lead {
 	ended: boolean;
-	/** The clock (ms) when the narration ended with part 1 still being made; null before that. */
+	/** The wait for part 1 ran out: the words play over the picture. */
+	expired: boolean;
+	/** The clock (ms) when the picture began to wait for part 1; null before that. */
 	holdSince: number | null;
 	since: number;
 }
@@ -43,6 +46,8 @@ export interface PlayState {
 	bad: Record<string, string>;
 	/** The place has ended. */
 	done: boolean;
+	/** Index of the half of the words playing, or the next one to play. */
+	half: number;
 	/** The place has a picture to stand on while the first part is still being made. */
 	hasPicture: boolean;
 	/** How far the narration has played, in seconds. */
@@ -58,30 +63,38 @@ export interface PlayState {
 	phase: "playing" | "spent" | "waiting";
 	/** Which of the two players holds the part on screen; the other buffers the next one. */
 	slot: Slot;
+	/** The narration should be playing now: a half of the words is being said. */
+	speaking: boolean;
 	/** Index of the part a stall is waiting on, once its `stall-start` is marked. */
 	stall: number | null;
+	/** The place has begun: the narration is loaded and the first part is on screen or not coming. */
+	started: boolean;
 }
 
 export type PlayEvent =
 	| { type: "bad"; id: string }
 	| { type: "ended" }
 	| { type: "grace" }
+	| { type: "lead-timeout" }
 	| { type: "narration-ended" }
 	| {
-			/** The narration's time. `partLeftSec` is what the part on screen has left, if known. */
+			/** The narration's time, and how long the whole narration is. */
 			length: number;
-			partLeftSec: number | null;
 			sec: number;
 			type: "narration-time";
 	  }
 	| { type: "parts"; parts: Part[] }
+	| {
+			/** The part on screen is `sec` in; `duration` is its real length, 0 when not known. */
+			duration: number;
+			sec: number;
+			type: "part-time";
+	  }
 	| { type: "started" };
 
 export interface Step {
 	end?: EndCause;
 	marks: {
-		/** On `part-cut`: how much of the part was left when the next part's words cut it, in ms. */
-		cutMs?: number;
 		/** On `lead-hold-end`: how long the picture waited after the narration, in ms. */
 		holdMs?: number;
 		/** On `picture-lead-end`: how long the picture led alone, in ms. */
@@ -89,13 +102,18 @@ export interface Step {
 		name:
 			| "lead-hold-end"
 			| "lead-hold-start"
-			| "part-cut"
+			| "narration-start"
 			| "part-end"
 			| "picture-lead-end"
 			| "picture-lead-start"
 			| "stall-end"
-			| "stall-start";
+			| "stall-start"
+			| "voice-pause"
+			| "voice-resume";
+		/** Part numbers count from 1; on voice marks, the number of the half. */
 		part: number;
+		/** On voice marks: where the narration is, in seconds. */
+		sec?: number;
 	}[];
 	state: PlayState;
 }
@@ -108,6 +126,7 @@ export const begin = (
 	at: -1,
 	bad: {},
 	done: false,
+	half: 0,
 	hasPicture,
 	heard: 0,
 	lead: null,
@@ -116,7 +135,9 @@ export const begin = (
 	parts,
 	phase: "waiting",
 	slot: 1,
+	speaking: false,
 	stall: null,
+	started: false,
 });
 
 const unchanged = (state: PlayState): Step => ({ marks: [], state });
@@ -150,33 +171,36 @@ export function wordsStart(s: PlayState, index: number): number {
 		: Number.POSITIVE_INFINITY;
 }
 
+/** Where a part's half of the words ends: where the next part's words start; the last, the narration's end. */
+export const wordsEnd = (s: PlayState, index: number) =>
+	index >= s.parts.length - 1 ? s.length : wordsStart(s, index + 1);
+
 /**
- * The part whose words are playing: the last part after the one on screen that is not failed and
- * whose words have started. Once the narration is over (or there is none) no part has words, so
- * the parts play on in order. -1: none yet.
+ * How far into part `index` its half of the words starts: centred, so the silence before and
+ * after is equal. A half as long as the part or longer starts with it. The part's length is
+ * `videoSec`, or its own `durationSec` while the video's is not known (0).
+ */
+export function voiceOffset(s: PlayState, index: number, videoSec = 0) {
+	const partSec = videoSec > 0 ? videoSec : (s.parts[index]?.durationSec ?? 0);
+	const half = wordsEnd(s, index) - wordsStart(s, index);
+	return Number.isFinite(half) && half >= 0 && partSec > 0
+		? Math.max(0, (partSec - half) / 2)
+		: 0;
+}
+
+/**
+ * The part that plays next, if its turn has come: the next one in line, once the half of the
+ * words before it has ended. Once the narration is over (or there is none) the parts play on.
+ * -1: none yet.
  */
 const dueIndex = (s: PlayState) => {
-	if (s.narrationEnded) {
-		return nextIndex(s);
-	}
-	let found = -1;
-	for (const [index, part] of s.parts.entries()) {
-		if (index > s.at && !isFailed(s, part) && s.heard >= wordsStart(s, index)) {
-			found = index;
-		}
-	}
-	return found;
+	const next = nextIndex(s);
+	return s.narrationEnded || s.half >= next ? next : -1;
 };
 
-/** The part to play next: the one whose words are playing, else the next one in line. */
-const targetIndex = (s: PlayState) => {
-	const due = dueIndex(s);
-	return due === -1 ? nextIndex(s) : due;
-};
-
-/** The next part to play, when it can be played now. */
+/** The next part to play, when it can be played now (it may load before its turn). */
 export function upcoming(s: PlayState): Part | null {
-	const part = s.parts[targetIndex(s)];
+	const part = s.parts[nextIndex(s)];
 	return part && isPlayable(part) ? part : null;
 }
 
@@ -199,7 +223,7 @@ export const hasParts = (parts: Part[]) =>
 export const leadZoom = (s: PlayState, reduceMotion: boolean) =>
 	s.lead !== null && !s.lead.ended && !reduceMotion;
 
-/** The narration starts over the picture while the first part is still being made. */
+/** The picture waits for the first part, which is still being made, with the music alone. */
 function startLead(s: PlayState, now: number): Step {
 	if (
 		s.lead ||
@@ -212,36 +236,42 @@ function startLead(s: PlayState, now: number): Step {
 	}
 	return {
 		marks: [{ name: "picture-lead-start", part: 1 }],
-		state: { ...s, lead: { ended: false, holdSince: null, since: now } },
+		state: {
+			...s,
+			lead: { ended: false, expired: false, holdSince: null, since: now },
+		},
 	};
 }
 
-/** The narration is done and the next part is still not here: the wait that ends in `grace`. */
+/**
+ * The wait that ends in `grace`: the narration is done and the next part is not here (the
+ * place ends), or the narration is paused for a part that is not here (it talks on).
+ */
 export const graceDue = (s: PlayState) =>
-	!s.done && s.phase === "waiting" && s.narrationEnded;
+	!s.done &&
+	s.phase === "waiting" &&
+	(s.narrationEnded || (s.stall !== null && !s.speaking));
 
 /**
- * The narration is done over the picture and part 1 is still being made (not failed): the
- * picture stays up, for longer than the usual grace. Not a stall.
+ * The picture waits for part 1, which is still being made (not failed), before the words
+ * start. Not a stall. After `LEAD_HOLD_MS` the words play over the picture.
  */
 export const leadHolding = (s: PlayState) =>
 	!s.done &&
-	s.phase === "waiting" &&
-	s.narrationEnded &&
+	s.started &&
+	!s.speaking &&
 	s.at < 0 &&
 	s.lead !== null &&
 	!s.lead.ended &&
+	!s.lead.expired &&
 	s.parts[0]?.status === "making";
-
-/** How long the wait for the next part lasts before the place ends with `grace`. */
-export const graceMs = (s: PlayState) =>
-	leadHolding(s) ? LEAD_HOLD_MS : GRACE_MS;
 
 const sameParts = (a: Part[], b: Part[]) =>
 	a.length === b.length &&
 	a.every(
 		(part, index) =>
 			part.id === b[index].id &&
+			part.durationSec === b[index].durationSec &&
 			part.narrationFromSec === b[index].narrationFromSec &&
 			part.status === b[index].status &&
 			part.url === b[index].url
@@ -271,9 +301,9 @@ function play(s: PlayState, index: number, now: number): Step {
 }
 
 /**
- * Moves on as far as it can while no part is running: plays the part whose words are playing,
- * holds the last frame while the next part's words have not started (and, marking a stall, while
- * that part is not playable), and ends the place once no part is left and the narration is done.
+ * Moves on as far as it can while no part is running: plays the next part once the half of the
+ * words before it has ended, holds the last frame until then (and, marking a stall, while the
+ * part is not playable), and ends the place once no part is left and the narration is done.
  * `cause` names what ended the place if this is the end. `force` plays the next part at once,
  * for when the part on screen cannot play.
  */
@@ -299,7 +329,7 @@ function settle(
 	}
 	const index = force ? next : dueIndex(s);
 	if (index === -1) {
-		// The next part's words have not started: the last frame holds until they do.
+		// The half of the words before the next part is still playing: the last frame holds.
 		return unchanged(s);
 	}
 	if (isPlayable(s.parts[index])) {
@@ -315,29 +345,39 @@ function settle(
 	};
 }
 
-/** The narration's time: the next part's words start, which cuts the part on screen, or end a hold. */
+/**
+ * The half of the words playing is over. When a part is on screen to wait for the next one, the
+ * narration pauses; otherwise (words over the picture, or the next part failed) it plays on.
+ */
+function endHalf(s: PlayState): Step {
+	if (
+		!s.speaking ||
+		s.narrationEnded ||
+		s.half >= s.parts.length - 1 ||
+		s.heard < wordsStart(s, s.half + 1)
+	) {
+		return unchanged(s);
+	}
+	const half = s.half + 1;
+	const pauses = s.at >= 0 && !isFailed(s, s.parts[half]);
+	return {
+		marks: pauses ? [{ name: "voice-pause", part: half, sec: s.heard }] : [],
+		state: { ...s, half, speaking: !pauses },
+	};
+}
+
+/** The narration's time: a half of the words may end, which lets the next part start. */
 function onNarrationTime(
 	s: PlayState,
 	event: Extract<PlayEvent, { type: "narration-time" }>,
 	now: number
 ): Step {
-	const timed = { ...s, heard: event.sec, length: event.length };
-	if (timed.done || timed.phase !== "playing") {
-		return settle(timed, "narration", now);
+	const over = endHalf({ ...s, heard: event.sec, length: event.length });
+	if (over.state.phase === "playing") {
+		return over;
 	}
-	const index = dueIndex(timed);
-	if (index === -1 || !isPlayable(timed.parts[index])) {
-		return unchanged(timed);
-	}
-	const cut = play(timed, index, now);
-	const cutMs =
-		event.partLeftSec === null
-			? undefined
-			: Math.max(0, Math.round(event.partLeftSec * 1000));
-	return {
-		...cut,
-		marks: [{ cutMs, name: "part-cut", part: timed.at + 1 }, ...cut.marks],
-	};
+	const next = settle(over.state, "narration", now);
+	return { ...next, marks: [...over.marks, ...next.marks] };
 }
 
 function ended(s: PlayState, now: number): Step {
@@ -366,14 +406,83 @@ function bad(s: PlayState, id: string, now: number): Step {
 	);
 }
 
+/** The half of the words about to play starts. */
+function startHalf(s: PlayState): Step {
+	return {
+		marks: [
+			{
+				name: s.half === 0 ? "narration-start" : "voice-resume",
+				part: s.half + 1,
+				sec: wordsStart(s, s.half),
+			},
+		],
+		state: { ...s, speaking: true },
+	};
+}
+
 function grace(s: PlayState): Step {
 	if (!graceDue(s)) {
 		return unchanged(s);
+	}
+	if (!s.narrationEnded) {
+		// The narration waited for a part that did not come: it talks on over the held frame.
+		return startHalf(s);
 	}
 	return {
 		end: "grace",
 		marks: stallEnd(s),
 		state: { ...s, done: true, stall: null },
+	};
+}
+
+/** The lead hold runs out: the words play over the picture. */
+function leadTimeout(s: PlayState): Step {
+	if (!(leadHolding(s) && s.lead)) {
+		return unchanged(s);
+	}
+	return { marks: [], state: { ...s, lead: { ...s.lead, expired: true } } };
+}
+
+/**
+ * Whether the half of the words about to play should start now. A half starts `voiceOffset` into
+ * its part (`sec`, in seconds, is where the part on screen is; -1 when not known). Half 1 starts
+ * over the picture when part 1 will not come or its wait ran out. A part that failed has no
+ * place to centre in: its half plays at once.
+ */
+function halfDue(s: PlayState, sec: number, duration: number) {
+	const owner = s.parts[s.half];
+	if (
+		!owner ||
+		s.done ||
+		s.speaking ||
+		s.narrationEnded ||
+		!s.started ||
+		!Number.isFinite(wordsStart(s, s.half))
+	) {
+		return false;
+	}
+	if (isFailed(s, owner) || s.at > s.half) {
+		return true;
+	}
+	if (s.at === s.half) {
+		return s.phase !== "playing" || sec >= voiceOffset(s, s.half, duration);
+	}
+	return s.half === 0 && s.at < 0 && !isPlayable(owner) && !leadHolding(s);
+}
+
+/** Starts the half of the words that is due, after any event. */
+function withVoice(next: Step, event: PlayEvent): Step {
+	const timed = event.type === "part-time";
+	if (
+		!halfDue(next.state, timed ? event.sec : -1, timed ? event.duration : 0)
+	) {
+		return next;
+	}
+	const start = startHalf(next.state);
+	return {
+		...next,
+		marks: [...next.marks, ...start.marks],
+		state: start.state,
 	};
 }
 
@@ -411,7 +520,7 @@ export function step(
 	event: PlayEvent,
 	now: number = Date.now()
 ): Step {
-	return holdMarks(s, advance(s, event, now), now);
+	return holdMarks(s, withVoice(advance(s, event, now), event), now);
 }
 
 function advance(s: PlayState, event: PlayEvent, now: number): Step {
@@ -425,10 +534,16 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 			return ended(s, now);
 		case "grace":
 			return grace(s);
+		case "lead-timeout":
+			return leadTimeout(s);
 		case "narration-ended":
 			return s.narrationEnded
 				? unchanged(s)
-				: settle({ ...s, narrationEnded: true }, "narration", now);
+				: settle(
+						{ ...s, narrationEnded: true, speaking: false },
+						"narration",
+						now
+					);
 		case "narration-time":
 			return onNarrationTime(s, event, now);
 		case "parts":
@@ -437,8 +552,10 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 				"narration",
 				now
 			);
+		case "part-time":
+			return unchanged(s);
 		case "started":
-			return startLead(s, now);
+			return s.started ? unchanged(s) : startLead({ ...s, started: true }, now);
 		default:
 			return unchanged(s);
 	}
