@@ -7,6 +7,8 @@ import type { NodeId, Part, Place } from "./types";
 export const END_MARGIN_SEC = 0.1;
 /** How long a finished narration waits for a part that is still being made. */
 export const GRACE_MS = 3000;
+/** How long a finished narration keeps the picture up for a first part that is still being made. */
+export const LEAD_HOLD_MS = 12_000;
 
 /** The part on screen has reached its end: its end event came, or its time is nearly its length. */
 export const reachedEnd = (currentTime: number, duration: number) =>
@@ -28,6 +30,8 @@ export const LEAD_FADE_MS = 400;
  */
 export interface Lead {
 	ended: boolean;
+	/** The clock (ms) when the narration ended with part 1 still being made; null before that. */
+	holdSince: number | null;
 	since: number;
 }
 
@@ -64,9 +68,13 @@ export type PlayEvent =
 export interface Step {
 	end?: EndCause;
 	marks: {
+		/** On `lead-hold-end`: how long the picture waited after the narration, in ms. */
+		holdMs?: number;
 		/** On `picture-lead-end`: how long the picture led alone, in ms. */
 		leadMs?: number;
 		name:
+			| "lead-hold-end"
+			| "lead-hold-start"
 			| "part-end"
 			| "picture-lead-end"
 			| "picture-lead-start"
@@ -146,13 +154,30 @@ function startLead(s: PlayState, now: number): Step {
 	}
 	return {
 		marks: [{ name: "picture-lead-start", part: 1 }],
-		state: { ...s, lead: { ended: false, since: now } },
+		state: { ...s, lead: { ended: false, holdSince: null, since: now } },
 	};
 }
 
 /** The narration is done and the next part is still not here: the wait that ends in `grace`. */
 export const graceDue = (s: PlayState) =>
 	!s.done && s.phase === "waiting" && s.narrationEnded;
+
+/**
+ * The narration is done over the picture and part 1 is still being made (not failed): the
+ * picture stays up, for longer than the usual grace. Not a stall.
+ */
+export const leadHolding = (s: PlayState) =>
+	!s.done &&
+	s.phase === "waiting" &&
+	s.narrationEnded &&
+	s.at < 0 &&
+	s.lead !== null &&
+	!s.lead.ended &&
+	s.parts[0]?.status === "making";
+
+/** How long the wait for the next part lasts before the place ends with `grace`. */
+export const graceMs = (s: PlayState) =>
+	leadHolding(s) ? LEAD_HOLD_MS : GRACE_MS;
 
 const sameParts = (a: Part[], b: Part[]) =>
 	a.length === b.length &&
@@ -250,6 +275,31 @@ function grace(s: PlayState): Step {
 	};
 }
 
+/** Adds the marks for a lead hold starting or ending around one step. */
+function holdMarks(before: PlayState, next: Step, now: number): Step {
+	const was = leadHolding(before);
+	const is = leadHolding(next.state);
+	const since = before.lead?.holdSince ?? null;
+	if (was && !is && since !== null) {
+		const holdMs = now - since;
+		return {
+			...next,
+			marks: [{ holdMs, name: "lead-hold-end", part: 1 }, ...next.marks],
+		};
+	}
+	if (!was && is && next.state.lead) {
+		return {
+			...next,
+			marks: [...next.marks, { name: "lead-hold-start", part: 1 }],
+			state: {
+				...next.state,
+				lead: { ...next.state.lead, holdSince: now },
+			},
+		};
+	}
+	return next;
+}
+
 /**
  * One event in, the next state out, with the marks to record and the end if the place is over.
  * `now` is the clock in ms, for the length of a picture lead.
@@ -259,6 +309,10 @@ export function step(
 	event: PlayEvent,
 	now: number = Date.now()
 ): Step {
+	return holdMarks(s, advance(s, event, now), now);
+}
+
+function advance(s: PlayState, event: PlayEvent, now: number): Step {
 	if (s.done) {
 		return unchanged(s);
 	}

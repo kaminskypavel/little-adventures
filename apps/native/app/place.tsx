@@ -43,6 +43,7 @@ import {
 	type EndCause,
 	GRACE_MS,
 	graceDue,
+	graceMs,
 	hasParts,
 	LEAD_FADE_MS,
 	LEAD_ZOOM_MS,
@@ -479,9 +480,11 @@ function MediaPlayer({
 			}
 			machine.current = next.state;
 			setView(next.state);
-			for (const { leadMs, name: markName, part } of next.marks) {
+			for (const { holdMs, leadMs, name: markName, part } of next.marks) {
+				const ms = holdMs === undefined ? { leadMs } : { holdMs };
 				mark(markName, {
-					detail: leadMs === undefined ? undefined : { leadMs },
+					detail:
+						ms.leadMs === undefined && ms.holdMs === undefined ? undefined : ms,
 					part,
 					place: node,
 				});
@@ -572,13 +575,14 @@ function MediaPlayer({
 	}, [narrationFailed, send]);
 	// The narration is done and the next part is still not here: wait a little, then move on.
 	const waitingOnPart = graceDue(view);
+	const waitMs = graceMs(view);
 	useEffect(() => {
 		if (!(waitingOnPart && playing)) {
 			return;
 		}
-		const timer = setTimeout(() => send({ type: "grace" }), GRACE_MS);
+		const timer = setTimeout(() => send({ type: "grace" }), waitMs);
 		return () => clearTimeout(timer);
-	}, [playing, send, waitingOnPart]);
+	}, [playing, send, waitMs, waitingOnPart]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
 	useEffect(() => {
 		if (narrationFailed) {

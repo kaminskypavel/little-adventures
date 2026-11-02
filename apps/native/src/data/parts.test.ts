@@ -3,8 +3,11 @@ import {
 	begin,
 	END_MARGIN_SEC,
 	type EndCause,
+	GRACE_MS,
 	graceDue,
+	graceMs,
 	hasParts,
+	LEAD_HOLD_MS,
 	LEAD_ZOOM_TO,
 	leadZoom,
 	neighbourUrls,
@@ -343,7 +346,11 @@ describe("the picture leads while part 1 is still being made", () => {
 	test("picture and narration start the place before any part is playable", () => {
 		const led = step(begin(first, true, true), started, 1000);
 		expect(led.marks).toEqual([{ name: "picture-lead-start", part: 1 }]);
-		expect(led.state.lead).toEqual({ ended: false, since: 1000 });
+		expect(led.state.lead).toEqual({
+			ended: false,
+			holdSince: null,
+			since: 1000,
+		});
 		expect(leadZoom(led.state, false)).toBe(true);
 		// Started again: nothing more.
 		expect(step(led.state, started, 2000).marks).toEqual([]);
@@ -389,5 +396,60 @@ describe("the picture leads while part 1 is still being made", () => {
 		const led = step(begin(first, true, true), started, 0).state;
 		expect(leadZoom(led, true)).toBe(false);
 		expect(LEAD_ZOOM_TO).toBe(1.06);
+	});
+});
+
+describe("the picture holds after the narration while part 1 is still being made", () => {
+	const first = [making("a"), making("b")];
+	const started: PlayEvent = { type: "started" };
+	const led = () => step(begin(first, true, true), started, 0).state;
+
+	test("part 1 lands 5 s later: part 1 then part 2 play and the place ends with last-part", () => {
+		const held = step(led(), narrationEnded, 12_000);
+		expect(held.marks).toEqual([{ name: "lead-hold-start", part: 1 }]);
+		expect(held.end).toBe(undefined);
+		expect(graceMs(held.state)).toBe(LEAD_HOLD_MS);
+		const one = step(held.state, parts(playable("a"), making("b")), 17_000);
+		expect(one.marks.map((m) => m.name)).toEqual([
+			"lead-hold-end",
+			"picture-lead-end",
+		]);
+		expect(one.marks[0].holdMs).toBe(5000);
+		expect(one.state.at).toBe(0);
+		const two = step(
+			step(one.state, parts(playable("a"), playable("b")), 18_000).state,
+			ended,
+			22_000
+		);
+		expect(two.state.at).toBe(1);
+		expect(step(two.state, ended, 26_000).end).toBe("last-part");
+	});
+
+	test("part 1 never lands: the place ends with grace after 12 s", () => {
+		const held = step(led(), narrationEnded, 12_000);
+		expect(graceDue(held.state)).toBe(true);
+		const over = step(held.state, grace, 24_000);
+		expect(over.end).toBe("grace");
+		expect(over.marks).toEqual([
+			{ holdMs: 12_000, name: "lead-hold-end", part: 1 },
+		]);
+	});
+
+	test("part 1 failed: the place ends at once, with the usual grace and no hold", () => {
+		const lost = step(led(), parts(failed("a"), failed("b")), 100).state;
+		const done = step(lost, narrationEnded, 12_000);
+		expect(done.end).toBe("narration");
+		expect(done.marks).toEqual([]);
+		// Failing during the hold ends it at once too.
+		const held = step(led(), narrationEnded, 12_000).state;
+		const gone = step(held, parts(failed("a"), failed("b")), 13_000);
+		expect(gone.end).toBe("narration");
+		expect(gone.marks.map((m) => m.name)).toEqual(["lead-hold-end"]);
+	});
+
+	test("outside a picture lead the grace is as before", () => {
+		const plain = step(begin(first, true), narrationEnded, 0);
+		expect(plain.marks).toEqual([]);
+		expect(graceMs(plain.state)).toBe(GRACE_MS);
 	});
 });

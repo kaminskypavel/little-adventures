@@ -13,6 +13,8 @@ export type MarkName =
 	| "stall-start"
 	| "picture-lead-start"
 	| "picture-lead-end"
+	| "lead-hold-start"
+	| "lead-hold-end"
 	| "stall-end"
 	| "choice"
 	| "screen";
