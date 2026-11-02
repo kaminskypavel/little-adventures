@@ -29,10 +29,11 @@ import { colors, flat, motion } from "./tokens";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const gate = flat.holdGate;
-const center = gate.box / 2;
-const ringRadius = (gate.box - gate.stroke) / 2;
-const circumference = 2 * Math.PI * ringRadius;
+// "gate" is the 233 pt sun gate of Grown-ups; "lock" the 64 pt sage lock with a 84 pt ring.
+const variants = {
+	gate: { dims: flat.holdGate, tone: "sun" },
+	lock: { dims: flat.holdLock, tone: "sage" },
+} as const;
 const easeOut = Easing.bezier(...motion.easeOut);
 // The ring is information, not decoration: it fills even under reduced motion.
 const ringTiming = { reduceMotion: ReduceMotion.Never } as const;
@@ -40,7 +41,7 @@ const ringTiming = { reduceMotion: ReduceMotion.Never } as const;
 const SPRING_UNDERSHOOT = 0.16;
 
 /**
- * 17: hold the lock for 3 s. The ring fills linearly while held, release early
+ * 17: hold the lock for 3 s (`variant="lock"`: the small sage lock in a 84 pt ring). The ring fills linearly while held, release early
  * and it resets in 200 ms. `onOpen` runs once the ring is full. Screen readers
  * cannot hold, so the `activate` action opens it directly.
  */
@@ -48,11 +49,17 @@ export function HoldGate({
 	accessibilityLabel = "Hold to open grown-ups",
 	onOpen,
 	style,
+	variant = "gate",
 }: {
 	accessibilityLabel?: string;
 	onOpen: () => void;
 	style?: StyleProp<ViewStyle>;
+	variant?: keyof typeof variants;
 }) {
+	const { dims: gate, tone } = variants[variant];
+	const center = gate.box / 2;
+	const ringRadius = gate.ring;
+	const circumference = 2 * Math.PI * ringRadius;
 	const calm = useCalm();
 	const ring = useSharedValue(0);
 	const pressed = useSharedValue(0);
@@ -192,7 +199,7 @@ export function HoldGate({
 							StyleSheet.absoluteFill,
 							{ alignItems: "center", justifyContent: "center" },
 						]}
-						tone="sun"
+						tone={tone}
 					>
 						<Icon color={colors.inkNavy} name="lock" size={gate.coreIcon} />
 					</ClaySurface>
