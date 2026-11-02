@@ -17,7 +17,14 @@ export interface NarrationAudio {
 export type PartStatus = "failed" | "making" | "playable";
 /** One part of a place's video. `id` is stable across reads; `url` is set only while playable. */
 export interface Part {
+	/** How long the part plays, in seconds. Absent or null: not known. */
+	durationSec?: number | null;
 	id: string;
+	/**
+	 * Where this part's words start in the place's narration, in seconds (part 1 starts at 0).
+	 * Absent or null: the parts share the narration evenly.
+	 */
+	narrationFromSec?: number | null;
 	status: PartStatus;
 	url: string | null;
 }
@@ -46,6 +53,8 @@ interface EndGoal {
 export interface Adventure {
 	endGoal: EndGoal;
 	id: string;
+	/** A mood loop to play under the whole adventure. Absent or null: no music. */
+	music?: { url: string } | null;
 	places: Record<NodeId, Place>;
 	/** Seconds until the next read while any place is still being made. Absent or null: all done. */
 	pollAfterSec?: number | null;

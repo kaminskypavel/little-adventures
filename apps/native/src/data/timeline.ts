@@ -7,6 +7,7 @@ export type MarkName =
 	| "wait-ready"
 	| "first-frame"
 	| "part-end"
+	| "part-cut"
 	| "narration-start"
 	| "narration-end"
 	| "place-end"

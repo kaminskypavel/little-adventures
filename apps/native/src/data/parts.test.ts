@@ -17,6 +17,7 @@ import {
 	slotParts,
 	step,
 	upcoming,
+	wordsStart,
 } from "./parts";
 import type { Part } from "./types";
 
@@ -46,6 +47,13 @@ const parts = (...list: Part[]): PlayEvent => ({ parts: list, type: "parts" });
 const ended: PlayEvent = { type: "ended" };
 const narrationEnded: PlayEvent = { type: "narration-ended" };
 const grace: PlayEvent = { type: "grace" };
+/** The narration reaches `sec` of a 16 s narration; `left` is what the part on screen has left. */
+const at = (sec: number, left: number | null = null): PlayEvent => ({
+	length: 16,
+	partLeftSec: left,
+	sec,
+	type: "narration-time",
+});
 
 describe("two parts and a narration", () => {
 	const two = [playable("a"), playable("b")];
@@ -56,6 +64,7 @@ describe("two parts and a narration", () => {
 			begin(two, true),
 			parts(...two),
 			ended,
+			at(8),
 			narrationEnded,
 			ended
 		);
@@ -66,6 +75,7 @@ describe("two parts and a narration", () => {
 			begin(two, true),
 			parts(...two),
 			ended,
+			at(8),
 			ended,
 			narrationEnded
 		);
@@ -77,6 +87,7 @@ describe("two parts and a narration", () => {
 			begin(two, true),
 			parts(...two),
 			ended,
+			at(8),
 			narrationEnded
 		);
 		expect(midway.end).toBe(undefined);
@@ -90,7 +101,14 @@ describe("two parts and a narration", () => {
 	});
 
 	test("a part's end after the swap does nothing more", () => {
-		const a = drive(begin(two, true), parts(...two), ended, ended, ended);
+		const a = drive(
+			begin(two, true),
+			parts(...two),
+			ended,
+			at(8),
+			ended,
+			ended
+		);
 		expect(a.marks).toEqual(["part-end 1", "part-end 2"]);
 		expect(a.end).toBe(undefined);
 	});
@@ -99,7 +117,7 @@ describe("two parts and a narration", () => {
 		const start = drive(begin(two, true), parts(...two));
 		expect(start.state.slot).toBe(0);
 		expect(slotParts(start.state)).toEqual([two[0], two[1]]);
-		const swapped = drive(start.state, ended);
+		const swapped = drive(start.state, ended, at(8));
 		expect(swapped.state.slot).toBe(1);
 		expect(slotParts(swapped.state)).toEqual([null, two[1]]);
 	});
@@ -108,8 +126,11 @@ describe("two parts and a narration", () => {
 describe("the next part is not playable yet", () => {
 	test("hold the last frame, mark the stall, and end it when the part is playable", () => {
 		const first = [playable("a"), making("b")];
-		const held = drive(begin(first, true), parts(...first), ended);
-		expect(held.marks).toEqual(["part-end 1", "stall-start 2"]);
+		const early = drive(begin(first, true), parts(...first), ended);
+		// Part 2's words have not started: the frame holds, and that is not a stall yet.
+		expect(early.marks).toEqual(["part-end 1"]);
+		const held = drive(early.state, at(8));
+		expect(held.marks).toEqual(["stall-start 2"]);
 		expect(held.state.at).toBe(0);
 		expect(held.state.phase).toBe("waiting");
 		// The first part is still the one held, and the next has nothing to load yet.
@@ -204,14 +225,14 @@ describe("a failed part", () => {
 
 	test("a failed middle part is skipped for the next playable one", () => {
 		const list = [playable("a"), failed("b"), playable("c")];
-		const next = drive(begin(list, true), parts(...list), ended);
+		const next = drive(begin(list, true), parts(...list), ended, at(11));
 		expect(next.state.at).toBe(2);
 		expect(next.marks).toEqual(["part-end 1"]);
 	});
 
 	test("a part being waited on that then fails ends the stall and lets the narration end the place", () => {
 		const list = [playable("a"), making("b")];
-		const held = drive(begin(list, true), parts(...list), ended);
+		const held = drive(begin(list, true), parts(...list), ended, at(8));
 		const failedNow = drive(held.state, parts(playable("a"), failed("b")));
 		expect(failedNow.marks).toEqual(["stall-end 2"]);
 		expect(failedNow.state.phase).toBe("spent");
@@ -245,7 +266,7 @@ describe("a failed part", () => {
 describe("the narration is longer than the parts", () => {
 	test("the last frame holds and nothing stalls", () => {
 		const list = [playable("a"), playable("b")];
-		const held = drive(begin(list, true), parts(...list), ended, ended);
+		const held = drive(begin(list, true), parts(...list), ended, at(8), ended);
 		expect(held.marks).toEqual(["part-end 1", "part-end 2"]);
 		expect(held.state.phase).toBe("spent");
 		expect(held.state.stall).toBe(null);
@@ -300,7 +321,7 @@ describe("the swap on time", () => {
 		const length = 5;
 		const ticks = [0.1, 2.5, 4.8, 4.9, 5];
 		const swappedAt = ticks.find((time) => reachedEnd(time, length));
-		const swapped = drive(start.state, ended);
+		const swapped = drive(start.state, ended, at(8));
 		expect(swappedAt).toBe(4.9);
 		expect(swapped.state.at).toBe(1);
 		expect(swapped.state.slot).toBe(1);
@@ -371,7 +392,7 @@ describe("the picture leads while part 1 is still being made", () => {
 		]);
 		expect(one.state.at).toBe(0);
 		expect(leadZoom(one.state, false)).toBe(false);
-		const over = step(one.state, ended, 9000);
+		const over = step(step(one.state, at(8), 8500).state, ended, 9000);
 		expect(over.marks).toEqual([
 			{ name: "part-end", part: 1 },
 			{ name: "stall-start", part: 2 },
@@ -451,5 +472,118 @@ describe("the picture holds after the narration while part 1 is still being made
 		const plain = step(begin(first, true), narrationEnded, 0);
 		expect(plain.marks).toEqual([]);
 		expect(graceMs(plain.state)).toBe(GRACE_MS);
+	});
+});
+
+describe("the narration leads the parts", () => {
+	const two = [playable("a"), playable("b")];
+	/** Part 2's words start at 9 s of a 16 s narration. */
+	const seconds = [
+		{ ...playable("a"), narrationFromSec: 0 },
+		{ ...playable("b"), narrationFromSec: 9 },
+	];
+
+	test("words cross part 2's start while part 1 plays: part 2 starts and part 1 is cut", () => {
+		const playing = drive(begin(seconds, true), parts(...seconds), at(8.9));
+		expect(playing.state.at).toBe(0);
+		const cut = drive(playing.state, at(9, 6.04));
+		expect(cut.state.at).toBe(1);
+		expect(cut.state.slot).toBe(1);
+		expect(cut.marks).toEqual(["part-cut 1"]);
+		const [detail] = step(playing.state, at(9, 6.04)).marks;
+		expect(detail).toEqual({ cutMs: 6040, name: "part-cut", part: 1 });
+		// The part that was cut has nothing more to say when its end comes late.
+		expect(drive(cut.state, narrationEnded, ended).end).toBe("last-part");
+	});
+
+	test("part 2 not playable when its words start: part 1 plays on, then the frame stalls", () => {
+		const list = [seconds[0], { ...making("b"), narrationFromSec: 9 }];
+		const late = drive(begin(list, true), parts(...list), at(9.5));
+		expect(late.state.at).toBe(0);
+		expect(late.marks).toEqual([]);
+		const stalled = drive(late.state, ended);
+		expect(stalled.marks).toEqual(["part-end 1", "stall-start 2"]);
+	});
+
+	test("part 1 ends early: it holds its last frame until part 2's words start", () => {
+		const held = drive(begin(seconds, true), parts(...seconds), at(7), ended);
+		expect(held.marks).toEqual(["part-end 1"]);
+		expect(held.state.at).toBe(0);
+		expect(held.state.phase).toBe("waiting");
+		expect(held.state.stall).toBe(null);
+		expect(graceDue(held.state)).toBe(false);
+		// The next part loads while the frame holds.
+		expect(slotParts(held.state)).toEqual([seconds[0], seconds[1]]);
+		expect(drive(held.state, at(8.9)).state.at).toBe(0);
+		const next = drive(held.state, at(9));
+		expect(next.state.at).toBe(1);
+		expect(next.state.phase).toBe("playing");
+		// No cut: part 1 had ended.
+		expect(next.marks).toEqual([]);
+	});
+
+	test("part 1 lands after part 2's words began: it is skipped for the part being said", () => {
+		const first = [making("a"), making("b")];
+		const led = step(begin(first, true, true), { type: "started" }, 0).state;
+		const spoken = step(led, at(10), 10_000).state;
+		const landed = step(
+			spoken,
+			parts({ ...playable("a"), narrationFromSec: 0 }, making("b")),
+			10_500
+		);
+		// Part 2 is the part being said and is not here yet: the picture stays up.
+		expect(landed.state.at).toBe(-1);
+		const both = step(
+			landed.state,
+			parts(
+				{ ...playable("a"), narrationFromSec: 0 },
+				{ ...playable("b"), narrationFromSec: 9 }
+			),
+			11_000
+		);
+		expect(both.state.at).toBe(1);
+		expect(both.marks).toEqual([
+			{ leadMs: 11_000, name: "picture-lead-end", part: 1 },
+		]);
+	});
+
+	test("part 1 lands while the narration is still inside part 1's words: it plays", () => {
+		const first = [making("a"), making("b")];
+		const led = step(begin(first, true, true), { type: "started" }, 0).state;
+		const spoken = step(led, at(3), 3000).state;
+		const landed = step(spoken, parts(...seconds), 3500);
+		expect(landed.state.at).toBe(0);
+	});
+
+	test("a part with no start of its own takes an even share of the narration", () => {
+		const three = [playable("a"), playable("b"), playable("c")];
+		const state = begin(three, true);
+		// 16 s over 3 parts: part 2 at 5.33 s, part 3 at 10.67 s.
+		const first = drive(state, parts(...three), at(5.3));
+		expect(first.state.at).toBe(0);
+		const second = drive(first.state, at(5.34));
+		expect(second.state.at).toBe(1);
+		const third = drive(second.state, at(10.7));
+		expect(third.state.at).toBe(2);
+		expect(wordsStart({ ...state, length: 16 }, 0)).toBe(0);
+		expect(Math.round(wordsStart({ ...state, length: 16 }, 2) * 1000)).toBe(
+			10_667
+		);
+	});
+
+	test("a narration whose length is not known yet holds every later part", () => {
+		const unknown = drive(begin(two, true), parts(...two), {
+			length: 0,
+			partLeftSec: null,
+			sec: 5,
+			type: "narration-time",
+		});
+		expect(unknown.state.at).toBe(0);
+		expect(wordsStart(unknown.state, 1)).toBe(Number.POSITIVE_INFINITY);
+	});
+
+	test("after the narration is over the parts play on in order", () => {
+		const done = drive(begin(two, true), parts(...two), narrationEnded, ended);
+		expect(done.state.at).toBe(1);
 	});
 });
