@@ -14,6 +14,8 @@ import { StyleSheet } from "react-native";
 import type { AdventureSummary, Idea } from "@/src/data/types";
 
 const SKELETONS = [0, 1, 2];
+// The doors a full row shows on a phone: fewer stories leave the rest as empty doors.
+const EMPTY_SLOTS = [0, 1, 2, 3];
 // Label and shelf sit at these offsets from the left: the label a little in from the margin.
 const LABEL_LEFT = 26;
 
@@ -27,19 +29,21 @@ function Doors({
 	if (adventures === null) {
 		return SKELETONS.map((n) => <DoorSkeleton key={n} />);
 	}
-	if (adventures.length === 0) {
-		return <EmptyDoor />;
-	}
-	return adventures.map((adventure) => (
-		<StoryDoor
-			done={adventure.partsDone}
-			key={adventure.id}
-			onPress={() => onOpen(adventure)}
-			picture={adventure.picture}
-			title={adventure.title}
-			total={adventure.partsTotal}
-		/>
-	));
+	// A short shelf is topped up with empty doors, so the row never looks bare.
+	const empty = EMPTY_SLOTS.slice(adventures.length);
+	return [
+		...adventures.map((adventure) => (
+			<StoryDoor
+				done={adventure.partsDone}
+				key={adventure.id}
+				onPress={() => onOpen(adventure)}
+				picture={adventure.picture}
+				title={adventure.title}
+				total={adventure.partsTotal}
+			/>
+		)),
+		...empty.map((n) => <EmptyDoor key={`empty-${n}`} />),
+	];
 }
 
 function Pictures({
