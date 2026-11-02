@@ -18,6 +18,18 @@ export const LEAD_HOLD_MS = 12_000;
 export const reachedEnd = (currentTime: number, duration: number) =>
 	duration > 0 && currentTime >= duration - END_MARGIN_SEC;
 
+/**
+ * How long a part plays, in seconds: the video's real length (`videoSec`, 0 when not known), cut
+ * short by the part's own `durationSec` when that is set and shorter. 0 when neither is known.
+ */
+export function playableSec(part: Part | undefined, videoSec = 0) {
+	const marked = part?.durationSec ?? 0;
+	if (videoSec > 0 && marked > 0) {
+		return Math.min(videoSec, marked);
+	}
+	return videoSec > 0 ? videoSec : marked;
+}
+
 export type EndCause = "grace" | "last-part" | "narration";
 export type Slot = 0 | 1;
 
@@ -89,7 +101,7 @@ export type PlayEvent =
 	  }
 	| { type: "parts"; parts: Part[] }
 	| {
-			/** The part on screen is `sec` in; `duration` is its real length, 0 when not known. */
+			/** The part on screen is `sec` in; `duration` is how long it plays, 0 when not known. */
 			duration: number;
 			sec: number;
 			type: "part-time";
@@ -235,10 +247,10 @@ export const wordsEnd = (s: PlayState, index: number) => {
 /**
  * How far into part `index` its half of the words starts: centred, so the silence before and
  * after is equal. A half as long as the part or longer starts with it. The part's length is
- * `videoSec`, or its own `durationSec` while the video's is not known (0).
+ * `playableSec`: the video's `videoSec` (0 when not known), cut short by the part's `durationSec`.
  */
 export function voiceOffset(s: PlayState, index: number, videoSec = 0) {
-	const partSec = videoSec > 0 ? videoSec : (s.parts[index]?.durationSec ?? 0);
+	const partSec = playableSec(s.parts[index], videoSec);
 	const half = wordsEnd(s, index) - wordsStart(s, index);
 	return Number.isFinite(half) && half >= 0 && partSec > 0
 		? Math.max(0, (partSec - half) / 2)

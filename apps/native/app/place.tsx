@@ -56,6 +56,7 @@ import {
 	ownVoices,
 	type PlayEvent,
 	type PlayState,
+	playableSec,
 	reachedEnd,
 	type Slot,
 	slotParts,
@@ -705,9 +706,12 @@ function MediaPlayer({
 	);
 
 	// A tick of the part on screen: its first frame, or its end when no end event came.
-	const tickPart = (index: number, currentTime: number, duration: number) => {
+	const tickPart = (index: number, currentTime: number, videoSec: number) => {
+		const duration = playableSec(machine.current.parts[index], videoSec);
 		if (reachedEnd(currentTime, duration)) {
 			if (inPart.current) {
+				// A part cut short by its durationSec stops here, so the held frame is the last one shown.
+				players[machine.current.slot].pause();
 				send({ type: "ended" });
 			}
 		} else if (currentTime > 0) {

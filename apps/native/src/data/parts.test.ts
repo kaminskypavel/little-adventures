@@ -13,6 +13,7 @@ import {
 	ownVoices,
 	type PlayEvent,
 	type PlayState,
+	playableSec,
 	reachedEnd,
 	slotParts,
 	step,
@@ -252,6 +253,29 @@ const voiceEnded: PlayEvent = { type: "voice-ended" };
 describe("each part has its own audio", () => {
 	// Part 1 is 15 s with 8 s of audio (starts at 3.5 s); part 2 is 15 s with 6 s (starts at 4.5 s).
 	const own = [voiced("a", 15, 8), voiced("b", 15, 6)];
+
+	test("a durationSec shorter than the video cuts the part, and the audio is centred in what is left", () => {
+		const cut = [voiced("a", 8.2, 6)];
+		const { state } = drive(begin(cut, true), parts(...cut), started);
+		// A 15 s video, marked to stop at 8.2 s: the part is 8.2 s, the 6 s audio sits in the middle.
+		expect(playableSec(cut[0], 15)).toBe(8.2);
+		expect(Math.round(voiceOffset(state, 0, 15) * 100)).toBe(110);
+		// The tick reports the playable length, so reaching it counts as the end of the part.
+		expect(reachedEnd(8.2, playableSec(cut[0], 15))).toBe(true);
+		expect(reachedEnd(8.0, playableSec(cut[0], 15))).toBe(false);
+		// Not set, or longer than the video: the video's length stands.
+		expect(playableSec({ ...cut[0], durationSec: null }, 15)).toBe(15);
+		expect(playableSec({ ...cut[0], durationSec: 20 }, 15)).toBe(15);
+		expect(playableSec(cut[0], 0)).toBe(8.2);
+		expect(playableSec(playable("x"), 0)).toBe(0);
+		expect(
+			voiceOffset(
+				{ ...state, parts: [{ ...cut[0], durationSec: null }] },
+				0,
+				15
+			)
+		).toBe(4.5);
+	});
 
 	test("each audio is centred inside its part, with no pause between", () => {
 		expect(ownVoices(own)).toBe(true);
