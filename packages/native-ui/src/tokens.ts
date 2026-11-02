@@ -1,6 +1,7 @@
 // Design tokens for the Little Adventures app. Sizes are points (1 pt = 1 RN unit).
 
 export const colors = {
+	black: "#000000",
 	caret: "#E8A400",
 	cream: "#F4ECD8",
 	deepNavy: "#1B3560",
@@ -17,8 +18,6 @@ export const colors = {
 	hillHi: "#8DBB78",
 	hillLo: "#4C7C49",
 	hillMid: "#5F9358",
-	inkHi: "#34343A",
-	inkLo: "#0E0E11",
 	inkNavy: "#12254A",
 	lockedHi: "#B3C3C3",
 	lockedLo: "#9CB0B0",
@@ -45,20 +44,21 @@ export const colors = {
 	sunLo: "#FFC12A",
 	sunReadyLo: "#FFB91F",
 	toggleOff: "rgba(18,37,74,0.14)",
+	whiteLo: "#ECEEF2",
 } as const;
 
 /** Clay face gradients, top to bottom. */
 export const clayFaces = {
 	drawing: [colors.drawingHi, colors.drawingLo],
 	field: [colors.fieldHi, colors.fieldLo],
-	// Near black: Sign in with Apple must be a black (or white) button.
-	ink: [colors.inkHi, colors.inkLo],
 	locked: [colors.lockedHi, colors.lockedLo],
 	medal: [colors.medalHi, colors.medalLo],
 	off: [colors.offHi, colors.offLo],
 	sage: [colors.sageHi, colors.sageLo],
 	sun: [colors.sunHi, colors.sunLo],
 	sunReady: [colors.sunHi, colors.sunReadyLo],
+	// Sign in with Apple must be a white (on dark backgrounds) or black button: a barely-there gradient.
+	white: [colors.star, colors.whiteLo],
 } as const;
 
 export type ClayTone = keyof typeof clayFaces;
