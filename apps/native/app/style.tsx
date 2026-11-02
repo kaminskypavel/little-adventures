@@ -131,7 +131,7 @@ export default function StylePicker() {
 			<Screen
 				dock={<PrimaryButton label="Start" onPress={start} />}
 				scrolls
-				title={"Get\nready"}
+				title="Get ready"
 			>
 				<ScrollView
 					contentContainerStyle={styles.content}
