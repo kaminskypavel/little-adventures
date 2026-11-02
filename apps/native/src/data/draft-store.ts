@@ -24,7 +24,8 @@ export function createDraftStore(api: DraftApi) {
 	const drafts = new Map<string, Promise<string | null>>();
 	// One start per question, shared by repeat taps, until the question is asked again.
 	const starts = new Map<string, Promise<string>>();
-	let prepared = false;
+	// The child last prepared for; null when none, or after a failed try.
+	let prepared: string | null = null;
 
 	// Start is safe to repeat, so a server error or a dropped connection gets one more try. Create
 	// is never called after a start that may have gone through.
@@ -67,14 +68,14 @@ export function createDraftStore(api: DraftApi) {
 					.catch(() => null)
 			);
 		},
-		/** Once per app session; errors are ignored and a miss lets the next call try again. */
-		prepareOnce() {
-			if (prepared) {
+		/** Once per child per app session; errors are ignored and a miss lets the next call try again. */
+		prepareOnce(childId = "") {
+			if (prepared === childId) {
 				return;
 			}
-			prepared = true;
+			prepared = childId;
 			api.prepare().catch(() => {
-				prepared = false;
+				prepared = null;
 			});
 		},
 		startDrafted({ question, style }: { question: string; style: Style }) {

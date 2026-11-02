@@ -8,7 +8,7 @@ import {
 	ideasOptions,
 } from "@/src/data/adventure-client";
 import { micPermission } from "@/src/data/mic-permission";
-import { useChild } from "@/src/data/profile-queries";
+import { useChild, useChildren } from "@/src/data/profile-queries";
 import { prefetchAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 
@@ -22,6 +22,7 @@ const SHELF_AHEAD = 4;
  */
 export function useHomeData(first: string | undefined) {
 	const child = useChild();
+	const children = useChildren();
 	const refetchChild = child.refetch;
 	const home = useQuery(homeOptions());
 	const refetchHome = home.refetch;
@@ -50,7 +51,9 @@ export function useHomeData(first: string | undefined) {
 
 	return {
 		adventures: home.data ?? null,
-		avatarUrl: child.data?.avatarUrl ?? null,
+		avatar: child.data?.avatar ?? null,
+		childCount: children?.length ?? 0,
+		childId: child.data?.id,
 		ideas: ideas.data ?? null,
 		name: child.data?.profile.childName ?? null,
 	};

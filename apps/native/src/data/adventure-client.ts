@@ -4,6 +4,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
+import { currentChildReady, getCurrentChildId } from "./current-child";
 import { createDraftStore } from "./draft-store";
 import {
 	createEngineClient,
@@ -283,8 +284,8 @@ const drafts = engine
 /** Starts preparing an adventure for the confirmed question. Returns at once. */
 export const beginDraft = (question: string) => drafts?.beginDraft(question);
 
-/** Gets the child's next adventure ready: once per app session, errors ignored. */
-export const prepareChild = () => drafts?.prepareOnce();
+/** Gets the child's next adventure ready: once per child per app session, errors ignored. */
+export const prepareChild = (childId?: string) => drafts?.prepareOnce(childId);
 
 /** Starts the adventure (the prepared one when there is one) and gives its id. */
 export const startDrafted = async (input: {
@@ -358,8 +359,9 @@ export const visit = (id: string, node: NodeId): Promise<Progress> => {
 export const getAdventures = (): Promise<AdventureSummary[]> =>
 	engine ? listEngine(engine) : wait(grownUpList);
 
-/** The caller's first child, or the empty profile when there is none yet. */
+/** The current child, or the empty profile when there is none yet. */
 async function loadChild(): Promise<{ id?: string; profile: Profile }> {
+	await currentChildReady();
 	// From the shared cache when it is there (read again behind it when stale), so a screen that
 	// asks for the child's name paints at once instead of after a round trip.
 	const rows = await queryClient.ensureQueryData({
@@ -367,7 +369,7 @@ async function loadChild(): Promise<{ id?: string; profile: Profile }> {
 		retry: false,
 		revalidateIfStale: true,
 	});
-	const { id, profile } = toChild(rows);
+	const { id, profile } = toChild(rows, getCurrentChildId());
 	return { id, profile };
 }
 
