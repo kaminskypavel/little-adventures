@@ -32,6 +32,8 @@ interface IconButtonProps extends ButtonProps {
 }
 
 interface PrimaryButtonProps extends IconButtonProps {
+	/** Replaces the label's size (in pt): for a button squeezed into a tight screen. */
+	labelSize?: number;
 	/** Replaces the icon: a custom mark (for example the Google G) left of the label. */
 	leading?: ReactNode;
 }
@@ -46,6 +48,9 @@ function ink(tone: ClayTone) {
 
 // Beside a mark the label steps down a little, so mark and label sit clear of the pill's ends.
 const LEADING_LABEL = { fontSize: 24, lineHeight: 26 } as const;
+
+const labelStyle = (labelSize?: number) =>
+	labelSize ? { fontSize: labelSize, lineHeight: labelSize * 1.1 } : undefined;
 
 /** The label's text style per size: lg keeps each button's own, md and sm step down. */
 const labelVariant = (size: ButtonSize, lg: "buttonSecondary" | "title") => {
@@ -64,6 +69,7 @@ export function PrimaryButton({
 	accessibilityLabel,
 	icon,
 	label,
+	labelSize,
 	leading,
 	size = "lg",
 	style,
@@ -94,7 +100,7 @@ export function PrimaryButton({
 			<ClayText
 				color={ink(tone)}
 				numberOfLines={leading || size !== "lg" ? 1 : undefined}
-				style={leading ? LEADING_LABEL : undefined}
+				style={leading ? LEADING_LABEL : labelStyle(labelSize)}
 				variant={labelVariant(size, leading ? "buttonSecondary" : "title")}
 			>
 				{label}

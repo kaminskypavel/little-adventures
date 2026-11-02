@@ -1,17 +1,19 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
+import { ForkMap } from "@little-adventures/native-ui/fork-map";
 import { Screen } from "@little-adventures/native-ui/screen";
 import {
 	MapBackdrop,
+	type MapGoodnight,
 	type MapPlace,
 	type MapPlaceNode,
 	StoryMap,
 } from "@little-adventures/native-ui/story-map";
-import { layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useRef } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
+import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
 import { markScreen } from "@/src/data/timeline";
@@ -32,6 +34,69 @@ const PLACE_IDS: readonly MapPlaceNode[] = ["intro", "p1", "p2", "p1a", "p2a"];
 
 const isNode = (value?: string): value is NodeId =>
 	value !== undefined && NODE_IDS.includes(value);
+
+/** Sideways: the fork road. The star walks the roads, so its route is every stop on the way. */
+function SidewaysMap({
+	goodnight,
+	goodnightOpen,
+	next,
+	onOpen,
+	onWalked,
+	places,
+	progress,
+	title,
+	walkTo,
+}: {
+	goodnight: MapGoodnight;
+	goodnightOpen: boolean;
+	next: readonly NodeId[];
+	onOpen: (node: NodeId) => void;
+	onWalked: () => void;
+	places: Record<MapPlaceNode, MapPlace>;
+	progress: Progress;
+	title: string;
+	walkTo?: NodeId;
+}) {
+	const router = useRouter();
+	const { here, visited } = progress;
+	const ready: NodeId[] = PLACE_IDS.filter(
+		(node) => places[node].state === "ready"
+	);
+	if (goodnightOpen && next.includes("outro") && !visited.includes("outro")) {
+		ready.push("outro");
+	}
+	const atGoodnight = here === "outro";
+	return (
+		<ForkMap
+			action={{
+				accessibilityLabel: "Grown-ups",
+				icon: "lock",
+				onPress: () => router.push("/gate"),
+			}}
+			button={
+				<PrimaryButton
+					disabled={walkTo !== undefined}
+					icon={atGoodnight ? undefined : "play"}
+					label={atGoodnight ? "Say goodnight" : "Keep walking"}
+					labelSize={21}
+					onPress={() => onOpen(here)}
+					size="md"
+					style={styles.sidewaysButton}
+					testID="keep-walking"
+				/>
+			}
+			dots={dottedRoads(here, ready, visited)}
+			goodnight={goodnight}
+			here={here}
+			lit={litRoads(visited)}
+			onWalked={onWalked}
+			places={places}
+			route={walkTo ? pathBetween(here, walkTo, visited) : [here]}
+			title={title}
+			walkTo={walkTo}
+		/>
+	);
+}
 
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
@@ -60,6 +125,7 @@ export default function StoryMapScreen() {
 		router.replace(`/place?id=${id}&node=${node}`);
 
 	let content: ReactNode = null;
+	let fork: ReactNode = null;
 	if (adventure && progress) {
 		const next = neighbours(progress.here);
 		const stateOf = (node: NodeId): MapPlace["state"] => {
@@ -102,16 +168,34 @@ export default function StoryMapScreen() {
 		// The road just walked glows: from the node visited before this one, to this one.
 		const at = progress.visited.indexOf(progress.here);
 
+		const goodnight = {
+			image: goodnightOpen ? adventure.endGoal.open : adventure.endGoal.closed,
+			locked: !goodnightOpen,
+			name: adventure.places.outro.name,
+		};
+		fork = (
+			<SidewaysMap
+				goodnight={goodnight}
+				goodnightOpen={goodnightOpen}
+				next={next}
+				onOpen={openPlace}
+				onWalked={() => {
+					if (walkTo) {
+						impactAsync(ImpactFeedbackStyle.Soft).catch(() => undefined);
+						openPlace(walkTo);
+					}
+				}}
+				places={places}
+				progress={progress}
+				title={childName ? `${childName}'s map` : ""}
+				walkTo={walkTo}
+			/>
+		);
+
 		content = (
 			<StoryMap
 				glowFrom={at > 0 ? progress.visited[at - 1] : undefined}
-				goodnight={{
-					image: goodnightOpen
-						? adventure.endGoal.open
-						: adventure.endGoal.closed,
-					locked: !goodnightOpen,
-					name: adventure.places.outro.name,
-				}}
+				goodnight={goodnight}
 				here={progress.here}
 				next={next}
 				onWalked={() => {
@@ -157,24 +241,13 @@ export default function StoryMapScreen() {
 		</>
 	);
 
-	// Sideways, the portrait map stands as a column on the sky and scrolls, until the wide map is designed.
-	return sideways ? (
-		<ScrollView
-			contentContainerStyle={styles.sidewaysContent}
-			showsVerticalScrollIndicator={false}
-		>
-			<View style={styles.column}>{screen}</View>
-		</ScrollView>
-	) : (
-		screen
-	);
+	// Sideways, the fork road takes the whole screen.
+	if (sideways) {
+		return fork;
+	}
+	return screen;
 }
 
 const styles = StyleSheet.create({
-	column: {
-		height: layout.baseHeight,
-		overflow: "hidden",
-		width: layout.baseWidth,
-	},
-	sidewaysContent: { alignItems: "center" },
+	sidewaysButton: { height: 60, paddingHorizontal: 24 },
 });
