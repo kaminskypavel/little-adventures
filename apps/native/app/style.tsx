@@ -4,6 +4,7 @@ import {
 } from "@little-adventures/native-ui/body-fade";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { Icon } from "@little-adventures/native-ui/icons";
 import { LookTile } from "@little-adventures/native-ui/look-tile";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { ToggleCard } from "@little-adventures/native-ui/toggle-card";
@@ -24,6 +25,7 @@ import {
 	useGrownUpPhoto,
 	useSaveProfile,
 } from "@/src/data/profile-queries";
+import { LIVE_STYLES } from "@/src/data/styles";
 import { mark } from "@/src/data/timeline";
 import type { Profile } from "@/src/data/types";
 
@@ -50,6 +52,9 @@ const looks: { label: string; picture: number; style: Style }[] = [
 	},
 ];
 
+const LOCK_SIZE = 22;
+const LOCKED_OPACITY = 0.5;
+
 const subtitle = (
 	photo: GrownUpPhoto | null | undefined,
 	photoUri: string | null
@@ -59,6 +64,26 @@ const subtitle = (
 	}
 	return photo?.called?.name ?? "Tap your photo to change";
 };
+
+/** A look that is not open yet: shown dimmed with a lock, and not pressable. */
+function LockedLook({ label, picture }: { label: string; picture: number }) {
+	return (
+		<View
+			accessibilityLabel={`${label}, coming soon`}
+			accessibilityState={{ disabled: true }}
+			accessible
+			pointerEvents="none"
+			style={styles.tile}
+		>
+			<View style={styles.locked}>
+				<LookTile label={label} picture={picture} />
+			</View>
+			<View style={styles.lock}>
+				<Icon color={colors.cream} name="lock" size={LOCK_SIZE} />
+			</View>
+		</View>
+	);
+}
 
 /** Who comes along: the grown-up or the puppy, exactly one (as on the coming screen). */
 function Companion({ profile }: { profile: Profile }) {
@@ -144,16 +169,20 @@ export default function StylePicker() {
 						Style
 					</ClayText>
 					<View style={styles.row}>
-						{looks.map(({ label, picture, style }) => (
-							<LookTile
-								key={style}
-								label={label}
-								onPress={() => setPicked(style)}
-								picture={picture}
-								selected={picked === style}
-								style={styles.tile}
-							/>
-						))}
+						{looks.map(({ label, picture, style }) =>
+							LIVE_STYLES.includes(style) ? (
+								<LookTile
+									key={style}
+									label={label}
+									onPress={() => setPicked(style)}
+									picture={picture}
+									selected={picked === style}
+									style={styles.tile}
+								/>
+							) : (
+								<LockedLook key={style} label={label} picture={picture} />
+							)
+						)}
 					</View>
 					<ClayText color={colors.cream} style={styles.label} variant="label">
 						{"Who's coming?"}
@@ -181,6 +210,8 @@ const styles = StyleSheet.create({
 		paddingTop: BODY_SCROLL_START,
 	},
 	label: { marginTop: 6, opacity: 0.92 },
+	lock: { position: "absolute", right: 12, top: 12 },
+	locked: { opacity: LOCKED_OPACITY },
 	root: { flex: 1 },
 	row: { flexDirection: "row", flexWrap: "wrap", gap: select.lookRowGap },
 	// Two across: 45% each wraps the third tile, and grow fills the row.
