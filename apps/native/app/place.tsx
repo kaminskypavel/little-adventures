@@ -30,8 +30,8 @@ import {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { getProfile } from "@/src/data/adventure-client";
 import { endSource, wordIndexAt } from "@/src/data/playback";
+import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
 import type {
 	Adventure,
@@ -461,15 +461,7 @@ export default function Place() {
 	const id = params.id ?? "box";
 	const node = (params.node ?? "p1") as NodeId;
 	const { adventure, onMediaError, visit } = useAdventure(id);
-	const [childName, setChildName] = useState<string | null>(null);
-
-	useEffect(() => {
-		let live = true;
-		getProfile().then((profile) => live && setChildName(profile.childName));
-		return () => {
-			live = false;
-		};
-	}, []);
+	const childName = useChildName();
 
 	const goodnight = node === "outro";
 
@@ -485,7 +477,7 @@ export default function Place() {
 		[id, router]
 	);
 
-	if (!adventure || childName === null) {
+	if (!adventure || childName === undefined) {
 		return null;
 	}
 	const place = adventure.places[node];

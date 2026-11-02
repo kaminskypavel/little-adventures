@@ -307,10 +307,6 @@ async function loadChild(): Promise<{ id?: string; profile: Profile }> {
 	return { id, profile };
 }
 
-/** The child set up on first run (name, boy or girl, age, look, who comes along). */
-export const getProfile = async (): Promise<Profile> =>
-	(await loadChild()).profile;
-
 /** The app server refuses every signed-in call of a grown-up outside the private beta. */
 const isOutsideBeta = (error: unknown) =>
 	(error as { data?: { code?: string } } | null)?.data?.code === "FORBIDDEN";

@@ -15,12 +15,13 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { getProfile, getProgress } from "@/src/data/adventure-client";
+import { getProgress } from "@/src/data/adventure-client";
 import {
 	choicesFrom,
 	isOutroLocked,
 	missingPlaces,
 } from "@/src/data/map-rules";
+import { useChildName } from "@/src/data/profile-queries";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -112,14 +113,13 @@ export default function Choice() {
 	const from = (params.from ?? "intro") as NodeId;
 	const { adventure } = useAdventure(id);
 	const [progress, setProgress] = useState<Progress | null>(null);
-	const [childName, setChildName] = useState<string | null>(null);
+	const childName = useChildName();
 	const [picked, setPicked] = useState<NodeId | null>(null);
 	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	useEffect(() => {
 		let live = true;
 		getProgress(id).then((p) => live && setProgress(p));
-		getProfile().then((p) => live && setChildName(p.childName));
 		return () => {
 			live = false;
 			clearTimeout(timer.current);
@@ -156,7 +156,7 @@ export default function Choice() {
 		}
 	}, [goodnightOpen]);
 
-	if (!(adventure && visited) || childName === null) {
+	if (!(adventure && visited) || childName === undefined) {
 		return null;
 	}
 

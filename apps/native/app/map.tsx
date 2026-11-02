@@ -8,9 +8,9 @@ import {
 } from "@little-adventures/native-ui/story-map";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type ReactNode, useEffect, useState } from "react";
-import { getProfile } from "@/src/data/adventure-client";
+import type { ReactNode } from "react";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
+import { useChildName } from "@/src/data/profile-queries";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -39,15 +39,7 @@ export default function StoryMapScreen() {
 	const id = params.id ?? "box";
 	const walkTo = isNode(params.walkTo) ? params.walkTo : undefined;
 	const { adventure, progress: stored } = useAdventure(id);
-	const [childName, setChildName] = useState("");
-
-	useEffect(() => {
-		let live = true;
-		getProfile().then((p) => live && setChildName(p.childName));
-		return () => {
-			live = false;
-		};
-	}, []);
+	const childName = useChildName() ?? "";
 
 	// Dev only: ?visited=intro,p1 pretends those places were walked, in that order.
 	const devVisited = dev(params.visited)?.split(",").filter(isNode);
