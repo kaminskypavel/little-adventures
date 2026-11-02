@@ -42,12 +42,6 @@ jobs:
         run: bun run check-types
       - name: Unit tests
         run: bun run test
-        working-directory: apps/web
-      - name: Package tests
-        run: |
-          for dir in packages/llm packages/decision packages/image-editing packages/transcribe packages/api packages/auth packages/storage packages/validation apps/native; do
-            (cd "$dir" && bun test) || exit 1
-          done
 
   e2e:
     needs: checks
