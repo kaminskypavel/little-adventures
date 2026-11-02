@@ -38,6 +38,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
+import { speakingAt } from "@/src/data/music-rules";
+import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
 	type EndCause,
@@ -262,6 +264,7 @@ function TimerPlayer({
 	const progress = useSharedValue(0);
 	const [current, setCurrent] = useState(0);
 	const [playing, setPlaying] = useState(true);
+	usePlayerMusic(false, !playing);
 
 	const endRef = useRef(onEnd);
 	useLayoutEffect(() => {
@@ -338,6 +341,13 @@ const setupPlayer = (created: VideoPlayer) => {
 	created.muted = true;
 	created.timeUpdateEventInterval = PART_TICK_SEC;
 };
+
+/** A narration tick only repaints the screen when it moved the parts. */
+const moved = (a: PlayState, b: PlayState) =>
+	a.at !== b.at ||
+	a.phase !== b.phase ||
+	a.stall !== b.stall ||
+	a.done !== b.done;
 
 /** What one part player reports. */
 interface SlotEvents {
@@ -513,17 +523,29 @@ function MediaPlayer({
 	);
 	const send = useCallback(
 		(event: PlayEvent) => {
-			const next = step(machine.current, event);
-			if (next.state === machine.current) {
+			const before = machine.current;
+			const next = step(before, event);
+			if (next.state === before) {
 				return;
 			}
 			machine.current = next.state;
-			setView(next.state);
-			for (const { holdMs, leadMs, name: markName, part } of next.marks) {
-				const ms = holdMs === undefined ? { leadMs } : { holdMs };
+			if (event.type !== "narration-time" || moved(before, next.state)) {
+				setView(next.state);
+			}
+			for (const {
+				cutMs,
+				holdMs,
+				leadMs,
+				name: markName,
+				part,
+			} of next.marks) {
+				const detail = Object.fromEntries(
+					Object.entries({ cutMs, holdMs, leadMs }).filter(
+						([, value]) => value !== undefined
+					)
+				);
 				mark(markName, {
-					detail:
-						ms.leadMs === undefined && ms.holdMs === undefined ? undefined : ms,
+					detail: Object.keys(detail).length > 0 ? detail : undefined,
 					part,
 					place: node,
 				});
@@ -604,6 +626,26 @@ function MediaPlayer({
 			send({ type: "narration-ended" });
 		}
 	}, [heard.didJustFinish, node, send]);
+	// The narration leads: its time tells the machine when the next part's words start.
+	const heardSec = heard.currentTime;
+	const heardLength = heard.duration;
+	useEffect(() => {
+		if (!hasNarration) {
+			return;
+		}
+		const now = machine.current;
+		let part: VideoPlayer | null = null;
+		if (now.phase === "playing") {
+			part = now.slot === 0 ? player0 : player1;
+		}
+		send({
+			length: heardLength,
+			partLeftSec:
+				part && part.duration > 0 ? part.duration - part.currentTime : null,
+			sec: heardSec,
+			type: "narration-time",
+		});
+	}, [hasNarration, heardLength, heardSec, player0, player1, send]);
 	// A narration that fails stops holding the place up, after a moment for fresh urls to arrive.
 	useEffect(() => {
 		if (!narrationFailed) {
@@ -689,6 +731,12 @@ function MediaPlayer({
 	const zoom = leadZoom(view, useReducedMotion());
 	const spoken = hasNarration ? heard.currentTime : 0;
 	const length = hasNarration ? heard.duration : 0;
+	usePlayerMusic(
+		hasNarration && audio !== null
+			? speakingAt(audio.words, spoken, length, view.narrationEnded)
+			: false,
+		!playing
+	);
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
 			{IS_WEB ? (

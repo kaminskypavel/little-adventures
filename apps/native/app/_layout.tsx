@@ -33,6 +33,7 @@ import { useAdminHold } from "@/src/admin/use-admin-hold";
 import { useSession } from "@/src/auth/use-session";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
+import { stopMusic } from "@/src/data/music-store";
 import { queryClient } from "@/src/data/query-client";
 import { isAdventurePath } from "@/src/orientation";
 import { useBack } from "@/src/use-back";
@@ -56,6 +57,17 @@ function SplashGate() {
 			})
 		);
 		return () => cancelAnimationFrame(frame);
+	}, [pathname]);
+	return null;
+}
+
+/** The music bed belongs to the adventure screens: it fades out as soon as one leaves them (Home). */
+function MusicGate() {
+	const pathname = usePathname();
+	useEffect(() => {
+		if (!isAdventurePath(pathname)) {
+			stopMusic();
+		}
 	}, [pathname]);
 	return null;
 }
@@ -163,6 +175,7 @@ export default function Layout() {
 												<AdminHint />
 												<AdminPanel />
 												<SplashGate />
+												<MusicGate />
 											</View>
 										</QueryClientProvider>
 									</BodyFadeProvider>

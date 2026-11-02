@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, StyleSheet } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { litRoads } from "@/src/data/fork-roads";
+import { END_FADE_AFTER_MS } from "@/src/data/music-rules";
+import { useFadeMusicOutAfter } from "@/src/data/music-store";
 import { useChildName } from "@/src/data/profile-queries";
 import { useAdventure } from "@/src/data/use-adventure";
 import { useLandscape } from "@/src/orientation";
@@ -37,6 +39,7 @@ export default function End() {
 	const { adventure } = useAdventure(id);
 	const childName = useChildName() ?? "";
 	const sideways = useLandscape();
+	useFadeMusicOutAfter(END_FADE_AFTER_MS);
 
 	// Sideways, the whole road is walked: every place done, the star at the open goodnight.
 	if (sideways) {
