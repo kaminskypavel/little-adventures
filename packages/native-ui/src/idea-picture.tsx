@@ -15,11 +15,13 @@ export function IdeaPicture({
 	onPress,
 	picture,
 	question,
+	testID,
 }: {
 	onPress: () => void;
 	/** A required module or an image source, or null for the stand-in picture. */
 	picture: ImageSource | number | null;
 	question: string;
+	testID?: string;
 }) {
 	return (
 		<ClayPressable
@@ -27,6 +29,7 @@ export function IdeaPicture({
 			onPress={onPress}
 			radius={size / 2}
 			style={styles.ring}
+			testID={testID}
 			tone="sage"
 		>
 			<View style={styles.picture}>

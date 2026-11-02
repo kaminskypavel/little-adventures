@@ -264,7 +264,7 @@ export function ChoiceCard({
 				/>
 				<ClayPressable
 					accessibilityLabel={locked ? `${name}, locked` : name}
-					accessibilityState={{ selected }}
+					accessibilityState={{ busy: drawing, selected }}
 					onPress={handlePress}
 					radius={choice.radius}
 					style={{ flex: 1 }}
