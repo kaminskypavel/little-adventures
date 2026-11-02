@@ -40,6 +40,9 @@ function ink(tone: ClayTone) {
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }
 
+// Beside a mark the label steps down a little, so mark and label sit clear of the pill's ends.
+const LEADING_LABEL = { fontSize: 24, lineHeight: 26 } as const;
+
 /** The label's text style per size: lg keeps each button's own, md and sm step down. */
 const labelVariant = (size: ButtonSize, lg: "buttonSecondary" | "title") => {
 	if (size === "sm") {
@@ -51,7 +54,7 @@ const labelVariant = (size: ButtonSize, lg: "buttonSecondary" | "title") => {
 /**
  * 88 high, pill, sun clay. One per screen. Full width inside the margins.
  * With a `leading` mark the label drops to the secondary size and stays on one line, so it
- * fits beside a 40 pt mark inside the pill.
+ * fits beside a 32 pt mark inside the pill.
  */
 export function PrimaryButton({
 	accessibilityLabel,
@@ -87,6 +90,7 @@ export function PrimaryButton({
 			<ClayText
 				color={ink(tone)}
 				numberOfLines={leading || size !== "lg" ? 1 : undefined}
+				style={leading ? LEADING_LABEL : undefined}
 				variant={labelVariant(size, leading ? "buttonSecondary" : "title")}
 			>
 				{label}

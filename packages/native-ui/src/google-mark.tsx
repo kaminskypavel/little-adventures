@@ -1,8 +1,8 @@
 import { View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-const CIRCLE = 40;
-const MARK = 22;
+const CIRCLE = 32;
+const MARK = 18;
 
 // Google's brand rules fix these four colours and the white field behind the G.
 const brand = {
