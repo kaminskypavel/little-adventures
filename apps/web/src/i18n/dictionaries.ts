@@ -138,7 +138,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 				question: "¿Qué hay bajo el océano?",
 			},
 			playroom: {
-				line: "Cuentos para dormir que nacen de las preguntas de tus hijos.",
+				line: "Pequeñas aventuras que empiezan con las propias preguntas de tus hijos.",
 			},
 			saturn: {
 				line: "Tus hijos son los protagonistas, dibujados a partir de una foto que subes.",
@@ -202,7 +202,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 				question: "Qu'y a-\u2060t-\u2060il sous l'océan\u00A0?",
 			},
 			playroom: {
-				line: "Des histoires du soir qui partent des questions de votre enfant.",
+				line: "De petites aventures qui partent des questions de votre enfant.",
 			},
 			saturn: {
 				line: "Votre enfant est le héros, dessiné d'après une photo que vous ajoutez.",
