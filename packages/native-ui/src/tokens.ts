@@ -17,6 +17,8 @@ export const colors = {
 	hillHi: "#8DBB78",
 	hillLo: "#4C7C49",
 	hillMid: "#5F9358",
+	inkHi: "#34343A",
+	inkLo: "#0E0E11",
 	inkNavy: "#12254A",
 	lockedHi: "#B3C3C3",
 	lockedLo: "#9CB0B0",
@@ -49,6 +51,8 @@ export const colors = {
 export const clayFaces = {
 	drawing: [colors.drawingHi, colors.drawingLo],
 	field: [colors.fieldHi, colors.fieldLo],
+	// Near black: Sign in with Apple must be a black (or white) button.
+	ink: [colors.inkHi, colors.inkLo],
 	locked: [colors.lockedHi, colors.lockedLo],
 	medal: [colors.medalHi, colors.medalLo],
 	off: [colors.offHi, colors.offLo],

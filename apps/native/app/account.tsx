@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AppleMark } from "@little-adventures/native-ui/apple-mark";
 import {
 	PrimaryButton,
 	SecondaryButton,
@@ -22,7 +23,7 @@ import { Keyboard, StyleSheet, View } from "react-native";
 import {
 	redeemVerifier,
 	sendCode,
-	signInWithGoogle,
+	signInWith,
 	verifyCode,
 } from "@/src/auth/auth-client";
 import { startRoute } from "@/src/data/adventure-client";
@@ -36,7 +37,11 @@ const CODE_SPACING = 10;
 const CODE_STYLE = { letterSpacing: CODE_SPACING } as const;
 const NON_DIGITS = /\D/gu;
 
-const GOOGLE_FAILED = "Google did not work. Try again.";
+const SIGN_IN_FAILED = {
+	apple: "Apple did not work. Try again.",
+	google: "Google did not work. Try again.",
+	returned: "That sign-in did not work. Try again.",
+} as const;
 const SEND_FAILED = "That did not send. Try again.";
 const CODE_FAILED = "That code did not work. Try again.";
 const RESENT = "A new code is on its way.";
@@ -84,7 +89,7 @@ export default function Account() {
 				goNext(router);
 			} else {
 				setReturning(false);
-				setNote(GOOGLE_FAILED);
+				setNote(SIGN_IN_FAILED.returned);
 			}
 		});
 	}, [query, router]);
@@ -103,13 +108,13 @@ export default function Account() {
 		}
 	};
 
-	const google = () =>
+	const social = (provider: "apple" | "google") =>
 		run(async () => {
-			const result = await signInWithGoogle();
+			const result = await signInWith(provider);
 			if (result === "ok") {
 				await goNext(router);
 			} else if (result === "failed") {
-				setNote(GOOGLE_FAILED);
+				setNote(SIGN_IN_FAILED[provider]);
 			}
 		});
 
@@ -235,9 +240,15 @@ export default function Account() {
 			dock={
 				<>
 					<PrimaryButton
+						label="Continue with Apple"
+						leading={<AppleMark color={colors.star} />}
+						onPress={() => social("apple")}
+						tone="ink"
+					/>
+					<PrimaryButton
 						label="Continue with Google"
 						leading={<GoogleMark />}
-						onPress={google}
+						onPress={() => social("google")}
 					/>
 					<SecondaryButton
 						label="Continue with email"
