@@ -77,8 +77,10 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true'
         run: bunx playwright install-deps chromium
         working-directory: apps/web
+      # The full build also copies the kids app's web export into /web; the landing
+      # tests never open /web, so CI builds the Next app alone.
       - name: Build
-        run: bun run build
+        run: bunx next build
         working-directory: apps/web
       - name: End-to-end tests
         run: bun run test:e2e
