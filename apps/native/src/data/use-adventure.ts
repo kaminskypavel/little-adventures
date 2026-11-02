@@ -32,9 +32,14 @@ const mapPictures = (a: Adventure) =>
 // Decoded small: the download is what is kept on disk for the map and the places.
 const PREFETCH_WIDTH = 300;
 
-/** Loads a picture through the image cache under its own cache key, then lets the decoded copy go. */
-const warm = async (source: { cacheKey?: string; uri: string }) =>
-	(await Image.loadAsync(source, { maxWidth: PREFETCH_WIDTH })).release();
+/**
+ * Loads a picture through the image cache under its own cache key. The returned ref is dropped, not
+ * released: release() frees the decoded image the cache shares with any view showing it, so a
+ * picture on screen would vanish.
+ */
+const warm = async (source: { cacheKey?: string; uri: string }) => {
+	await Image.loadAsync(source, { maxWidth: PREFETCH_WIDTH });
+};
 
 /**
  * Reads an adventure, its progress and its map pictures ahead (Home does it for the stories on its
