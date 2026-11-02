@@ -34,7 +34,10 @@ const SMALL_RING = 150;
 
 export default function GrownUpPhoto() {
 	const router = useRouter();
-	const { replace } = useLocalSearchParams<{ replace?: string }>();
+	const { replace, source: autoSource } = useLocalSearchParams<{
+		replace?: string;
+		source?: Source;
+	}>();
 	const replacing = replace === "1";
 	const saveGrownUpPhoto = useSaveGrownUpPhoto();
 	const saveProfile = useSaveProfile();
@@ -77,6 +80,19 @@ export default function GrownUpPhoto() {
 		}
 		busy.current = false;
 	};
+
+	// Grown-ups opens this screen with "camera" or "library" to start the picker at once.
+	const launched = useRef(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: choose is new each render; the ref runs it once
+	useEffect(() => {
+		if (
+			(autoSource === "camera" || autoSource === "library") &&
+			!launched.current
+		) {
+			launched.current = true;
+			choose(autoSource);
+		}
+	}, [autoSource]);
 
 	const approvePhoto = async () => {
 		if (busy.current || !pending) {

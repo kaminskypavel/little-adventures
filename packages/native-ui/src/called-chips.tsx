@@ -20,7 +20,7 @@ export interface Called {
 	relation: Relation;
 }
 
-const PRESETS: Called[] = [
+export const PRESETS: Called[] = [
 	{ name: "Mama", pronoun: "she", relation: "mother" },
 	{ name: "Papa", pronoun: "he", relation: "father" },
 	{ name: "Grandma", pronoun: "she", relation: "grandmother" },

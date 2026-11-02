@@ -9,6 +9,8 @@ export interface ChildRow {
 	artStatus: ArtStatus;
 	/** The drawn look cut out of its backdrop; older servers leave it out. */
 	cutUrl?: string | null;
+	/** Storage keys of the drawings: stable, unlike their signed urls. */
+	drawings?: { clay?: string };
 	drawingUrls: { clay?: string };
 	faceUrl: string | null;
 	grownUp: boolean;
@@ -18,6 +20,21 @@ export interface ChildRow {
 	photoKey: string | null;
 	puppy: boolean;
 }
+
+/**
+ * A signed picture with a stable cache key. The url is signed again on every read, so as a plain
+ * url every new read missed the image cache and the picture blinked in again; its storage key never
+ * changes, so a picture seen once paints from memory everywhere.
+ */
+export interface ArtImage {
+	cacheKey: string;
+	uri: string;
+}
+
+const artImage = (
+	uri: string | null | undefined,
+	key: string | null | undefined
+): ArtImage | null => (uri ? { cacheKey: key ?? uri, uri } : null);
 
 /** What `child.save` takes; fields left out stay as they are. */
 export interface ChildSave {
@@ -57,7 +74,7 @@ const rowToProfile = (row: ChildRow): Profile => ({
 
 export interface Child {
 	/** The clay picture drawn of the child; null until one is drawn. */
-	avatarUrl: string | null;
+	avatar: ArtImage | null;
 	/** That picture cut out of its backdrop; null until it is cut. */
 	cutUrl: string | null;
 	/** Absent until the first child is saved. */
@@ -65,18 +82,37 @@ export interface Child {
 	profile: Profile;
 }
 
-/** The caller's first child (the app has one), or the empty profile when there is none yet. */
-export const toChild = (rows: ChildRow[]): Child => {
-	const [row] = rows;
+const rowToChild = (row: ChildRow): Child => ({
+	avatar: artImage(row.drawingUrls.clay, row.drawings?.clay),
+	cutUrl: row.cutUrl ?? null,
+	id: row.id,
+	profile: rowToProfile(row),
+});
+
+/**
+ * The current child: the row with `currentId`, else the first (nothing stored, or the stored child
+ * is gone). The empty profile when the account has no child yet.
+ */
+export const toChild = (rows: ChildRow[], currentId?: string | null): Child => {
+	const row = rows.find((r) => r.id === currentId) ?? rows[0];
 	return row
-		? {
-				avatarUrl: row.drawingUrls.clay ?? null,
-				cutUrl: row.cutUrl ?? null,
-				id: row.id,
-				profile: rowToProfile(row),
-			}
-		: { avatarUrl: null, cutUrl: null, profile: { ...emptyProfile } };
+		? rowToChild(row)
+		: { avatar: null, cutUrl: null, profile: { ...emptyProfile } };
 };
+
+/** Exactly the child with `id` (no fallback to the first), null when the account has none such. */
+export const toChildById = (rows: ChildRow[], id: string): Child | null => {
+	const row = rows.find((r) => r.id === id);
+	return row ? rowToChild(row) : null;
+};
+
+/** Every child of the account, oldest first, as the "Who's listening?" sheet shows them. */
+export const toChildren = (rows: ChildRow[]) =>
+	rows.map((row) => ({
+		avatar: artImage(row.drawingUrls.clay, row.drawings?.clay),
+		id: row.id,
+		name: row.name,
+	}));
 
 /** The cache after `child.save` would have succeeded. A new child waits for the server's row. */
 export const applyChildSave = <R extends ChildRow>(
@@ -120,15 +156,29 @@ export interface GrownUpPhoto {
 	called: Called | null;
 	/** The drawn look cut out of its backdrop; the server adds it after the look. */
 	cutUrl?: string | null;
+	faceKey?: string | null;
 	faceUrl: string | null;
+	lookKey?: string | null;
 	/** The drawn look of the grown-up; the server adds it, so it may be missing for now. */
 	lookUrl?: string | null;
+	photoKey?: string;
 	photoUrl: string;
 }
 
 /** The picture to show for the grown-up: the drawn look, else the face cut-out, else the photo. */
 export const grownUpPicture = (photo: GrownUpPhoto) =>
 	photo.lookUrl ?? photo.faceUrl ?? photo.photoUrl;
+
+/** The same picture with its storage key as the cache key (see ArtImage). */
+export const grownUpImage = (photo: GrownUpPhoto): ArtImage => {
+	if (photo.lookUrl) {
+		return { cacheKey: photo.lookKey ?? photo.lookUrl, uri: photo.lookUrl };
+	}
+	if (photo.faceUrl) {
+		return { cacheKey: photo.faceKey ?? photo.faceUrl, uri: photo.faceUrl };
+	}
+	return { cacheKey: photo.photoKey ?? photo.photoUrl, uri: photo.photoUrl };
+};
 
 /** The grown-up's own photo (signed url), or null when none is saved. */
 export const toGrownUpPhoto = (
@@ -137,8 +187,11 @@ export const toGrownUpPhoto = (
 		calledPronoun?: Called["pronoun"] | null;
 		calledRelation?: Called["relation"] | null;
 		cutUrl?: string | null;
+		faceKey?: string | null;
 		faceUrl?: string | null;
+		lookKey?: string | null;
 		lookUrl?: string | null;
+		photoKey?: string;
 		photoUrl: string;
 	} | null
 ): GrownUpPhoto | null =>
@@ -153,8 +206,11 @@ export const toGrownUpPhoto = (
 							}
 						: null,
 				cutUrl: row.cutUrl ?? null,
+				faceKey: row.faceKey ?? null,
 				faceUrl: row.faceUrl ?? null,
+				lookKey: row.lookKey ?? null,
 				lookUrl: row.lookUrl ?? null,
+				photoKey: row.photoKey,
 				photoUrl: row.photoUrl,
 			}
 		: null;

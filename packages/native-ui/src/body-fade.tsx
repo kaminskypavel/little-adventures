@@ -10,6 +10,12 @@ export const BODY_FADE = 80;
 /** A scrolling body also fades over this many pt under the headline. */
 export const BODY_FADE_TOP = 40;
 /**
+ * While the keyboard is up the body ends this far above the docked actions, and fades over its
+ * last BODY_FADE_KEYBOARD pt: a short, soft edge instead of the full fade over the buttons.
+ */
+export const BODY_KEYBOARD_GAP = 12;
+export const BODY_FADE_KEYBOARD = 40;
+/**
  * Bottom padding for a scroll view above a faded dock: the fade plus a small gap, so the last
  * item scrolls fully clear of it.
  */

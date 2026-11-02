@@ -37,6 +37,7 @@ export const colors = {
 	sageLo: "#B0C6AA",
 	sand: "#F1E2B8",
 	scrim: "rgba(10,22,44,0.5)",
+	skyNavy: "#0C1F3C",
 	star: "#FFFFFF",
 	statusPill: "rgba(14,28,56,0.78)",
 	sun: "#FFC83D",
@@ -179,6 +180,10 @@ export const motion = {
 	releaseOvershoot: 1.02,
 	select: 160,
 	shimmer: 1900,
+	// Full-screen pickers: content rises 40 pt on a soft spring, sinks again in 220 ms.
+	swooshExit: 220,
+	swooshRise: 40,
+	swooshSpring: 520,
 	walk: 1600,
 } as const;
 
@@ -235,6 +240,15 @@ export const heroCard = {
 
 /** Flat pieces (plates, panels, bars). Never clay, never lifted, never tappable. */
 export const flat = {
+	// The gentle pencil on a face in edit mode (bottom right, 2 pt in from the circle's box).
+	editBadge: {
+		fill: "rgba(12,31,60,0.82)",
+		icon: 20,
+		inset: 2,
+		ring: "rgba(244,236,216,0.55)",
+		ringWidth: 2,
+		size: 38,
+	},
 	found: {
 		dot: 12,
 		dotLeft: 3,
@@ -253,7 +267,17 @@ export const flat = {
 		box: 233,
 		core: 164,
 		coreIcon: 61,
+		ring: 109.5,
 		stroke: 14,
+		track: "rgba(244,236,216,0.22)",
+	},
+	// The small lock (the picker's way into edit mode): sage core, ring hugging it.
+	holdLock: {
+		box: 84,
+		core: 64,
+		coreIcon: 30,
+		ring: 36,
+		stroke: 7,
 		track: "rgba(244,236,216,0.22)",
 	},
 	namePill: { padBottom: 6, padTop: 4, padX: 19, radius: 28 },
@@ -270,6 +294,17 @@ export const flat = {
 		trackTint: "rgba(244,236,216,0.2)",
 		upcoming: 0.5,
 		wordGap: 8,
+	},
+	// Grown-ups "Your plan": information on flat sand, not a button.
+	plan: {
+		dot: 12,
+		noteGap: 14,
+		padBottom: 22,
+		padTop: 20,
+		padX: 22,
+		radius: 36,
+		rowGap: 10,
+		tag: { inset: 20, padX: 10, padY: 6, radius: 12, size: 15 },
 	},
 	plate: {
 		big: { height: 44, padX: 25, radius: 22, size: 25 },
@@ -296,6 +331,16 @@ export const flat = {
 		size: 44,
 	},
 	statusPill: { fade: 200, padBottom: 6, padTop: 4, padX: 19, radius: 19 },
+} as const;
+
+/** Round portraits on the grown-up screens: sand border, sage camera badge ringed in sky navy. */
+export const portrait = {
+	badge: 42,
+	badgeIcon: 22,
+	badgeRing: 3,
+	border: 4,
+	child: 120,
+	grownUp: 128,
 } as const;
 
 /** Chips, choice and look tiles, toggle cards and the text field. */

@@ -3,12 +3,20 @@
 // server's answer again when they settle. Screens never track "saving" or copies of the data.
 import type { Called } from "@little-adventures/native-ui/called-chips";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	getCurrentChildId,
+	setCurrentChildId,
+	useCurrentChild,
+} from "./current-child";
 import { optimisticSet, rollback, type Snapshot } from "./optimistic";
 import {
 	applyChildSave,
 	type ChildRow,
 	clearChildPhoto,
+	emptyProfile,
 	toChild,
+	toChildById,
+	toChildren,
 	toGrownUpPhoto,
 } from "./profile-map";
 import { trpc, type trpcClient } from "./trpc";
@@ -41,14 +49,27 @@ export const grownUpOptions = () =>
 	});
 
 /** The child as the screens know it. Undefined data while loading. */
-export const useChild = () => useQuery({ ...childOptions(), select: toChild });
+export const useChild = () => {
+	const id = useCurrentChild((s) => s.id);
+	return useQuery({
+		...childOptions(),
+		select: (rows: ChildRows) => toChild(rows, id),
+	});
+};
 
-/** The child's name from the same cache: undefined while loading, "" before setup. */
-export const useChildName = () =>
+/** One child by id (the current child is not touched). Null when the account has none such. */
+export const useChildById = (id: string) =>
 	useQuery({
 		...childOptions(),
-		select: (rows: ChildRows) => toChild(rows).profile.childName,
-	}).data;
+		select: (rows: ChildRows) => toChildById(rows, id),
+	});
+
+/** The child's name from the same cache: undefined while loading, "" before setup. */
+export const useChildName = () => useChild().data?.profile.childName;
+
+/** All the account's children (id, name, look art url), oldest first. Undefined while loading. */
+export const useChildren = () =>
+	useQuery({ ...childOptions(), select: toChildren }).data;
 
 /** The grown-up's own photo: undefined while loading, null when none is saved. */
 export const useGrownUpPhoto = () =>
@@ -60,6 +81,9 @@ const grownUpKey = () => trpc.grownUp.mine.queryKey();
 /**
  * Saves some fields of the profile on top of what is cached and answers the merged profile.
  * Until name and age are both set nothing is sent (the form saves them together).
+ * With `{ create: true }` the patch is a NEW child on an empty profile (saved without an id), and
+ * the server's row becomes the current child. With `{ id }` the patch is on that child, whoever
+ * is current, and the current child stays as it is.
  */
 export function useSaveProfile() {
 	const client = useQueryClient();
@@ -74,15 +98,24 @@ export function useSaveProfile() {
 			onSettled: () => client.invalidateQueries(trpc.child.mine.queryFilter()),
 		})
 	);
-	return async (patch: Partial<Profile>): Promise<Profile> => {
-		const { id, profile } = toChild(
-			await client.ensureQueryData(childOptions())
-		);
-		const merged = { ...profile, ...patch };
+	return async (
+		patch: Partial<Profile>,
+		{ create = false, id: forId }: { create?: boolean; id?: string } = {}
+	): Promise<Profile> => {
+		const rows = await client.ensureQueryData(childOptions());
+		const current = forId
+			? toChildById(rows, forId)
+			: toChild(rows, getCurrentChildId());
+		if (!current) {
+			// The child is gone (deleted elsewhere): never save over another one.
+			return { ...emptyProfile, ...patch };
+		}
+		const id = create ? undefined : current.id;
+		const merged = { ...(create ? emptyProfile : current.profile), ...patch };
 		if (merged.childName.trim() === "" || merged.childAge === null) {
 			return merged;
 		}
-		await save.mutateAsync({
+		const saved = await save.mutateAsync({
 			age: merged.childAge,
 			grownUp: merged.grownUp,
 			id,
@@ -92,11 +125,14 @@ export function useSaveProfile() {
 			photoKey: merged.photoKey,
 			puppy: merged.puppy,
 		});
+		if (create) {
+			setCurrentChildId(saved.id);
+		}
 		return merged;
 	};
 }
 
-/** Deletes the stored photo of the child; the cache drops the photo, face and looks at once. */
+/** Deletes the stored photo of the child with this id; the cache drops the photo, face and looks at once. */
 export function useDeleteChildPhoto() {
 	const client = useQueryClient();
 	const remove = useMutation(
@@ -110,12 +146,7 @@ export function useDeleteChildPhoto() {
 			onSettled: () => client.invalidateQueries(trpc.child.mine.queryFilter()),
 		})
 	);
-	return async () => {
-		const { id } = toChild(await client.ensureQueryData(childOptions()));
-		if (id) {
-			await remove.mutateAsync({ childId: id });
-		}
-	};
+	return (childId: string) => remove.mutateAsync({ childId });
 }
 
 /** Saves the grown-up's photo by its storage key; the server's row (with urls) replaces the cache. */

@@ -266,7 +266,7 @@ function useRidgePeople(): {
 } {
 	const { data: grownUpPhoto } = useGrownUpPhoto();
 	const { data } = useChild();
-	const child = { cut: data?.cutUrl ?? null, round: data?.avatarUrl ?? null };
+	const child = { cut: data?.cutUrl ?? null, round: data?.avatar?.uri ?? null };
 	if (!data?.profile.grownUp) {
 		return { child, companion: null };
 	}

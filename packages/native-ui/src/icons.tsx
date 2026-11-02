@@ -13,6 +13,7 @@ export type IconName =
 	| "mic"
 	| "mic-off"
 	| "pause"
+	| "pencil"
 	| "play"
 	| "plus"
 	| "sliders"
@@ -25,6 +26,7 @@ export const iconNames: readonly IconName[] = [
 	"lock",
 	"play",
 	"pause",
+	"pencil",
 	"check",
 	"map",
 	"user",
@@ -98,6 +100,12 @@ const shapes: Record<IconName, (color: string) => ReactNode> = {
 		<G fill={c}>
 			<Rect height={14} rx={1.6} width={4} x={6.5} y={5} />
 			<Rect height={14} rx={1.6} width={4} x={13.5} y={5} />
+		</G>
+	),
+	pencil: (c) => (
+		<G stroke={c} strokeWidth={2.2} {...line}>
+			<Path d="M5 19l1-4 9.5-9.5a2 2 0 0 1 3 3L9 18z" />
+			<Path d="M14 7l3 3" />
 		</G>
 	),
 	play: (c) => (

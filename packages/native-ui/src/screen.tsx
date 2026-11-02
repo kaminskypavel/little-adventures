@@ -8,13 +8,20 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
-import Animated, { cubicBezier } from "react-native-reanimated";
+import {
+	KeyboardStickyView,
+	useReanimatedKeyboardAnimation,
+} from "react-native-keyboard-controller";
+import Animated, {
+	cubicBezier,
+	useAnimatedStyle,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton, useBackAction } from "./back-button";
 import {
 	BODY_FADE,
 	BODY_FADE_TOP,
+	BODY_KEYBOARD_GAP,
 	bodyMaskImage,
 	useBodyMask,
 } from "./body-fade";
@@ -176,6 +183,17 @@ export function Screen({
 			{children}
 		</Animated.View>
 	);
+	// The docked actions ride on the keyboard; the body shrinks by the same amount, so it always
+	// ends (with its fade) where they begin and nothing sits under them, as iOS does with a bottom
+	// safe-area inset. A floating dock runs over a scrolling body and needs none of this.
+	const keyboard = useReanimatedKeyboardAnimation();
+	const docked = Boolean(dock) && !floatDock;
+	const aboveKeyboard = useAnimatedStyle(() => ({
+		marginBottom: docked
+			? Math.max(0, -keyboard.height.get() - insets.bottom) +
+				BODY_KEYBOARD_GAP * keyboard.progress.get()
+			: 0,
+	}));
 
 	return (
 		<View style={styles.root}>
@@ -224,15 +242,17 @@ export function Screen({
 				</Animated.View>
 			) : null}
 			{/* A tap on the screen's empty space puts the keyboard away. */}
-			<Pressable
-				accessible={false}
-				onPress={Keyboard.dismiss}
-				style={styles.bodyWrap}
-			>
-				<FadedBody bottom={fadeBottom} top={fadeTop}>
-					{body}
-				</FadedBody>
-			</Pressable>
+			<Animated.View style={[styles.bodyWrap, aboveKeyboard]}>
+				<Pressable
+					accessible={false}
+					onPress={Keyboard.dismiss}
+					style={styles.bodyWrap}
+				>
+					<FadedBody bottom={fadeBottom} top={fadeTop}>
+						{body}
+					</FadedBody>
+				</Pressable>
+			</Animated.View>
 			{dock ? (
 				<Dock calm={calm} float={floatDock}>
 					{dock}

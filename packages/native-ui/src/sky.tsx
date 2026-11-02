@@ -1,245 +1,160 @@
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
 import {
-	type LayoutChangeEvent,
-	Platform,
-	StyleSheet,
-	View,
-} from "react-native";
-import Animated from "react-native-reanimated";
-import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
+	BlurMask,
+	Canvas,
+	Circle,
+	FilterMode,
+	Group,
+	Image,
+	ImageShader,
+	LinearGradient,
+	MipmapMode,
+	RadialGradient,
+	Rect,
+	rect,
+	type Transforms3d,
+	useImage,
+	vec,
+} from "@shopify/react-native-skia";
+import { useState } from "react";
+import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import {
+	type SharedValue,
+	useDerivedValue,
+	useFrameCallback,
+	useSharedValue,
+} from "react-native-reanimated";
 import { useCalm } from "./motion-provider";
-import { mulberry32 } from "./seeded-random";
-import { colors, layout, type SkyPalette, skyPalettes } from "./tokens";
+import {
+	BAND_FADE,
+	BAND_FADE_OVERLAP,
+	type BandLayer,
+	bandBack,
+	bandDrift,
+	bandFront,
+	type Drift,
+	type Puff,
+	percentOf,
+	puffDrift,
+	puffs,
+	STAR_CALM_OPACITY,
+	STAR_GLOW,
+	STAR_GLOW_BLUR,
+	type Star,
+	skyRgb,
+	stars,
+	twinkleFrom,
+	twinkleTo,
+	WISP_LEFT,
+	WISP_TRAVEL,
+	WISP_WIDTH,
+	wispStops,
+	wisps,
+	wispTint,
+} from "./sky-scene";
+import { colors, type SkyPalette, skyPalettes } from "./tokens";
 
-// Every size below is the round 7 page value (drawn at 0.72 scale), converted to points.
-const SCALE = 0.72;
-const pt = (px: number) => px / SCALE;
-// Round 7 phone screen width in its own px; horizontal travel scales with the real width.
-const DRAW_WIDTH = layout.baseWidth * SCALE;
+// The sky on iOS and Android: one opaque Skia canvas, drawn on the UI thread (the web keeps its
+// views, `sky.web.tsx`). As views, one per cloud band, puff and star, each on a looping animation,
+// the sky was most of the phone's heat: every frame Reanimated committed some 40 animated views
+// and the compositor moved as many layers. Here the scene is a single layer, and its slow motion
+// steps 30 times a second instead of 60. Calm (reduced motion): the clock never starts, so the
+// scene holds the pose it opens on.
 
-// Round 7 dims the sprites with CSS `brightness()` and `saturate()`. iOS draws `brightness` as a
-// box over the whole view and has no `saturate`, so the dimming is baked into the files instead.
-const bandFrontSprite = require("../assets/sky/cloud-band-front.webp"); // brightness .42, saturate .85
-const bandBackSprite = require("../assets/sky/cloud-band-back.webp"); // brightness .38, saturate .85
-const cloudTop = require("../assets/sky/cloud-1-dim.webp"); // brightness .62
-const cloudRight = require("../assets/sky/cloud-2-dim.webp");
-const cloudLeft = require("../assets/sky/cloud-4-dim.webp");
+const STEP = 1 / 30; // seconds between redraws; drifts and twinkles read the same as at 60
+const SMOOTH = { filter: FilterMode.Linear, mipmap: MipmapMode.None };
 
-type Easing = "linear" | "ease-in-out";
-interface Offset {
-	x: number;
-	y: number;
+/** CSS `ease-in-out`, near enough for slow loops: half a cosine. */
+function easeInOut(p: number) {
+	"worklet";
+	return 0.5 - 0.5 * Math.cos(Math.PI * p);
 }
-interface Drift {
-	alternate: boolean;
-	delay: number; // seconds, negative = already under way
-	duration: number; // seconds
-	easing: Easing;
-	from: Offset;
-	to: Offset;
+
+/** Where a looping drift is `t` seconds after the screen opened (a negative delay = under way). */
+function driftAt(d: Drift, t: number): Transforms3d {
+	"worklet";
+	let p = ((t - d.delay) / d.duration) % (d.alternate ? 2 : 1);
+	if (p > 1) {
+		p = 2 - p;
+	}
+	const k = d.easing === "linear" ? p : easeInOut(p);
+	return [
+		{ translateX: d.from.x + (d.to.x - d.from.x) * k },
+		{ translateY: d.from.y + (d.to.y - d.from.y) * k },
+	];
+}
+
+/** The twinkle, 0 (dim, small) to 1 (bright, a little big) and back once per cycle. */
+function twinkleAt(s: Star, t: number) {
+	"worklet";
+	const p = ((t - s.delay) / s.duration) % 1;
+	return easeInOut(p < 0.5 ? p * 2 : 2 - p * 2);
 }
 
 /**
- * One looping drift. Moving: a Reanimated CSS animation (runs on the UI thread on iOS,
- * Android and web). Calm: the same pose the loop would be at when the screen opens, still.
+ * Seconds since the sky opened, advanced in STEP increments on the UI thread. Counted from the
+ * first frame's timestamp, kept in a shared value: a re-render registers the frame callback again,
+ * and the callback's own `timeSinceFirstFrame` would restart at 0 and stall the sky.
  */
-function driftStyle(d: Drift, calm: boolean) {
-	if (calm) {
-		const cycle = d.alternate ? 2 : 1;
-		let p = (-d.delay / d.duration) % cycle;
-		if (p > 1) {
-			p = 2 - p;
+function useSkyClock(moving: boolean) {
+	const clock = useSharedValue(0);
+	const origin = useSharedValue(-1);
+	useFrameCallback(({ timestamp }) => {
+		if (origin.get() < 0) {
+			origin.set(timestamp);
 		}
-		return {
-			transform: [
-				{ translateX: d.from.x + (d.to.x - d.from.x) * p },
-				{ translateY: d.from.y + (d.to.y - d.from.y) * p },
-			],
-		};
-	}
-	return {
-		animationDelay: `${d.delay}s`,
-		animationDirection: d.alternate
-			? ("alternate" as const)
-			: ("normal" as const),
-		animationDuration: `${d.duration}s`,
-		animationIterationCount: "infinite" as const,
-		animationName: {
-			from: {
-				transform: [{ translateX: d.from.x }, { translateY: d.from.y }],
-			},
-			to: { transform: [{ translateX: d.to.x }, { translateY: d.to.y }] },
-		},
-		animationTimingFunction: d.easing,
-	};
+		const t = (timestamp - origin.get()) / 1000;
+		if (t - clock.get() >= STEP) {
+			clock.set(t);
+		}
+	}, moving);
+	return clock;
 }
 
-// ---- Puffy clouds (round 7 `.sk .cl1 .cl2 .p .pr .pl .pt`) ----
-
-const BAND_TILES = 3; // round 7 band is 1332 px wide = 2.3 tiles; 3 covers it and any phone width
-
-interface BandLayer {
-	bottom: number;
-	delay: number;
-	duration: number;
-	height: number;
-	opacity: number;
-	sprite: number;
-	tileWidth: number;
-}
-
-const bandFront: BandLayer = {
-	bottom: pt(-6), // .cl1 bottom
-	delay: -18, // .cl1 --d
-	duration: 70, // .cl1 --t
-	height: pt(104),
-	opacity: 0.85, // .cl1 opacity .85
-	sprite: bandFrontSprite,
-	tileWidth: pt(587),
-};
-const bandBack: BandLayer = {
-	bottom: pt(42), // .cl2 bottom
-	delay: -60, // .cl2 --d
-	duration: 112, // .cl2 --t
-	height: pt(90),
-	opacity: 0.45, // .cl2 opacity .45
-	sprite: bandBackSprite,
-	tileWidth: pt(509),
-};
-
-interface Puff {
-	alternate: boolean;
-	delay: number;
-	duration: number;
-	dx: number; // horizontal travel as a fraction of the round 7 screen width
-	easing: Easing;
-	height: number;
-	horizontal: { left: number } | { right: number };
-	image: number;
-	opacity: number;
-	startX: number; // fraction of the round 7 screen width
-	top: `${number}%`;
-	width: number;
-}
-
-const puffRight: Puff = {
-	alternate: true,
-	delay: -9,
-	duration: 34,
-	dx: -150 / DRAW_WIDTH,
-	easing: "ease-in-out",
-	height: pt(72),
-	horizontal: { right: pt(-34) },
-	image: cloudRight,
-	opacity: 0.55, // .p opacity .55
-	startX: 0,
-	top: "36%",
-	width: pt(120),
-};
-const puffLeft: Puff = {
-	alternate: true,
-	delay: -31,
-	duration: 41,
-	dx: -140 / DRAW_WIDTH,
-	easing: "ease-in-out",
-	height: pt(86),
-	horizontal: { left: pt(-30) },
-	image: cloudLeft,
-	opacity: 0.38, // .pl opacity .38
-	startX: 0,
-	top: "20%",
-	width: pt(104),
-};
-const puffTop: Puff = {
-	alternate: false,
-	delay: -40,
-	duration: 95,
-	dx: 460 / DRAW_WIDTH, // ptop: -130 px to 330 px
-	easing: "linear",
-	height: pt(62),
-	horizontal: { left: 0 },
-	image: cloudTop,
-	opacity: 0.4, // .pt opacity .4
-	startX: -130 / DRAW_WIDTH,
-	top: "7%",
-	width: pt(132),
-};
+type Clock = SharedValue<number>;
 
 function Band({
-	calm,
+	clock,
+	height,
 	layer,
-	pose,
+	width,
 }: {
-	calm: boolean;
+	clock: Clock;
+	height: number;
 	layer: BandLayer;
-	pose: Drift;
+	width: number;
 }) {
-	const tiles = Array.from({ length: BAND_TILES }, (_, i) => i);
+	const image = useImage(layer.sprite);
+	const drift = bandDrift(layer);
+	const transform = useDerivedValue(() => driftAt(drift, clock.get()));
+	const y = height - layer.bottom - layer.height;
+	if (!image) {
+		return null;
+	}
+	// One repeating shader: the band slides one tile per loop, so it wraps with no visible join.
 	return (
-		<Animated.View
-			pointerEvents="none"
-			style={[
-				styles.band,
-				{
-					bottom: layer.bottom,
-					height: layer.height,
-					opacity: layer.opacity,
-					width: layer.tileWidth * BAND_TILES,
-				},
-				driftStyle(pose, calm),
-			]}
-		>
-			{tiles.map((i) => (
-				<Image
-					contentFit="fill"
-					key={i}
-					source={layer.sprite}
-					style={{ height: layer.height, width: layer.tileWidth }}
+		<Group opacity={layer.opacity} transform={transform}>
+			<Rect height={layer.height} width={width + layer.tileWidth} x={0} y={y}>
+				<ImageShader
+					fit="fill"
+					image={image}
+					rect={rect(0, y, layer.tileWidth, layer.height)}
+					sampling={SMOOTH}
+					tx="repeat"
+					ty="clamp"
 				/>
-			))}
-		</Animated.View>
+			</Rect>
+		</Group>
 	);
-}
-
-// The band sprite is still opaque along its bottom row, so the back layer would end in a hard line
-// 42 pt above the screen bottom. Instead of clipping the sprite, paint the sky's own colour back
-// over its lower BAND_FADE pt, solid at the edge, so the layer dissolves into the sky.
-const BAND_FADE = pt(36);
-const BAND_FADE_OVERLAP = 2; // also cover the pt under the edge so no antialiased row survives
-
-function skyRgb(
-	stops: readonly string[],
-	locations: readonly number[],
-	at: number
-): string {
-	const i = Math.max(
-		1,
-		locations.findIndex((l) => l >= at)
-	);
-	const start = locations[i - 1] ?? 0;
-	const t = Math.min(
-		1,
-		Math.max(0, (at - start) / ((locations[i] ?? 1) - start))
-	);
-	const from = stops[i - 1] ?? "#000000";
-	const to = stops[i] ?? from;
-	return [1, 3, 5]
-		.map((k) => {
-			const a = Number.parseInt(from.slice(k, k + 2), 16);
-			const b = Number.parseInt(to.slice(k, k + 2), 16);
-			return Math.round(a + (b - a) * t);
-		})
-		.join(",");
 }
 
 function BandFade({
 	height,
 	palette,
+	width,
 }: {
 	height: number;
 	palette: SkyPalette;
+	width: number;
 }) {
 	const { colors: stops, locations } = skyPalettes[palette];
 	const edge = skyRgb(stops, locations, 1 - bandBack.bottom / height);
@@ -249,283 +164,233 @@ function BandFade({
 		1 - (bandBack.bottom + BAND_FADE) / height
 	);
 	const total = BAND_FADE + BAND_FADE_OVERLAP;
+	const y = height - (bandBack.bottom - BAND_FADE_OVERLAP) - total;
 	return (
-		<LinearGradient
-			colors={[`rgba(${top},0)`, `rgba(${edge},1)`, `rgba(${edge},1)`]}
-			locations={[0, BAND_FADE / total, 1]}
-			pointerEvents="none"
-			style={[
-				styles.abs,
-				{
-					bottom: bandBack.bottom - BAND_FADE_OVERLAP,
-					height: total,
-					left: 0,
-					right: 0,
-				},
-			]}
-		/>
+		<Rect height={total} width={width} x={0} y={y}>
+			<LinearGradient
+				colors={[`rgba(${top},0)`, `rgba(${edge},1)`, `rgba(${edge},1)`]}
+				end={vec(0, y + total)}
+				positions={[0, BAND_FADE / total, 1]}
+				start={vec(0, y)}
+			/>
+		</Rect>
 	);
-}
-
-function bandDrift(layer: BandLayer): Drift {
-	return {
-		alternate: false,
-		delay: layer.delay,
-		duration: layer.duration,
-		easing: "linear",
-		from: { x: 0, y: 0 },
-		to: { x: -layer.tileWidth, y: 0 }, // one tile per loop = seamless wrap
-	};
 }
 
 function PuffCloud({
-	calm,
+	clock,
+	height,
 	puff,
 	width,
 }: {
-	calm: boolean;
+	clock: Clock;
+	height: number;
 	puff: Puff;
 	width: number;
 }) {
-	// pdrift: from (0, -6 px) to (dx, +8 px); ptop: straight across.
-	const k = width / DRAW_WIDTH;
-	const vertical = puff.alternate;
-	const pose: Drift = {
-		alternate: puff.alternate,
-		delay: puff.delay,
-		duration: puff.duration,
-		easing: puff.easing,
-		from: { x: puff.startX * DRAW_WIDTH * k, y: vertical ? pt(-6) : 0 },
-		to: {
-			x: (puff.startX + puff.dx) * DRAW_WIDTH * k,
-			y: vertical ? pt(8) : 0,
-		},
-	};
+	const image = useImage(puff.image);
+	const drift = puffDrift(puff, width);
+	const transform = useDerivedValue(() => driftAt(drift, clock.get()));
+	const x =
+		"left" in puff.horizontal
+			? puff.horizontal.left
+			: width - puff.horizontal.right - puff.width;
 	return (
-		<Animated.View
-			pointerEvents="none"
-			style={[
-				styles.abs,
-				puff.horizontal,
-				{
-					height: puff.height,
-					opacity: puff.opacity,
-					top: puff.top,
-					width: puff.width,
-				},
-				driftStyle(pose, calm),
-			]}
-		>
+		<Group opacity={puff.opacity} transform={transform}>
 			<Image
-				contentFit="contain"
-				source={puff.image}
-				style={StyleSheet.absoluteFill}
+				fit="contain"
+				height={puff.height}
+				image={image}
+				sampling={SMOOTH}
+				width={puff.width}
+				x={x}
+				y={percentOf(puff.top, height)}
 			/>
-		</Animated.View>
+		</Group>
 	);
 }
 
-// ---- Night and Twilight wisps (round 7 `.sk .w`) ----
+function Wisp({
+	clock,
+	height,
+	tint,
+	width,
+	wisp,
+}: {
+	clock: Clock;
+	height: number;
+	tint: string;
+	width: number;
+	wisp: (typeof wisps)[number];
+}) {
+	const wide = width * WISP_WIDTH;
+	const travel = wide * WISP_TRAVEL;
+	const drift: Drift = {
+		alternate: true,
+		delay: wisp.delay,
+		duration: wisp.duration,
+		easing: "ease-in-out",
+		from: { x: -travel, y: 0 },
+		to: { x: travel, y: 0 },
+	};
+	const transform = useDerivedValue(() => driftAt(drift, clock.get()));
+	const r = wide / 2;
+	// A round gradient squashed to the wisp's height, like the SVG ellipse stretched to its box.
+	return (
+		<Group transform={transform}>
+			<Group
+				transform={[
+					{ translateX: width * WISP_LEFT },
+					{ translateY: percentOf(wisp.top, height) },
+					{ scaleY: wisp.height / wide },
+				]}
+			>
+				<Circle c={vec(r, r)} r={r}>
+					<RadialGradient
+						c={vec(r, r)}
+						colors={wispStops.map((s) => `rgba(${tint},${s.opacity})`)}
+						positions={wispStops.map((s) => s.at)}
+						r={r}
+					/>
+				</Circle>
+			</Group>
+		</Group>
+	);
+}
 
-const wispTint: Record<"night" | "twilight", string> = {
-	night: "190,212,255",
-	twilight: "214,230,255",
-};
-const wisps = [
-	{ delay: -14, duration: 58, height: pt(92), top: "9%" },
-	{ delay: -40, duration: 76, height: pt(120), top: "38%" },
-	{ delay: -5, duration: 66, height: pt(100), top: "64%" },
-] as const;
-
-function Wisps({
+function StarDot({
 	calm,
+	clock,
+	height,
+	star,
+	width,
+}: {
+	calm: boolean;
+	clock: Clock;
+	height: number;
+	star: Star;
+	width: number;
+}) {
+	const radius = star.size / 2;
+	const c = vec(
+		percentOf(star.left, width) + radius,
+		percentOf(star.top, height) + radius
+	);
+	const opacity = useDerivedValue(() => {
+		if (calm) {
+			return STAR_CALM_OPACITY;
+		}
+		const k = twinkleAt(star, clock.get());
+		return twinkleFrom.opacity + (twinkleTo.opacity - twinkleFrom.opacity) * k;
+	});
+	const transform = useDerivedValue(() => {
+		const k = calm ? 1 : twinkleAt(star, clock.get());
+		const scale = calm
+			? 1
+			: twinkleFrom.scale + (twinkleTo.scale - twinkleFrom.scale) * k;
+		return [{ scale }];
+	});
+	// The glow is the dot blurred: a CSS box-shadow blur of B is a Gaussian of sigma B / 2.
+	return (
+		<Group opacity={opacity} origin={c} transform={transform}>
+			<Circle c={c} color={STAR_GLOW} r={radius}>
+				<BlurMask blur={(star.size * STAR_GLOW_BLUR) / 2} style="normal" />
+			</Circle>
+			<Circle c={c} color={colors.star} r={radius} />
+		</Group>
+	);
+}
+
+function SkyScene({
+	calm,
+	height,
 	palette,
 	width,
 }: {
 	calm: boolean;
-	palette: "night" | "twilight";
+	height: number;
+	palette: SkyPalette;
 	width: number;
 }) {
-	const tint = wispTint[palette];
-	const wispWidth = width * 1.7; // width: 170%
-	const travel = wispWidth * 0.14; // translateX -14% to 14%
-	const gradientId = `wisp-${palette}`;
+	const clock = useSkyClock(!calm);
+	const { colors: stops, locations } = skyPalettes[palette];
 	return (
-		<>
-			{wisps.map((w) => (
-				<Animated.View
-					key={w.top}
-					pointerEvents="none"
-					style={[
-						styles.abs,
-						{
-							height: w.height,
-							left: width * -0.35, // left: -35%
-							top: w.top,
-							width: wispWidth,
-						},
-						driftStyle(
-							{
-								alternate: true,
-								delay: w.delay,
-								duration: w.duration,
-								easing: "ease-in-out",
-								from: { x: -travel, y: 0 },
-								to: { x: travel, y: 0 },
-							},
-							calm
-						),
-					]}
-				>
-					<Svg
-						height="100%"
-						preserveAspectRatio="none"
-						viewBox="0 0 100 100"
-						width="100%"
-					>
-						<Defs>
-							<RadialGradient cx="50%" cy="50%" id={gradientId} r="50%">
-								<Stop offset="0" stopColor={`rgb(${tint})`} stopOpacity={0.2} />
-								<Stop
-									offset="0.62"
-									stopColor={`rgb(${tint})`}
-									stopOpacity={0.08}
-								/>
-								<Stop offset="1" stopColor={`rgb(${tint})`} stopOpacity={0} />
-							</RadialGradient>
-						</Defs>
-						<Ellipse
-							cx={50}
-							cy={50}
-							fill={`url(#${gradientId})`}
-							rx={50}
-							ry={50}
+		<Canvas opaque style={StyleSheet.absoluteFill}>
+			<Rect height={height} width={width} x={0} y={0}>
+				<LinearGradient
+					colors={[...stops]}
+					end={vec(0, height)}
+					positions={[...locations]}
+					start={vec(0, 0)}
+				/>
+			</Rect>
+			{palette === "puffy" ? (
+				<>
+					{puffs.map((p) => (
+						<PuffCloud
+							clock={clock}
+							height={height}
+							key={p.top}
+							puff={p}
+							width={width}
 						/>
-					</Svg>
-				</Animated.View>
-			))}
-		</>
-	);
-}
-
-// ---- Stars (round 7 `.sk .s` and its `tw` twinkle): generated once, so nothing reshuffles ----
-
-const STAR_COUNT = 34;
-const STAR_SEED = 13; // round 7 uses rng(n * 97 + 13) for its first sky
-
-const stars = (() => {
-	const random = mulberry32(STAR_SEED);
-	return Array.from({ length: STAR_COUNT }, (_, id) => {
-		const big = random() < 0.12;
-		const size = pt(big ? 2.6 + random() * 0.9 : 1.2 + random() * 1.4);
-		const left = `${(random() * 98).toFixed(1)}%` as `${number}%`;
-		const top = `${(random() * 94).toFixed(1)}%` as `${number}%`; // the whole sky
-		const duration = 2.4 + random() * 3.8;
-		const delay = -(random() * 8); // negative: stars start mid-cycle
-		return { delay, duration, id, left, size, top };
-	});
-})();
-
-const twinkle = {
-	"0%": { opacity: 0.1, transform: [{ scale: 0.6 }] },
-	"50%": { opacity: 1, transform: [{ scale: 1.15 }] },
-	"100%": { opacity: 0.1, transform: [{ scale: 0.6 }] },
-};
-
-/**
- * The glow around a star. On iOS a box shadow costs the GPU several offscreen passes per star on
- * every frame of the twinkle; the layer's own shadow around the solid dot is drawn from its
- * outline instead, at no extra pass (shadowRadius is half the CSS blur).
- */
-const starGlow = (size: number) =>
-	Platform.OS === "ios"
-		? {
-				shadowColor: "rgba(255,255,255,0.75)",
-				shadowOffset: { height: 0, width: 0 },
-				shadowOpacity: 1,
-				shadowRadius: (size * 2.5) / 2,
-			}
-		: { boxShadow: `0px 0px ${size * 2.5}px rgba(255,255,255,0.75)` };
-
-function Stars({ calm }: { calm: boolean }) {
-	return (
-		<>
+					))}
+					<Band clock={clock} height={height} layer={bandBack} width={width} />
+					<BandFade height={height} palette={palette} width={width} />
+					<Band clock={clock} height={height} layer={bandFront} width={width} />
+				</>
+			) : (
+				wisps.map((w) => (
+					<Wisp
+						clock={clock}
+						height={height}
+						key={w.top}
+						tint={wispTint[palette]}
+						width={width}
+						wisp={w}
+					/>
+				))
+			)}
 			{stars.map((s) => (
-				<Animated.View
+				<StarDot
+					calm={calm}
+					clock={clock}
+					height={height}
 					key={s.id}
-					pointerEvents="none"
-					style={[
-						styles.abs,
-						{
-							backgroundColor: colors.star,
-							borderRadius: s.size / 2,
-							...starGlow(s.size),
-							height: s.size,
-							left: s.left,
-							opacity: 0.75,
-							top: s.top,
-							width: s.size,
-						},
-						calm
-							? null
-							: {
-									animationDelay: `${s.delay}s`,
-									animationDuration: `${s.duration}s`,
-									animationIterationCount: "infinite",
-									animationName: twinkle,
-									animationTimingFunction: "ease-in-out",
-								},
-					]}
+					star={s}
+					width={width}
 				/>
 			))}
-		</>
+		</Canvas>
 	);
 }
-
-// ---- Sky ----
 
 export function Sky({ palette = "puffy" }: { palette?: SkyPalette }) {
 	const calm = useCalm();
 	const [size, setSize] = useState({ height: 0, width: 0 });
-	const { height, width } = size;
-	const { colors: stops, locations } = skyPalettes[palette];
+	const { colors: stops } = skyPalettes[palette];
 
 	const onLayout = (e: LayoutChangeEvent) => {
-		const { height: h, width: w } = e.nativeEvent.layout;
-		setSize({ height: h, width: w });
+		const { height, width } = e.nativeEvent.layout;
+		setSize({ height, width });
 	};
 
 	return (
 		<View
 			onLayout={onLayout}
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, styles.clip]}
+			style={[StyleSheet.absoluteFill, { backgroundColor: stops[0] }]}
 		>
-			<LinearGradient
-				colors={[...stops]}
-				locations={[...locations]}
-				style={StyleSheet.absoluteFill}
-			/>
-			{width > 0 && palette !== "puffy" ? (
-				<Wisps calm={calm} palette={palette} width={width} />
+			{size.width > 0 ? (
+				// Keyed on calm: the frame clock only reads whether it runs when it mounts.
+				<SkyScene
+					calm={calm}
+					height={size.height}
+					key={calm ? "calm" : "moving"}
+					palette={palette}
+					width={size.width}
+				/>
 			) : null}
-			{width > 0 && palette === "puffy" ? (
-				<>
-					<PuffCloud calm={calm} puff={puffTop} width={width} />
-					<PuffCloud calm={calm} puff={puffRight} width={width} />
-					<PuffCloud calm={calm} puff={puffLeft} width={width} />
-					<Band calm={calm} layer={bandBack} pose={bandDrift(bandBack)} />
-					<BandFade height={height} palette={palette} />
-					<Band calm={calm} layer={bandFront} pose={bandDrift(bandFront)} />
-				</>
-			) : null}
-			<Stars calm={calm} />
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	abs: { position: "absolute" },
-	band: { flexDirection: "row", left: 0, position: "absolute" },
-	clip: { overflow: "hidden" },
-});

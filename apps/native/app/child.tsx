@@ -1,160 +1,56 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
-import { Chip } from "@little-adventures/native-ui/chip";
-import { ChoiceTile } from "@little-adventures/native-ui/choice-tile";
-import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { FieldError } from "@little-adventures/native-ui/field-error";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { TextField } from "@little-adventures/native-ui/text-field";
-import {
-	colors,
-	layout,
-	select,
-	spacing,
-} from "@little-adventures/native-ui/tokens";
-import {
-	type Child as ChildValues,
-	childSchema,
-} from "@little-adventures/validation/child";
-import { useRouter } from "expo-router";
-import { Controller, useForm } from "react-hook-form";
-import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ScrollView, StyleSheet } from "react-native";
+import { ChildFields, useChildForm } from "@/src/child/child-form";
+import { emptyProfile } from "@/src/data/profile-map";
 import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
 
-const ageRows = [
-	[2, 3, 4, 5, 6],
-	[7, 8, 9, 10, 11],
-];
-const LABEL = { opacity: 0.85 } as const;
-
-function Group({
-	style,
-	children,
-	error,
-	label,
-}: {
-	children: React.ReactNode;
-	error?: string;
-	label: string;
-	style?: StyleProp<ViewStyle>;
-}) {
-	return (
-		<View style={style}>
-			<ClayText color={colors.cream} style={LABEL} variant="label">
-				{label}
-			</ClayText>
-			<View style={styles.groupBody}>{children}</View>
-			<FieldError message={error} />
-		</View>
-	);
-}
-
-function ChildForm({ profile }: { profile: Profile }) {
+function ChildForm({ isNew, profile }: { isNew: boolean; profile: Profile }) {
 	const router = useRouter();
 	const saveProfile = useSaveProfile();
-	const { control, handleSubmit } = useForm<ChildValues>({
-		defaultValues: {
-			age: profile.childAge ?? undefined,
-			kind: profile.childKind,
-			name: profile.childName,
-		},
-		mode: "onTouched",
-		resolver: zodResolver(childSchema),
-	});
+	const { control, handleSubmit } = useChildForm(profile);
 
 	const next = handleSubmit(async ({ age, kind, name }) => {
-		await saveProfile({ childAge: age, childKind: kind, childName: name });
+		await saveProfile(
+			{ childAge: age, childKind: kind, childName: name },
+			{ create: isNew }
+		);
+		if (isNew) {
+			// The child now exists and is the current one: a second Next edits it, never adds again.
+			router.setParams({ new: undefined });
+		}
 		router.push("/photo");
 	});
 
 	return (
 		<Screen
-			bodyStyle={styles.body}
 			dock={<PrimaryButton label="Next" onPress={next} />}
 			title="Your hero"
 		>
-			<Controller
-				control={control}
-				name="name"
-				render={({ field, fieldState }) => (
-					<TextField
-						autoCapitalize="words"
-						autoComplete="off"
-						autoCorrect={false}
-						error={fieldState.error?.message}
-						label="Name"
-						onBlur={field.onBlur}
-						onChangeText={field.onChange}
-						returnKeyType="done"
-						value={field.value}
-					/>
-				)}
-			/>
-			<Controller
-				control={control}
-				name="kind"
-				render={({ field, fieldState }) => (
-					<Group error={fieldState.error?.message} label="Boy or girl">
-						<View style={styles.row}>
-							<ChoiceTile
-								label="Girl"
-								onPress={() => field.onChange("girl")}
-								selected={field.value === "girl"}
-								style={styles.flex}
-							/>
-							<ChoiceTile
-								label="Boy"
-								onPress={() => field.onChange("boy")}
-								selected={field.value === "boy"}
-								style={styles.flex}
-							/>
-						</View>
-					</Group>
-				)}
-			/>
-			<Controller
-				control={control}
-				name="age"
-				render={({ field, fieldState }) => (
-					<Group
-						error={fieldState.error?.message}
-						label="Age"
-						style={styles.age}
-					>
-						<View style={styles.chips}>
-							{ageRows.map((row) => (
-								<View key={row[0]} style={styles.chipRow}>
-									{row.map((n) => (
-										<Chip
-											key={n}
-											label={String(n)}
-											onPress={() => field.onChange(n)}
-											selected={field.value === n}
-											style={styles.flex}
-										/>
-									))}
-								</View>
-							))}
-						</View>
-					</Group>
-				)}
-			/>
+			{/* With the keyboard up the body shrinks above Next, and the rest of the form scrolls. */}
+			<ScrollView
+				contentContainerStyle={styles.body}
+				keyboardShouldPersistTaps="handled"
+				showsVerticalScrollIndicator={false}
+			>
+				<ChildFields control={control} />
+			</ScrollView>
 		</Screen>
 	);
 }
 
 export default function Child() {
 	const { data } = useChild();
-	return data ? <ChildForm profile={data.profile} /> : null;
+	// `?new=1` (Grown-ups, "Add a child"): an empty form that adds a child instead of editing.
+	const { new: add } = useLocalSearchParams<{ new?: string }>();
+	const isNew = add === "1";
+	return data ? (
+		<ChildForm isNew={isNew} profile={isNew ? emptyProfile : data.profile} />
+	) : null;
 }
 
 const styles = StyleSheet.create({
-	age: { marginTop: 4 },
-	body: { gap: spacing.lg, paddingTop: 34 },
-	chipRow: { flexDirection: "row", gap: layout.gapTight },
-	chips: { gap: select.lookRowGap },
-	flex: { flex: 1 },
-	groupBody: { marginTop: select.fieldLabelGap },
-	row: { flexDirection: "row", gap: layout.gap },
+	body: { paddingTop: 34 },
 });

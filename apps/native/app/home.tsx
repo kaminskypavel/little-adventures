@@ -13,8 +13,12 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Animated, {
+	Easing,
+	type EntryExitAnimationFunction,
+	FadeOut,
 	type SharedValue,
 	useAnimatedStyle,
+	withTiming,
 } from "react-native-reanimated";
 import {
 	useSafeAreaFrame,
@@ -32,6 +36,7 @@ import {
 	restLayout,
 } from "@/src/home/home-layout";
 import { IdeasShelf, YoursShelf } from "@/src/home/shelves";
+import { useGreeting } from "@/src/home/use-greeting";
 import { useFocusRun, useHomeData, useMicOff } from "@/src/home/use-home";
 import { useMorph } from "@/src/home/use-morph";
 import { lineFor, takeFor, titleFor } from "@/src/voice/ask-copy";
@@ -43,6 +48,28 @@ const MIC = 176;
 const PLATE_BOX = 88;
 const HINT = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
 const MIC_OFF_TEXT = "Ask a grown-up to turn on the mic.";
+const FADE_MS = 200;
+const overshoot = Easing.bezier(...motion.overshoot);
+/** "Hi {name}!" pops in: a little smaller, with the app's overshoot. */
+const popIn: EntryExitAnimationFunction = () => {
+	"worklet";
+	const timing = { duration: motion.enter, easing: overshoot };
+	return {
+		animations: {
+			opacity: withTiming(1, timing),
+			transform: [{ scale: withTiming(1, timing) }],
+		},
+		initialValues: { opacity: 0, transform: [{ scale: 0.92 }] },
+	};
+};
+/** The question comes in as the greeting fades out. */
+const fadeIn: EntryExitAnimationFunction = () => {
+	"worklet";
+	return {
+		animations: { opacity: withTiming(1, { duration: FADE_MS }) },
+		initialValues: { opacity: 0 },
+	};
+};
 /** The pressed button hides as Home switches state: on web it must not keep the focus. */
 function releaseFocus() {
 	if (Platform.OS === "web") {
@@ -217,6 +244,7 @@ function RestLayer({
 	listening,
 	micOff,
 	onGate,
+	onWho,
 	onOpen,
 	rest,
 	run,
@@ -226,16 +254,33 @@ function RestLayer({
 	listening: boolean;
 	micOff: boolean;
 	onGate: () => void;
+	/** Opens "Who's listening?"; only given when the account has two or more children. */
+	onWho?: () => void;
 	onOpen: (adventure: AdventureSummary) => void;
 	rest: SharedValue<number>;
 	run: number;
 	stage: Stage;
 }) {
-	const { adventures, avatarUrl, name } = data;
+	const { adventures, avatar, name } = data;
 	const spots = stage.rest;
 	const insets = useSafeAreaInsets();
 	const style = useAnimatedStyle(() => ({ opacity: rest.get() }));
-	const text = micOff ? MIC_OFF_TEXT : `What shall we explore, ${name}?`;
+	// After another child is picked the star greets first (phase 1), then asks (phase 2).
+	const greeting = useGreeting(data.childId);
+	const hi = greeting === 1 && !micOff;
+	let text = `What shall we explore, ${name}?`;
+	if (micOff) {
+		text = MIC_OFF_TEXT;
+	} else if (hi) {
+		text = `Hi ${name}!`;
+	}
+	const { calm } = stage;
+	let entering: typeof popIn | undefined;
+	if (hi) {
+		entering = popIn;
+	} else if (greeting === 2) {
+		entering = fadeIn;
+	}
 	return (
 		<Animated.View
 			aria-hidden={listening}
@@ -253,8 +298,9 @@ function RestLayer({
 						onPress: onGate,
 					}}
 					avatar={name !== null}
-					avatarUrl={avatarUrl}
+					avatarImage={avatar}
 					compact
+					onAvatarPress={onWho}
 					take="wave"
 					takeRun={run}
 				/>
@@ -266,9 +312,16 @@ function RestLayer({
 						{ top: spots.plateBottom - PLATE_BOX, width: stage.width },
 					]}
 				>
-					<SpeechPlate width={Math.min(PILL_WIDTH, stage.width - 2 * 22)}>
-						{text}
-					</SpeechPlate>
+					<Animated.View
+						entering={calm ? undefined : entering}
+						exiting={calm ? undefined : FadeOut.duration(FADE_MS)}
+						// A new key per line: the old plate fades out as the new one comes in.
+						key={hi ? "hi" : "ask"}
+					>
+						<SpeechPlate width={Math.min(PILL_WIDTH, stage.width - 2 * 22)}>
+							{text}
+						</SpeechPlate>
+					</Animated.View>
 				</TitleHold>
 			)}
 			<YoursShelf
@@ -352,11 +405,14 @@ export default function Home() {
 		}, [router])
 	);
 	const { arm, disarm } = ask;
-	// Once per app session, however often Home opens.
+	// Once per child per app session, however often Home opens; again when another child listens.
+	const { childId } = data;
 	useFocusEffect(
 		useCallback(() => {
-			prepareChild();
-		}, [])
+			if (childId) {
+				prepareChild(childId);
+			}
+		}, [childId])
 	);
 	const { deny } = mic;
 
@@ -400,6 +456,7 @@ export default function Home() {
 								: `/map?id=${adventure.id}`
 						)
 					}
+					onWho={data.childCount > 1 ? () => router.push("/who") : undefined}
 					rest={rest}
 					run={run}
 					stage={stage}

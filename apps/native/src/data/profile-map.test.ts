@@ -25,7 +25,7 @@ describe("profile map", () => {
 	test("a row becomes a profile with its avatar", () => {
 		const child = toChild([row]);
 		expect(child.id).toBe("c1");
-		expect(child.avatarUrl).toBe("https://x/clay.png");
+		expect(child.avatar?.uri).toBe("https://x/clay.png");
 		expect(child.profile.childName).toBe("Mia");
 		expect(child.profile.hasPhoto).toBe(true);
 		expect(child.profile.faceUrl).toBe("https://x/face.png");
@@ -33,7 +33,7 @@ describe("profile map", () => {
 
 	test("no row gives the empty profile", () => {
 		expect(toChild([])).toEqual({
-			avatarUrl: null,
+			avatar: null,
 			cutUrl: null,
 			profile: emptyProfile,
 		});
@@ -64,7 +64,9 @@ describe("profile map", () => {
 		expect(toGrownUpPhoto({ photoUrl: "p" })).toEqual({
 			called: null,
 			cutUrl: null,
+			faceKey: null,
 			faceUrl: null,
+			lookKey: null,
 			lookUrl: null,
 			photoUrl: "p",
 		});

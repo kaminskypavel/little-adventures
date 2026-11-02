@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { type ReactNode, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Character } from "./character";
 import { ClayText } from "./clay-text";
 import { IconButton } from "./icon-button";
@@ -15,6 +15,8 @@ const AVATAR_STAR = 51;
 // Compact (Home): a 56 pt avatar in a faint cream ring, and no title.
 const COMPACT_AVATAR = 56;
 const COMPACT_STAR = 47;
+// Grows the 56 pt avatar to a 64 pt target.
+const AVATAR_SLOP = 4;
 const RING = "0px 0px 0px 3px rgba(244,236,216,0.28)";
 const TITLE_BAR_WIDTH = 170;
 const TITLE_BAR_RATIO = 0.8;
@@ -64,8 +66,9 @@ function Title({
 export function TopBar({
 	action,
 	avatar = false,
-	avatarUrl,
+	avatarImage,
 	compact = false,
+	onAvatarPress,
 	onTitleLongPress,
 	take,
 	takeRun = 0,
@@ -78,9 +81,12 @@ export function TopBar({
 	};
 	avatar?: boolean;
 	/** The child's drawn picture. Shown instead of the star; the star stays when it is missing or fails to load. */
-	avatarUrl?: string | null;
+	/** The child's drawing. Its cacheKey (the storage key) keeps it from reloading as the signed url changes. */
+	avatarImage?: { cacheKey?: string; uri: string } | null;
 	/** A 56 pt avatar with a cream ring, and no title: the lock stays at the right. */
 	compact?: boolean;
+	/** Makes the avatar a button (Home: opens "Who's listening?"). Plain picture when absent. */
+	onAvatarPress?: () => void;
 	/** A 1 s hold on the title. Defaults to the app's `TitleHoldProvider` action. */
 	onTitleLongPress?: () => void;
 	/** Makes the avatar star live: it plays this gesture when it appears, then rests on idle. */
@@ -93,26 +99,39 @@ export function TopBar({
 	// The failed url is remembered, so a new url is tried again.
 	const [failedUrl, setFailedUrl] = useState<string | null>(null);
 	const starSize = compact ? COMPACT_STAR : AVATAR_STAR;
-	const picture = avatarUrl && avatarUrl !== failedUrl ? avatarUrl : null;
+	const picture =
+		avatarImage && avatarImage.uri !== failedUrl ? avatarImage : null;
 	let art: ReactNode = <Character kind="star" size={starSize} />;
 	if (picture) {
 		art = (
 			<Image
 				accessibilityIgnoresInvertColors
+				cachePolicy="memory-disk"
 				contentFit="cover"
-				onError={() => setFailedUrl(picture)}
-				source={{ uri: picture }}
+				onError={() => setFailedUrl(picture.uri)}
+				source={picture}
 				style={styles.picture}
 			/>
 		);
 	} else if (take) {
 		art = <StarTake key={takeRun} size={starSize} take={take} />;
 	}
+	const face = (
+		<View style={compact ? styles.compact : styles.avatar}>{art}</View>
+	);
 	return (
 		<>
-			{avatar ? (
-				<View style={compact ? styles.compact : styles.avatar}>{art}</View>
+			{avatar && onAvatarPress ? (
+				<Pressable
+					accessibilityLabel="Who's listening?"
+					accessibilityRole="button"
+					hitSlop={AVATAR_SLOP}
+					onPress={onAvatarPress}
+				>
+					{face}
+				</Pressable>
 			) : null}
+			{avatar && !onAvatarPress ? face : null}
 			<Title
 				compact={compact}
 				onTitleLongPress={onTitleLongPress}
