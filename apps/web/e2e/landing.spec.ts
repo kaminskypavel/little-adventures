@@ -79,6 +79,28 @@ test.describe("english home", () => {
 		await page.waitForTimeout(2500);
 		expect(await shownScene(page)).toBe(1);
 	});
+
+	test("a scroll made during a move is kept", async ({ page }, testInfo) => {
+		test.setTimeout(LOAD_TEST_TIMEOUT);
+		await page.goto("/");
+		await waitForStory(page);
+		const scroll = async () => {
+			if (testInfo.project.name === "phone") {
+				await swipeUp(page);
+			} else {
+				await page.mouse.move(720, 450);
+				await page.mouse.wheel(0, 120);
+			}
+		};
+		await scroll();
+		// A pause ends the first gesture; the second lands while the first move still plays.
+		await page.waitForTimeout(400);
+		await scroll();
+
+		await expect.poll(() => shownScene(page), { timeout: 10_000 }).toBe(2);
+		await page.waitForTimeout(2500);
+		expect(await shownScene(page)).toBe(2);
+	});
 });
 
 test.describe("languages", () => {

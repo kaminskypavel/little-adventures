@@ -2,8 +2,9 @@ import { createStore } from "zustand/vanilla";
 
 // Where the story is: the scene on screen, whether a move is playing, and how
 // long input stays ignored after a move (so a trackpad's momentum cannot skip a scene).
-// Touch is different: a finger has no momentum, so a new swipe always counts. One made
-// while a move plays waits for it to land; the swipe that started a move never counts twice.
+// Touch is different: a finger has no momentum, so a new swipe always counts. A new
+// gesture (a swipe, or a scroll after a pause) made while a move plays waits for it to
+// land; the gesture that started a move never counts twice.
 interface StoryState {
 	at: number;
 	busy: boolean;
@@ -25,7 +26,7 @@ interface StoryActions {
 	leave: () => void;
 	/** A finger touched the screen. */
 	press: () => void;
-	/** A touch swipe arrived that could not move now: keep it if it is new and a move is playing. */
+	/** A gesture arrived that could not move now: keep it if it is new and a move is playing. */
 	queueSwipe: (step: number) => void;
 }
 

@@ -23,6 +23,10 @@ const SCENE_IDS: readonly SceneId[] = [
 ];
 const N = SCENE_IDS.length;
 const MOVE_SPEED = 1.2;
+// A scroll made during a move: the move speeds up to this, then the next one plays.
+const HURRY_SPEED = 2.5;
+// A pause this long (seconds) in wheel input ends a gesture; the next scroll is a new one.
+const GESTURE_GAP = 0.15;
 // After a move, swallow a trackpad's leftover momentum so one swipe is one scene.
 const CALM_MS = 350;
 const CUE_ARROWS = ["first", "second", "third"] as const;
@@ -205,6 +209,7 @@ export function VideoStory({
 				Boolean
 			) as HTMLElement[];
 			let shown: HTMLElement | null = null;
+			let moving: HTMLVideoElement | null = null;
 			const only = (layer: HTMLElement) => {
 				shown = layer;
 				for (const x of layers) {
@@ -331,6 +336,8 @@ export function VideoStory({
 					clip.src = forward ? url.move(to) : url.back(from);
 				}
 				clip.currentTime = 0;
+				gsap.killTweensOf(clip);
+				moving = clip;
 				clip.playbackRate = MOVE_SPEED;
 				// Seek the landing loop to its first frame now, so it starts the instant the move ends.
 				loops[to].pause();
@@ -340,14 +347,21 @@ export function VideoStory({
 				clip.play().catch(() => arrive(to));
 			};
 
-			// `step` is +1 or -1. A touch swipe skips the trackpad calm window, and one made
-			// during a move is kept and played when the move lands.
+			// `step` is +1 or -1. A touch swipe skips the trackpad calm window. A new gesture
+			// made during a move (a new swipe, or a scroll after a pause) is kept and played
+			// when the move lands, and the move speeds up so it lands sooner.
 			const go = (step: number, touch = false) => {
 				const state = story.getState();
 				const to = state.at + step;
 				if (!state.canGo(to, N, touch)) {
-					if (touch) {
-						state.queueSwipe(step);
+					state.queueSwipe(step);
+					if (!state.queued && story.getState().queued && moving) {
+						gsap.to(moving, {
+							duration: 0.25,
+							ease: "sine.out",
+							overwrite: true,
+							playbackRate: HURRY_SPEED,
+						});
 					}
 					return;
 				}
@@ -472,6 +486,9 @@ export function VideoStory({
 				ignore: "[data-waitlist], [data-early], dialog",
 				onDown: (self) => go(-1, self.event.type !== "wheel"),
 				onPress: () => story.getState().press(),
+				// A wheel has no press, so a pause ends its gesture instead.
+				onStop: () => story.getState().press(),
+				onStopDelay: GESTURE_GAP,
 				onUp: (self) => go(1, self.event.type !== "wheel"),
 				preventDefault: true,
 				target: window,
