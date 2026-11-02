@@ -26,11 +26,13 @@ import {
 	useState,
 } from "react";
 import { BackHandler, Platform, StyleSheet, View } from "react-native";
-import {
+import Animated, {
 	cancelAnimation,
 	Easing,
 	type SharedValue,
 	useAnimatedReaction,
+	useAnimatedStyle,
+	useReducedMotion,
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
@@ -42,6 +44,10 @@ import {
 	GRACE_MS,
 	graceDue,
 	hasParts,
+	LEAD_FADE_MS,
+	LEAD_ZOOM_MS,
+	LEAD_ZOOM_TO,
+	leadZoom,
 	neighbourUrls,
 	type PlayEvent,
 	type PlayState,
@@ -319,6 +325,53 @@ const parkAtFirstFrame = (player: VideoPlayer) => {
 	player.currentTime = 0;
 };
 
+/**
+ * The picture over the video. While the first part is still being made it zooms very slowly
+ * (`zoom`; frozen where it is when the zoom stops); once the video has a frame (`gone`) it
+ * fades out over `fadeMs`.
+ */
+function Cover({
+	children,
+	fadeMs,
+	gone,
+	zoom,
+}: {
+	children: ReactNode;
+	fadeMs: number;
+	gone: boolean;
+	zoom: boolean;
+}) {
+	const scale = useSharedValue(1);
+	const opacity = useSharedValue(1);
+	useEffect(() => {
+		if (zoom) {
+			scale.set(
+				withTiming(LEAD_ZOOM_TO, {
+					duration: LEAD_ZOOM_MS,
+					easing: Easing.inOut(Easing.ease),
+				})
+			);
+		} else {
+			cancelAnimation(scale);
+		}
+	}, [scale, zoom]);
+	useEffect(() => {
+		opacity.set(withTiming(gone ? 0 : 1, { duration: fadeMs }));
+	}, [fadeMs, gone, opacity]);
+	const style = useAnimatedStyle(() => ({
+		opacity: opacity.get(),
+		transform: [{ scale: scale.get() }],
+	}));
+	return (
+		<Animated.View
+			pointerEvents="none"
+			style={[StyleSheet.absoluteFill, style]}
+		>
+			{children}
+		</Animated.View>
+	);
+}
+
 /** One part's picture. The part buffering for next, on the web, stays mounted but unseen. */
 function PartVideo({
 	hidden,
@@ -353,6 +406,7 @@ function PartVideo({
 function MediaPlayer({
 	audio,
 	cover,
+	hasPicture,
 	name,
 	node,
 	onBack,
@@ -364,6 +418,8 @@ function MediaPlayer({
 	audio: NarrationAudio | null;
 	/** The picture, shown when there is no video and until the first part has a frame. */
 	cover: ReactNode;
+	/** The place has a real picture: it may lead while the first part is still being made. */
+	hasPicture: boolean;
 	name: string;
 	node: NodeId;
 	onBack: () => void;
@@ -378,7 +434,7 @@ function MediaPlayer({
 	const heard = useAudioPlayerStatus(audioPlayer);
 	// The machine in parts.ts is the truth (a ref, so events read it at once); `view` repaints.
 	const [view, setView] = useState<PlayState>(() =>
-		begin(parts, audio !== null)
+		begin(parts, audio !== null, hasPicture)
 	);
 	const machine = useRef<PlayState>(view);
 	const held = slotParts(view);
@@ -423,8 +479,12 @@ function MediaPlayer({
 			}
 			machine.current = next.state;
 			setView(next.state);
-			for (const { name: markName, part } of next.marks) {
-				mark(markName, { part, place: node });
+			for (const { leadMs, name: markName, part } of next.marks) {
+				mark(markName, {
+					detail: leadMs === undefined ? undefined : { leadMs },
+					part,
+					place: node,
+				});
 			}
 			if (next.end) {
 				fireEnd(next.end);
@@ -545,6 +605,7 @@ function MediaPlayer({
 			if (hasNarration) {
 				mark("narration-start", { place: node });
 				audioPlayer.play();
+				send({ type: "started" });
 			}
 		}
 		if (view.phase === "playing" && begun.current !== view.at) {
@@ -560,6 +621,7 @@ function MediaPlayer({
 		player1,
 		playing,
 		ready,
+		send,
 		view.at,
 		view.phase,
 		view.slot,
@@ -577,7 +639,11 @@ function MediaPlayer({
 		setPlaying(!playing);
 	};
 
-	const showCover = !framed;
+	// The picture leads (it was on screen with the narration before the video): it fades away
+	// over the video's first frame. Otherwise it goes at once, as before.
+	const led = view.lead !== null;
+	const showCover = led || !framed;
+	const zoom = leadZoom(view, useReducedMotion());
 	const spoken = hasNarration ? heard.currentTime : 0;
 	const length = hasNarration ? heard.duration : 0;
 	const frame = (
@@ -602,7 +668,11 @@ function MediaPlayer({
 					player={players[view.slot]}
 				/>
 			)}
-			{showCover ? cover : null}
+			{showCover ? (
+				<Cover fadeMs={led ? LEAD_FADE_MS : 0} gone={framed} zoom={zoom}>
+					{cover}
+				</Cover>
+			) : null}
 		</View>
 	);
 
@@ -738,6 +808,7 @@ export default function Place() {
 		<MediaPlayer
 			audio={audio}
 			cover={cover}
+			hasPicture={place.picture !== null}
 			// By place and narration, never by a part's url: a part keeps playing when a read brings
 			// other urls. A new narration url (fresh urls after a failed file) starts the place over.
 			key={`${node}|${audio?.url}`}

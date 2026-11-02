@@ -15,6 +15,22 @@ export const reachedEnd = (currentTime: number, duration: number) =>
 export type EndCause = "grace" | "last-part" | "narration";
 export type Slot = 0 | 1;
 
+/** Longest zoom of the picture while the first part is still being made: scale 1 to this. */
+export const LEAD_ZOOM_TO = 1.06;
+/** How long the slow zoom runs. */
+export const LEAD_ZOOM_MS = 15_000;
+/** How long the picture takes to fade once the first part has its first frame. */
+export const LEAD_FADE_MS = 400;
+
+/**
+ * The picture and narration lead while the first part is still being made. `since` is the
+ * clock (ms) when it began; `ended` is set once a part plays and the video takes over.
+ */
+export interface Lead {
+	ended: boolean;
+	since: number;
+}
+
 export interface PlayState {
 	/** Index of the part on screen (the last one shown while holding), -1 before the first. */
 	at: number;
@@ -22,6 +38,10 @@ export interface PlayState {
 	bad: Record<string, string>;
 	/** The place has ended. */
 	done: boolean;
+	/** The place has a picture to stand on while the first part is still being made. */
+	hasPicture: boolean;
+	/** Set once the narration has started over the picture alone; null when it never did. */
+	lead: Lead | null;
 	/** True from the start when there is no narration to wait for. */
 	narrationEnded: boolean;
 	parts: Part[];
@@ -38,18 +58,35 @@ export type PlayEvent =
 	| { type: "ended" }
 	| { type: "grace" }
 	| { type: "narration-ended" }
-	| { type: "parts"; parts: Part[] };
+	| { type: "parts"; parts: Part[] }
+	| { type: "started" };
 
 export interface Step {
 	end?: EndCause;
-	marks: { name: "part-end" | "stall-end" | "stall-start"; part: number }[];
+	marks: {
+		/** On `picture-lead-end`: how long the picture led alone, in ms. */
+		leadMs?: number;
+		name:
+			| "part-end"
+			| "picture-lead-end"
+			| "picture-lead-start"
+			| "stall-end"
+			| "stall-start";
+		part: number;
+	}[];
 	state: PlayState;
 }
 
-export const begin = (parts: Part[], hasNarration: boolean): PlayState => ({
+export const begin = (
+	parts: Part[],
+	hasNarration: boolean,
+	hasPicture = false
+): PlayState => ({
 	at: -1,
 	bad: {},
 	done: false,
+	hasPicture,
+	lead: null,
 	narrationEnded: !hasNarration,
 	parts,
 	phase: "waiting",
@@ -92,6 +129,27 @@ export function slotParts(s: PlayState): [Part | null, Part | null] {
 export const hasParts = (parts: Part[]) =>
 	parts.some((part) => part.status !== "failed");
 
+/** The picture is leading: it holds the frame, with a slow zoom unless the person wants calm. */
+export const leadZoom = (s: PlayState, reduceMotion: boolean) =>
+	s.lead !== null && !s.lead.ended && !reduceMotion;
+
+/** The narration starts over the picture while the first part is still being made. */
+function startLead(s: PlayState, now: number): Step {
+	if (
+		s.lead ||
+		s.at >= 0 ||
+		!s.hasPicture ||
+		s.narrationEnded ||
+		s.parts[0]?.status !== "making"
+	) {
+		return unchanged(s);
+	}
+	return {
+		marks: [{ name: "picture-lead-start", part: 1 }],
+		state: { ...s, lead: { ended: false, since: now } },
+	};
+}
+
 /** The narration is done and the next part is still not here: the wait that ends in `grace`. */
 export const graceDue = (s: PlayState) =>
 	!s.done && s.phase === "waiting" && s.narrationEnded;
@@ -113,7 +171,7 @@ const stallEnd = (s: PlayState): Step["marks"] =>
  * last frame (marking a stall) while the next is not playable, and ends the place once no part is
  * left and the narration is done. `cause` names what ended the place if this is the end.
  */
-function settle(s: PlayState, cause: EndCause): Step {
+function settle(s: PlayState, cause: EndCause, now: number): Step {
 	if (s.done || s.phase === "playing") {
 		return unchanged(s);
 	}
@@ -129,11 +187,17 @@ function settle(s: PlayState, cause: EndCause): Step {
 			: { marks, state };
 	}
 	if (isPlayable(s.parts[index])) {
+		const { lead } = s;
+		const leadEnd: Step["marks"] =
+			lead && !lead.ended
+				? [{ leadMs: now - lead.since, name: "picture-lead-end", part: 1 }]
+				: [];
 		return {
-			marks: stallEnd(s),
+			marks: [...stallEnd(s), ...leadEnd],
 			state: {
 				...s,
 				at: index,
+				lead: lead && { ...lead, ended: true },
 				phase: "playing",
 				slot: other(s.slot),
 				stall: null,
@@ -150,18 +214,18 @@ function settle(s: PlayState, cause: EndCause): Step {
 	};
 }
 
-function ended(s: PlayState): Step {
+function ended(s: PlayState, now: number): Step {
 	if (s.phase !== "playing") {
 		return unchanged(s);
 	}
-	const next = settle({ ...s, phase: "waiting" }, "last-part");
+	const next = settle({ ...s, phase: "waiting" }, "last-part", now);
 	return {
 		...next,
 		marks: [{ name: "part-end", part: s.at + 1 }, ...next.marks],
 	};
 }
 
-function bad(s: PlayState, id: string): Step {
+function bad(s: PlayState, id: string, now: number): Step {
 	const part = s.parts.find((p) => p.id === id);
 	if (!part || part.url === null || s.bad[id] === part.url) {
 		return unchanged(s);
@@ -170,7 +234,8 @@ function bad(s: PlayState, id: string): Step {
 	const onScreen = s.phase === "playing" && s.parts[s.at]?.id === id;
 	return settle(
 		onScreen ? { ...marked, phase: "waiting" } : marked,
-		"narration"
+		"narration",
+		now
 	);
 }
 
@@ -185,27 +250,37 @@ function grace(s: PlayState): Step {
 	};
 }
 
-/** One event in, the next state out, with the marks to record and the end if the place is over. */
-export function step(s: PlayState, event: PlayEvent): Step {
+/**
+ * One event in, the next state out, with the marks to record and the end if the place is over.
+ * `now` is the clock in ms, for the length of a picture lead.
+ */
+export function step(
+	s: PlayState,
+	event: PlayEvent,
+	now: number = Date.now()
+): Step {
 	if (s.done) {
 		return unchanged(s);
 	}
 	switch (event.type) {
 		case "bad":
-			return bad(s, event.id);
+			return bad(s, event.id, now);
 		case "ended":
-			return ended(s);
+			return ended(s, now);
 		case "grace":
 			return grace(s);
 		case "narration-ended":
 			return s.narrationEnded
 				? unchanged(s)
-				: settle({ ...s, narrationEnded: true }, "narration");
+				: settle({ ...s, narrationEnded: true }, "narration", now);
 		case "parts":
 			return settle(
 				sameParts(s.parts, event.parts) ? s : { ...s, parts: event.parts },
-				"narration"
+				"narration",
+				now
 			);
+		case "started":
+			return startLead(s, now);
 		default:
 			return unchanged(s);
 	}

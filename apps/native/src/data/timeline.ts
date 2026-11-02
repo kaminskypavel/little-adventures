@@ -11,6 +11,8 @@ export type MarkName =
 	| "narration-end"
 	| "place-end"
 	| "stall-start"
+	| "picture-lead-start"
+	| "picture-lead-end"
 	| "stall-end"
 	| "choice"
 	| "screen";

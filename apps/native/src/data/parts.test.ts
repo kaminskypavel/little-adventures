@@ -5,6 +5,8 @@ import {
 	type EndCause,
 	graceDue,
 	hasParts,
+	LEAD_ZOOM_TO,
+	leadZoom,
 	neighbourUrls,
 	type PlayEvent,
 	type PlayState,
@@ -331,5 +333,61 @@ describe("warming neighbours", () => {
 	test("a neighbour with nothing playable adds nothing, and goodnight has none", () => {
 		expect(neighbourUrls(places, "p1")).toEqual(["https://files.test/p2-b"]);
 		expect(neighbourUrls(places, "outro")).toEqual([]);
+	});
+});
+
+describe("the picture leads while part 1 is still being made", () => {
+	const first = [making("a"), making("b")];
+	const started: PlayEvent = { type: "started" };
+
+	test("picture and narration start the place before any part is playable", () => {
+		const led = step(begin(first, true, true), started, 1000);
+		expect(led.marks).toEqual([{ name: "picture-lead-start", part: 1 }]);
+		expect(led.state.lead).toEqual({ ended: false, since: 1000 });
+		expect(leadZoom(led.state, false)).toBe(true);
+		// Started again: nothing more.
+		expect(step(led.state, started, 2000).marks).toEqual([]);
+	});
+
+	test("no picture, no narration or a playable first part: no lead", () => {
+		expect(step(begin(first, true), started, 0).state.lead).toBe(null);
+		expect(step(begin(first, false, true), started, 0).state.lead).toBe(null);
+		const ready = [playable("a"), making("b")];
+		expect(step(begin(ready, true, true), started, 0).state.lead).toBe(null);
+	});
+
+	test("part 1 turning playable ends the lead with its length, then part 2 follows", () => {
+		const led = step(begin(first, true, true), started, 1000).state;
+		const one = step(led, parts(playable("a"), making("b")), 4500);
+		expect(one.marks).toEqual([
+			{ leadMs: 3500, name: "picture-lead-end", part: 1 },
+		]);
+		expect(one.state.at).toBe(0);
+		expect(leadZoom(one.state, false)).toBe(false);
+		const over = step(one.state, ended, 9000);
+		expect(over.marks).toEqual([
+			{ name: "part-end", part: 1 },
+			{ name: "stall-start", part: 2 },
+		]);
+		const two = step(over.state, parts(playable("a"), playable("b")), 9500);
+		expect(two.marks.map((m) => m.name)).toEqual(["stall-end"]);
+		expect(two.state.at).toBe(1);
+		expect(two.state.lead?.ended).toBe(true);
+	});
+
+	test("part 1 failing keeps the picture and the place ends with the narration", () => {
+		const led = step(begin(first, true, true), started, 0).state;
+		const lost = step(led, parts(failed("a"), failed("b")), 100);
+		expect(lost.marks).toEqual([]);
+		expect(lost.state.lead?.ended).toBe(false);
+		expect(lost.end).toBe(undefined);
+		const done = step(lost.state, narrationEnded, 5000);
+		expect(done.end).toBe("narration");
+	});
+
+	test("reduce-motion turns the zoom off", () => {
+		const led = step(begin(first, true, true), started, 0).state;
+		expect(leadZoom(led, true)).toBe(false);
+		expect(LEAD_ZOOM_TO).toBe(1.06);
 	});
 });
