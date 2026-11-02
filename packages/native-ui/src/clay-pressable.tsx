@@ -14,6 +14,7 @@ import Animated, {
 	Easing,
 	Extrapolation,
 	interpolate,
+	type SharedValue,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
@@ -38,6 +39,8 @@ interface ClayPressableProps {
 	accessibilityState?: AccessibilityState;
 	children?: ReactNode;
 	disabled?: boolean;
+	/** Drops the clay shadows (see `ClaySurface`). */
+	flatten?: SharedValue<number>;
 	/** Overrides the automatic slop that grows the target to 64 pt. */
 	hitSlop?: number | Insets;
 	onPress?: () => void;
@@ -62,6 +65,7 @@ export function ClayPressable({
 	accessibilityState,
 	children,
 	disabled = false,
+	flatten,
 	hitSlop,
 	onPress,
 	radius = radii.button,
@@ -72,7 +76,12 @@ export function ClayPressable({
 }: ClayPressableProps) {
 	const calm = useCalm();
 	const pressed = useSharedValue(0);
-	const [box, setBox] = useState({ height: 0, width: 0 });
+	// The extra touch area that grows a small button to the minimum target. Kept, not the size, so
+	// a button that resizes every frame (the morphing pill) does not re-render on every frame.
+	const [grow, setGrow] = useState({
+		horizontal: layout.minTarget / 2,
+		vertical: layout.minTarget / 2,
+	});
 
 	const onPressRef = useRef(onPress);
 	onPressRef.current = onPress;
@@ -82,15 +91,16 @@ export function ClayPressable({
 
 	const onLayout = useCallback((event: LayoutChangeEvent) => {
 		const { height, width } = event.nativeEvent.layout;
-		setBox((prev) =>
-			prev.height === height && prev.width === width ? prev : { height, width }
+		const horizontal = Math.max(0, (layout.minTarget - width) / 2);
+		const vertical = Math.max(0, (layout.minTarget - height) / 2);
+		setGrow((prev) =>
+			prev.horizontal === horizontal && prev.vertical === vertical
+				? prev
+				: { horizontal, vertical }
 		);
 	}, []);
 
-	const slop = hitSlop ?? {
-		horizontal: Math.max(0, (layout.minTarget - box.width) / 2),
-		vertical: Math.max(0, (layout.minTarget - box.height) / 2),
-	};
+	const slop = hitSlop ?? grow;
 
 	const tap = useTapGesture({
 		enabled: !disabled,
@@ -164,6 +174,7 @@ export function ClayPressable({
 				testID={testID}
 			>
 				<ClaySurface
+					flatten={flatten}
 					pressed={pressed}
 					radius={radius}
 					selected={selected}

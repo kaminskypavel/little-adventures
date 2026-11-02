@@ -4,6 +4,7 @@ import Animated, {
 	interpolate,
 	type SharedValue,
 	useAnimatedStyle,
+	useDerivedValue,
 } from "react-native-reanimated";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
@@ -16,6 +17,9 @@ const MIC_ICON = 72;
 // Of the morph, the label is gone by this much, and the mic shows from this much.
 const LABEL_GONE = 0.3;
 const MIC_FROM = 0.6;
+// The clay shadows are gone by this much: resizing them every frame is what made the morph stutter
+// on iOS. The halo takes over at the end, so the circle never shows them.
+const SHADOW_GONE = 0.12;
 const clamp = Extrapolation.CLAMP;
 
 /** Where the pill sits: its center on the screen, and (for the pill) its width. */
@@ -90,6 +94,9 @@ export function MorphPill({
 			? 0
 			: interpolate(progress.get(), [MIC_FROM, 1], [0, 1], clamp),
 	}));
+	const flatten = useDerivedValue(() =>
+		calm ? 0 : interpolate(progress.get(), [0, SHADOW_GONE], [0, 1], clamp)
+	);
 	const ink = off ? colors.offInk : colors.inkNavy;
 
 	return (
@@ -101,6 +108,7 @@ export function MorphPill({
 			<ClayPressable
 				accessibilityLabel={label}
 				disabled={off || listening}
+				flatten={flatten}
 				onPress={onPress}
 				radius={size / 2}
 				style={styles.fill}

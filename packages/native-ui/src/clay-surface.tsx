@@ -36,6 +36,12 @@ export function cornerStyle(radius: ClayRadius): ViewStyle {
 
 interface ClaySurfaceProps {
 	children?: ReactNode;
+	/**
+	 * 0 keeps the shadows, 1 drops them: no shadow layers at all. For a surface that resizes every
+	 * frame (the New adventure pill turning into the mic), where iOS would rebuild and re-mask
+	 * every shadow on every frame.
+	 */
+	flatten?: SharedValue<number>;
 	/** 0 at rest, 1 while the finger is down. May overshoot below 0 on release. */
 	pressed?: SharedValue<number>;
 	radius: ClayRadius;
@@ -55,6 +61,7 @@ const clamp = Extrapolation.CLAMP;
  */
 export function ClaySurface({
 	children,
+	flatten,
 	pressed,
 	radius,
 	selected,
@@ -67,7 +74,12 @@ export function ClaySurface({
 
 	const shadow = useAnimatedStyle(() => {
 		const t = press.get();
-		const mix = (a: number, b: number) => interpolate(t, [0, 1], [a, b], clamp);
+		const flat = flatten ? flatten.get() : 0;
+		if (flat >= 1) {
+			return { boxShadow: [] };
+		}
+		const mix = (a: number, b: number) =>
+			interpolate(t, [0, 1], [a, b], clamp) * (1 - flat);
 		return {
 			boxShadow: [
 				{
@@ -140,7 +152,13 @@ export function ClaySurface({
 					]}
 				/>
 			</View>
-			<Animated.View pointerEvents="none" style={[fill, shadow]} />
+			{/* iOS draws these shadows once and reuses them (redrawn only while pressed): live,
+			    they cost the GPU offscreen passes on every frame. */}
+			<Animated.View
+				pointerEvents="none"
+				shouldRasterizeIOS
+				style={[fill, shadow]}
+			/>
 			{children}
 		</View>
 	);
