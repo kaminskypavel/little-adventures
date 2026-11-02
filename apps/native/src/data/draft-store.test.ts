@@ -67,8 +67,8 @@ describe("draft store", () => {
 		expect(calls.start).toEqual([]);
 	});
 
-	test("a start that answers 404 or 409 falls back to create", async () => {
-		for (const status of [404, 409]) {
+	test("a start that answers 403, 404 or 409 falls back to create", async () => {
+		for (const status of [403, 404, 409]) {
 			const { calls, store } = setup({
 				startFails: [new EngineError(status, "GONE", "gone")],
 			});

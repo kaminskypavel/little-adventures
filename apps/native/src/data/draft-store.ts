@@ -14,10 +14,10 @@ export interface DraftApi {
 
 const RETRY_MS = 1000;
 
-/** The draft is gone (missing or failed): the usual create call takes over. */
+/** The draft is gone (missing or failed) or no longer allowed: the usual create call takes over. */
 const isGone = (error: unknown) =>
 	error instanceof EngineError &&
-	(error.status === 404 || error.status === 409);
+	(error.status === 403 || error.status === 404 || error.status === 409);
 
 export function createDraftStore(api: DraftApi) {
 	// Null when the draft request failed: Start then creates as before.
