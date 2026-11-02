@@ -117,7 +117,9 @@ function HomeStar({
 			<Animated.View style={tiltStyle}>
 				<StarTake
 					hold={listening}
-					key={listening ? "ask" : run}
+					// Not remounted for listening: with `hold` the new take starts as soon as it has a
+					// frame while the old one keeps playing, so the star never blinks out.
+					key={run}
 					size={size}
 					take={listening ? takeFor(ask.pressing, ask.thinking) : "wave"}
 				/>
