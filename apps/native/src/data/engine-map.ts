@@ -49,6 +49,13 @@ const partOf = (raw: EnginePart, urls: KnownUrls): Part => {
 	return {
 		durationSec: raw.durationSec ?? null,
 		id: raw.id,
+		narration: raw.narration
+			? {
+					durationSec: raw.narration.durationSec,
+					url: pin(`part-voice:${raw.id}`, raw.narration.url, urls),
+					words: raw.narration.words,
+				}
+			: null,
 		narrationFromSec: raw.narrationFromSec ?? null,
 		status,
 		url:

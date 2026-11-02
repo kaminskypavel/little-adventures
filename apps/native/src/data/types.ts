@@ -13,6 +13,12 @@ export interface NarrationAudio {
 	url: string;
 	words: WordTiming[];
 }
+/** A part's own spoken audio. Its words are timed from 0 within this file. */
+export interface PartNarration {
+	durationSec: number;
+	url: string;
+	words: WordTiming[];
+}
 /** Making, playable (its file can be played), or failed. */
 export type PartStatus = "failed" | "making" | "playable";
 /** One part of a place's video. `id` is stable across reads; `url` is set only while playable. */
@@ -20,6 +26,8 @@ export interface Part {
 	/** How long the part plays, in seconds. Absent or null: not known. */
 	durationSec?: number | null;
 	id: string;
+	/** This part's own audio, played centred inside it. Absent or null: the place's narration. */
+	narration?: PartNarration | null;
 	/**
 	 * Where this part's words start in the place's narration, in seconds (part 1 starts at 0).
 	 * Absent or null: the parts share the narration evenly.

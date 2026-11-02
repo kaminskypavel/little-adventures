@@ -2,6 +2,8 @@
 // feeds in what its players report and does what comes back. Part numbers in marks count from 1.
 // Every part plays whole, back to back. The narration is one file with a half of words for each
 // part; half N plays centred inside part N, and the narration pauses between halves.
+// A part may carry its own audio instead (`own`): each audio is a half, centred inside its part
+// the same way, and the next audio is a different file rather than a pause.
 import { neighbours } from "./map-rules";
 import type { NodeId, Part, Place } from "./types";
 
@@ -46,7 +48,7 @@ export interface PlayState {
 	bad: Record<string, string>;
 	/** The place has ended. */
 	done: boolean;
-	/** Index of the half of the words playing, or the next one to play. */
+	/** Index of the half of the words playing, or the next one to play (own: the part's audio). */
 	half: number;
 	/** The place has a picture to stand on while the first part is still being made. */
 	hasPicture: boolean;
@@ -58,6 +60,8 @@ export interface PlayState {
 	length: number;
 	/** True from the start when there is no narration to wait for. */
 	narrationEnded: boolean;
+	/** The parts carry their own audio: half N is part N's file, not a stretch of one narration. */
+	own: boolean;
 	parts: Part[];
 	/** `waiting`: the next part is not playable yet. `spent`: no part is left to play. */
 	phase: "playing" | "spent" | "waiting";
@@ -90,7 +94,9 @@ export type PlayEvent =
 			sec: number;
 			type: "part-time";
 	  }
-	| { type: "started" };
+	| { type: "started" }
+	/** Own audio only: the audio of the half playing has ended. */
+	| { type: "voice-ended" };
 
 export interface Step {
 	end?: EndCause;
@@ -118,27 +124,74 @@ export interface Step {
 	state: PlayState;
 }
 
+/** The parts carry their own audio (an older adventure has one narration for the place). */
+export const ownVoices = (parts: Part[]) =>
+	parts.some((part) => part.narration);
+
+/** Own audio: which of the two audio players holds part `index`'s audio: they take turns. */
+export const voiceSlot = (index: number): Slot => (index % 2 === 0 ? 0 : 1);
+
+/** Own audio: the url each audio player should hold: the audio playing or next, and the one after. */
+export function voiceUrls(s: PlayState): [string | null, string | null] {
+	const urls: [string | null, string | null] = [null, null];
+	if (s.own) {
+		for (const i of [s.half, s.half + 1]) {
+			urls[voiceSlot(i)] = s.parts[i]?.narration?.url ?? null;
+		}
+	}
+	return urls;
+}
+
+/** Own audio: a part is waiting for its audio, which has not arrived (it may still). */
+const awaitsVoice = (part: Part | undefined, s: PlayState) =>
+	part !== undefined && !part.narration && !isFailed(s, part);
+
 export const begin = (
 	parts: Part[],
 	hasNarration: boolean,
 	hasPicture = false
-): PlayState => ({
-	at: -1,
-	bad: {},
-	done: false,
-	half: 0,
-	hasPicture,
-	heard: 0,
-	lead: null,
-	length: 0,
-	narrationEnded: !hasNarration,
-	parts,
-	phase: "waiting",
-	slot: 1,
-	speaking: false,
-	stall: null,
-	started: false,
-});
+): PlayState =>
+	skipSilent({
+		at: -1,
+		bad: {},
+		done: false,
+		half: 0,
+		hasPicture,
+		heard: 0,
+		lead: null,
+		length: 0,
+		narrationEnded: !hasNarration,
+		own: ownVoices(parts),
+		parts,
+		phase: "waiting",
+		slot: 1,
+		speaking: false,
+		stall: null,
+		started: false,
+	});
+
+/**
+ * Own audio: the halves of parts that failed with no audio have nothing to say, so they are
+ * passed over; with none left, the narration is over. A part still being made keeps its half: its
+ * audio may arrive.
+ */
+function skipSilent(s: PlayState): PlayState {
+	if (!s.own || s.done || s.speaking || s.narrationEnded) {
+		return s;
+	}
+	let { half } = s;
+	while (
+		half < s.parts.length &&
+		!s.parts[half].narration &&
+		isFailed(s, s.parts[half])
+	) {
+		half += 1;
+	}
+	if (half === s.half) {
+		return s;
+	}
+	return { ...s, half, narrationEnded: half >= s.parts.length };
+}
 
 const unchanged = (state: PlayState): Step => ({ marks: [], state });
 const other = (slot: Slot): Slot => (slot === 0 ? 1 : 0);
@@ -159,7 +212,7 @@ const nextIndex = (s: PlayState) =>
  * start of its own takes an even share of the narration, which is Infinity until its length is known.
  */
 export function wordsStart(s: PlayState, index: number): number {
-	if (index === 0) {
+	if (s.own || index === 0) {
 		return 0;
 	}
 	const from = s.parts[index]?.narrationFromSec;
@@ -172,8 +225,12 @@ export function wordsStart(s: PlayState, index: number): number {
 }
 
 /** Where a part's half of the words ends: where the next part's words start; the last, the narration's end. */
-export const wordsEnd = (s: PlayState, index: number) =>
-	index >= s.parts.length - 1 ? s.length : wordsStart(s, index + 1);
+export const wordsEnd = (s: PlayState, index: number) => {
+	if (s.own) {
+		return s.parts[index]?.narration?.durationSec ?? 0;
+	}
+	return index >= s.parts.length - 1 ? s.length : wordsStart(s, index + 1);
+};
 
 /**
  * How far into part `index` its half of the words starts: centred, so the silence before and
@@ -244,13 +301,28 @@ function startLead(s: PlayState, now: number): Step {
 }
 
 /**
+ * Own audio: a part that has been on screen holds the place up while its audio has not arrived:
+ * the next part waits for its half, or no part is left and the place would end. After a grace the
+ * half is given up and stays silent.
+ */
+const waitsOnVoice = (s: PlayState) =>
+	s.own &&
+	!s.narrationEnded &&
+	!s.speaking &&
+	s.at >= 0 &&
+	s.phase !== "playing" &&
+	awaitsVoice(s.parts[s.half], s) &&
+	(nextIndex(s) === -1 || s.half < nextIndex(s));
+
+/**
  * The wait that ends in `grace`: the narration is done and the next part is not here (the
  * place ends), or the narration is paused for a part that is not here (it talks on).
  */
 export const graceDue = (s: PlayState) =>
 	!s.done &&
-	s.phase === "waiting" &&
-	(s.narrationEnded || (s.stall !== null && !s.speaking));
+	((s.phase === "waiting" &&
+		(s.narrationEnded || (s.stall !== null && !s.speaking))) ||
+		waitsOnVoice(s));
 
 /**
  * The picture waits for part 1, which is still being made (not failed), before the words
@@ -273,6 +345,7 @@ const sameParts = (a: Part[], b: Part[]) =>
 			part.id === b[index].id &&
 			part.durationSec === b[index].durationSec &&
 			part.narrationFromSec === b[index].narrationFromSec &&
+			part.narration?.url === b[index].narration?.url &&
 			part.status === b[index].status &&
 			part.url === b[index].url
 	);
@@ -366,12 +439,33 @@ function endHalf(s: PlayState): Step {
 	};
 }
 
+/** Own audio: moves past the half in turn (its audio is over, or it never came). */
+const giveUp = (s: PlayState): PlayState => ({
+	...s,
+	half: s.half + 1,
+	narrationEnded: s.half + 1 >= s.parts.length,
+});
+
+/**
+ * Own audio: the audio of the half playing has ended. The next audio is due at once over the
+ * picture, or centred in its part otherwise; with none left, the narration is over.
+ */
+function endVoice(s: PlayState, now: number): Step {
+	if (!(s.own && s.speaking)) {
+		return unchanged(s);
+	}
+	return settle(giveUp({ ...s, speaking: false }), "narration", now);
+}
+
 /** The narration's time: a half of the words may end, which lets the next part start. */
 function onNarrationTime(
 	s: PlayState,
 	event: Extract<PlayEvent, { type: "narration-time" }>,
 	now: number
 ): Step {
+	if (s.own) {
+		return unchanged(s);
+	}
 	const over = endHalf({ ...s, heard: event.sec, length: event.length });
 	if (over.state.phase === "playing") {
 		return over;
@@ -411,7 +505,7 @@ function startHalf(s: PlayState): Step {
 	return {
 		marks: [
 			{
-				name: s.half === 0 ? "narration-start" : "voice-resume",
+				name: s.half === 0 || s.own ? "narration-start" : "voice-resume",
 				part: s.half + 1,
 				sec: wordsStart(s, s.half),
 			},
@@ -420,11 +514,17 @@ function startHalf(s: PlayState): Step {
 	};
 }
 
-function grace(s: PlayState): Step {
+function grace(s: PlayState, now: number): Step {
 	if (!graceDue(s)) {
 		return unchanged(s);
 	}
+	if (waitsOnVoice(s)) {
+		return settle(giveUp(s), "grace", now);
+	}
 	if (!s.narrationEnded) {
+		if (s.own && awaitsVoice(s.parts[s.half], s)) {
+			return unchanged(s);
+		}
 		// The narration waited for a part that did not come: it talks on over the held frame.
 		return startHalf(s);
 	}
@@ -461,11 +561,18 @@ function halfDue(s: PlayState, sec: number, duration: number) {
 	) {
 		return false;
 	}
+	if (s.own && !owner.narration) {
+		return false;
+	}
 	if (isFailed(s, owner) || s.at > s.half) {
 		return true;
 	}
 	if (s.at === s.half) {
 		return s.phase !== "playing" || sec >= voiceOffset(s, s.half, duration);
+	}
+	if (s.own) {
+		// Nothing on screen and no part to play next: the audios play over the picture.
+		return s.at < 0 && upcoming(s) === null && !leadHolding(s);
 	}
 	return s.half === 0 && s.at < 0 && !isPlayable(owner) && !leadHolding(s);
 }
@@ -520,7 +627,21 @@ export function step(
 	event: PlayEvent,
 	now: number = Date.now()
 ): Step {
-	return holdMarks(s, withVoice(advance(s, event, now), event), now);
+	return holdMarks(s, withVoice(reap(advance(s, event, now), now), event), now);
+}
+
+/** Own audio: after any event, passes over the halves with nothing to say, which may end the place. */
+function reap(next: Step, now: number): Step {
+	const alive = skipSilent(next.state);
+	if (alive === next.state) {
+		return next;
+	}
+	const settled = settle(alive, "narration", now);
+	return {
+		end: settled.end ?? next.end,
+		marks: [...next.marks, ...settled.marks],
+		state: settled.state,
+	};
 }
 
 function advance(s: PlayState, event: PlayEvent, now: number): Step {
@@ -533,7 +654,7 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 		case "ended":
 			return ended(s, now);
 		case "grace":
-			return grace(s);
+			return grace(s, now);
 		case "lead-timeout":
 			return leadTimeout(s);
 		case "narration-ended":
@@ -556,6 +677,8 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 			return unchanged(s);
 		case "started":
 			return s.started ? unchanged(s) : startLead({ ...s, started: true }, now);
+		case "voice-ended":
+			return endVoice(s, now);
 		default:
 			return unchanged(s);
 	}

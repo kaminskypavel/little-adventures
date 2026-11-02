@@ -10,6 +10,7 @@ import {
 	leadHolding,
 	leadZoom,
 	neighbourUrls,
+	ownVoices,
 	type PlayEvent,
 	type PlayState,
 	reachedEnd,
@@ -17,6 +18,7 @@ import {
 	step,
 	upcoming,
 	voiceOffset,
+	voiceUrls,
 	wordsEnd,
 	wordsStart,
 } from "./parts";
@@ -225,6 +227,245 @@ describe("each half of the words is centred inside its part", () => {
 		const swapped = drive(start.state, ...firstHalf, ended);
 		expect(swapped.state.slot).toBe(1);
 		expect(slotParts(swapped.state)).toEqual([null, two[1]]);
+	});
+});
+
+/** A part of `durationSec` with its own audio of `voiceSec`; `status` makes or fails it. */
+const voiced = (
+	id: string,
+	durationSec: number,
+	voiceSec: number,
+	status: Part["status"] = "playable"
+): Part => ({
+	durationSec,
+	id,
+	narration: {
+		durationSec: voiceSec,
+		url: `https://files.test/${id}.mp3`,
+		words: [],
+	},
+	status,
+	url: status === "playable" ? `https://files.test/${id}` : null,
+});
+const voiceEnded: PlayEvent = { type: "voice-ended" };
+
+describe("each part has its own audio", () => {
+	// Part 1 is 15 s with 8 s of audio (starts at 3.5 s); part 2 is 15 s with 6 s (starts at 4.5 s).
+	const own = [voiced("a", 15, 8), voiced("b", 15, 6)];
+
+	test("each audio is centred inside its part, with no pause between", () => {
+		expect(ownVoices(own)).toBe(true);
+		const a = drive(begin(own, true), parts(...own), started);
+		expect(voiceOffset(a.state, 0, 15)).toBe(3.5);
+		expect(voiceOffset(a.state, 1, 15)).toBe(4.5);
+		// The real length of the video wins.
+		expect(voiceOffset(a.state, 0, 12)).toBe(2);
+		expect(drive(a.state, tick(3.4)).state.speaking).toBe(false);
+		const one = drive(a.state, tick(3.5));
+		expect(one.marks).toEqual(["narration-start 1"]);
+		expect(one.state.speaking).toBe(true);
+		// Its audio ends inside the part: quiet, nothing else; part 2 waits for part 1 to end.
+		const quiet = drive(one.state, voiceEnded);
+		expect(quiet.marks).toEqual([]);
+		expect(quiet.state.speaking).toBe(false);
+		expect(quiet.state.half).toBe(1);
+		expect(quiet.state.at).toBe(0);
+		const swapped = drive(quiet.state, ended);
+		expect(swapped.marks).toEqual(["part-end 1"]);
+		expect(swapped.state.at).toBe(1);
+		expect(drive(swapped.state, tick(4.4)).state.speaking).toBe(false);
+		expect(drive(swapped.state, tick(4.5)).marks).toEqual([
+			"narration-start 2",
+		]);
+	});
+
+	test("an audio longer than its part starts with it and the part holds its last frame", () => {
+		const long = [voiced("a", 5, 8), voiced("b", 15, 6)];
+		const go = drive(begin(long, true), parts(...long), started, tick(0.1, 5));
+		expect(go.marks).toEqual(["narration-start 1"]);
+		const held = drive(go.state, tick(4.9, 5), ended);
+		expect(held.marks).toEqual(["part-end 1"]);
+		expect(held.state.at).toBe(0);
+		expect(held.state.phase).toBe("waiting");
+		expect(held.state.stall).toBe(null);
+		expect(graceDue(held.state)).toBe(false);
+		// The audio ends: part 2 starts at once.
+		const next = drive(held.state, voiceEnded);
+		expect(next.state.at).toBe(1);
+		expect(next.state.phase).toBe("playing");
+		expect(next.state.speaking).toBe(false);
+	});
+
+	test("the place ends after the last part and the last audio, whichever is later", () => {
+		const second = drive(
+			begin(own, true),
+			parts(...own),
+			started,
+			tick(3.5),
+			voiceEnded,
+			ended,
+			tick(4.5)
+		);
+		expect(second.state.speaking).toBe(true);
+		const partFirst = drive(second.state, ended);
+		expect(partFirst.end).toBe(undefined);
+		expect(partFirst.state.phase).toBe("spent");
+		expect(drive(partFirst.state, voiceEnded).end).toBe("narration");
+		const audioFirst = drive(second.state, voiceEnded);
+		expect(audioFirst.end).toBe(undefined);
+		expect(audioFirst.state.narrationEnded).toBe(true);
+		expect(drive(audioFirst.state, ended).end).toBe("last-part");
+	});
+
+	test("an audio that ends when no audio is playing does nothing", () => {
+		const a = drive(begin(own, true), parts(...own), started, voiceEnded);
+		expect(a.marks).toEqual([]);
+		expect(a.state.half).toBe(0);
+	});
+
+	test("a part that failed with no audio of its own is passed over", () => {
+		const gone: Part = { ...failed("b"), durationSec: 15 };
+		const list = [voiced("a", 15, 8), gone, voiced("c", 15, 6)];
+		const a = drive(begin(list, true), parts(...list), started, tick(3.5));
+		expect(drive(a.state, voiceEnded).state.half).toBe(2);
+		expect(begin([gone, voiced("c", 15, 6)], true).half).toBe(1);
+	});
+
+	test("an audio that never arrives: the part plays silent and the place ends with a grace", () => {
+		const bare: Part = { ...playable("b"), durationSec: 15 };
+		const list = [voiced("a", 15, 8), bare];
+		const a = drive(
+			begin(list, true),
+			parts(...list),
+			started,
+			tick(3.5),
+			voiceEnded,
+			ended
+		);
+		// Part 2 plays on with its half waiting.
+		expect(a.state.at).toBe(1);
+		expect(a.state.half).toBe(1);
+		const silent = drive(a.state, tick(4.5), ended);
+		expect(silent.end).toBe(undefined);
+		expect(graceDue(silent.state)).toBe(true);
+		expect(drive(silent.state, grace).end).toBe("grace");
+	});
+
+	test("part 2's audio arrives during part 1 and plays centred in part 2", () => {
+		const bare: Part = { ...playable("b"), durationSec: 15 };
+		const list = [voiced("a", 15, 8), bare];
+		const a = drive(begin(list, true), parts(...list), started, tick(3.5));
+		expect(voiceUrls(a.state)[1]).toBe(null);
+		const landed = drive(a.state, parts(own[0], own[1]));
+		expect(landed.marks).toEqual([]);
+		expect(voiceUrls(landed.state)[1]).toBe("https://files.test/b.mp3");
+		const next = drive(landed.state, voiceEnded, ended);
+		expect(next.marks).toEqual(["part-end 1"]);
+		expect(next.state.at).toBe(1);
+		expect(drive(next.state, tick(4.4)).state.speaking).toBe(false);
+		expect(drive(next.state, tick(4.5)).marks).toEqual(["narration-start 2"]);
+	});
+
+	test("part 2's audio arrives 2 s into part 2 and still plays", () => {
+		const bare: Part = { ...playable("b"), durationSec: 15 };
+		const list = [voiced("a", 15, 8), bare];
+		const inTwo = drive(
+			begin(list, true),
+			parts(...list),
+			started,
+			tick(3.5),
+			voiceEnded,
+			ended,
+			tick(2)
+		);
+		const landed = drive(inTwo.state, parts(own[0], own[1]));
+		expect(landed.state.speaking).toBe(false);
+		// The centre of the part (4.5 s) is still ahead: it starts there.
+		expect(drive(landed.state, tick(4.4)).state.speaking).toBe(false);
+		expect(drive(landed.state, tick(4.5)).marks).toEqual(["narration-start 2"]);
+		// Landing after the centre has passed: it starts at once.
+		const late = drive(inTwo.state, tick(9), parts(own[0], own[1]), tick(9.1));
+		expect(late.marks).toEqual(["narration-start 2"]);
+	});
+
+	test("an audio that lands too late to fit holds the last frame until it ends", () => {
+		const bare: Part = { ...playable("b"), durationSec: 15 };
+		const list = [voiced("a", 15, 8), bare];
+		const near = drive(
+			begin(list, true),
+			parts(...list),
+			started,
+			tick(3.5),
+			voiceEnded,
+			ended,
+			tick(12),
+			parts(own[0], own[1]),
+			tick(12.1)
+		);
+		expect(near.state.speaking).toBe(true);
+		const held = drive(near.state, ended);
+		expect(held.end).toBe(undefined);
+		expect(held.state.phase).toBe("spent");
+		expect(graceDue(held.state)).toBe(false);
+		expect(drive(held.state, voiceEnded).end).toBe("narration");
+	});
+
+	test("late part 1: the picture leads, then its audio is centred in it", () => {
+		const first = [voiced("a", 15, 8, "making"), voiced("b", 15, 6, "making")];
+		const hold = step(begin(first, true, true), started, 1000);
+		expect(hold.state.speaking).toBe(false);
+		expect(leadHolding(hold.state)).toBe(true);
+		const one = step(hold.state, parts(own[0], first[1]), 8400);
+		expect(one.state.at).toBe(0);
+		expect(one.state.speaking).toBe(false);
+		expect(step(one.state, tick(3.4), 11_000).state.speaking).toBe(false);
+		const on = step(one.state, tick(3.5), 12_000);
+		expect(on.state.speaking).toBe(true);
+		expect(on.marks).toEqual([{ name: "narration-start", part: 1, sec: 0 }]);
+	});
+
+	test("part 1 failing: the audios play one after the other over the picture", () => {
+		const first = [voiced("a", 15, 8, "making"), voiced("b", 15, 6, "making")];
+		const lost = step(
+			step(begin(first, true, true), started, 1000).state,
+			parts(voiced("a", 15, 8, "failed"), voiced("b", 15, 6, "failed")),
+			1100
+		);
+		expect(lost.marks.map((m) => `${m.name} ${m.part}`)).toEqual([
+			"lead-hold-end 1",
+			"narration-start 1",
+		]);
+		expect(lost.state.speaking).toBe(true);
+		// The next audio starts at once, with no pause between.
+		const next = drive(lost.state, voiceEnded);
+		expect(next.marks).toEqual(["narration-start 2"]);
+		expect(next.state.speaking).toBe(true);
+		expect(drive(next.state, voiceEnded).end).toBe("narration");
+	});
+
+	test("the lead hold runs out: the audios play over the picture", () => {
+		const first = [voiced("a", 15, 8, "making"), voiced("b", 15, 6, "making")];
+		const out = step(
+			step(begin(first, true, true), started, 1000).state,
+			leadTimeout,
+			13_000
+		);
+		expect(out.state.speaking).toBe(true);
+		const next = drive(out.state, voiceEnded);
+		expect(next.marks).toEqual(["narration-start 2"]);
+		expect(next.state.speaking).toBe(true);
+		// Part 1 landing now plays at once; the audios go on.
+		const landed = step(next.state, parts(own[0], first[1]), 20_000);
+		expect(landed.state.at).toBe(0);
+		expect(landed.state.speaking).toBe(true);
+	});
+
+	test("an old adventure (no audio on its parts) keeps one narration for the place", () => {
+		expect(ownVoices(two)).toBe(false);
+		const a = drive(begin(two, true), parts(...two), ...firstHalf);
+		expect(a.marks).toEqual(["narration-start 1", "voice-pause 1"]);
+		// An own-audio event means nothing to it.
+		expect(drive(a.state, voiceEnded).state).toBe(a.state);
 	});
 });
 

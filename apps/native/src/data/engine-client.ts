@@ -20,6 +20,8 @@ export interface EnginePart {
 	/** How long the part plays, in seconds; null on older adventures. */
 	durationSec?: number | null;
 	id: string;
+	/** The part's own audio, words timed from 0 within it; null on older adventures. */
+	narration?: { durationSec: number; url: string; words: EngineWord[] } | null;
 	/** Where the part's words start in the node's narration, in seconds; null on older adventures. */
 	narrationFromSec?: number | null;
 	status: string;
