@@ -37,8 +37,9 @@ interface PrimaryButtonProps extends IconButtonProps {
 }
 
 function ink(tone: ClayTone) {
-	if (tone === "ink") {
-		return colors.star;
+	// Sign in with Apple: logo and title are black on the white button.
+	if (tone === "white") {
+		return colors.black;
 	}
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }

@@ -239,23 +239,23 @@ export default function Account() {
 			bodyStyle={styles.body}
 			dock={
 				<>
-					<PrimaryButton
-						label="Continue with Apple"
-						leading={<AppleMark color={colors.star} />}
-						onPress={() => social("apple")}
-						tone="ink"
-					/>
-					<PrimaryButton
-						label="Continue with Google"
-						leading={<GoogleMark />}
-						onPress={() => social("google")}
-					/>
 					<SecondaryButton
 						label="Continue with email"
 						onPress={() => {
 							setNote(null);
 							setStep("email");
 						}}
+					/>
+					<PrimaryButton
+						label="Continue with Google"
+						leading={<GoogleMark />}
+						onPress={() => social("google")}
+					/>
+					<PrimaryButton
+						label="Continue with Apple"
+						leading={<AppleMark color={colors.black} />}
+						onPress={() => social("apple")}
+						tone="white"
 					/>
 				</>
 			}
