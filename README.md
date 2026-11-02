@@ -83,6 +83,7 @@ The production prompts were written this week and are held by the private engine
 | `bun run build` | Build every app |
 | `bun run check-types` | Type-check the whole repo |
 | `bun run test` | Run every unit test suite |
+| `bun run test:e2e` (in `apps/native`) | Smoke-test the app in a phone-sized browser: Welcome to the email step (Playwright; CI runs it when the app changes) |
 | `bun run db:generate` / `bun run db:migrate` | Create and apply database migrations |
 | `bunx ultracite check` / `bunx ultracite fix` | Lint and format (Biome) |
 
