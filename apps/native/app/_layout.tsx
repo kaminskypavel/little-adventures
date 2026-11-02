@@ -139,6 +139,12 @@ export default function Layout() {
 																<Stack.Screen key={name} name={name} />
 															))}
 														</Stack.Protected>
+														{/* Signed out only: once signed in they leave the history, so back from
+														    Home leaves the app instead of returning to Welcome. */}
+														<Stack.Protected guard={status !== "signed-in"}>
+															<Stack.Screen name="welcome" />
+															<Stack.Screen name="account" />
+														</Stack.Protected>
 													</Stack>
 												</ThemeProvider>
 												<AdminHint />

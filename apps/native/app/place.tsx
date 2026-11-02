@@ -20,7 +20,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { StyleSheet, View } from "react-native";
+import { BackHandler, StyleSheet, View } from "react-native";
 import {
 	cancelAnimation,
 	Easing,
@@ -486,6 +486,14 @@ export default function Place() {
 		() => router.replace(`/map?id=${id}`),
 		[id, router]
 	);
+	// Android's back does what the map button does (the map was replaced by this place).
+	useEffect(() => {
+		const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+			onBack();
+			return true;
+		});
+		return () => sub.remove();
+	}, [onBack]);
 
 	if (!adventure || childName === undefined) {
 		return null;
