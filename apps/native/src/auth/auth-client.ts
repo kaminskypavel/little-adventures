@@ -153,13 +153,13 @@ export async function redeemVerifier(query: string) {
 }
 
 /**
- * Google sign-in. On a phone: the system browser sheet, then the verifier comes back on the app
- * scheme. On the web preview the page itself leaves for Google and returns to /account with the
+ * Social sign-in (Apple or Google). On a phone: the system browser sheet, then the verifier comes
+ * back on the app scheme. On the web the page itself leaves for the provider and returns to /account with the
  * verifier in the query; the account screen redeems it.
  */
-export async function signInWithGoogle(): Promise<
-	"ok" | "cancelled" | "failed"
-> {
+export async function signInWith(
+	provider: "apple" | "google"
+): Promise<"ok" | "cancelled" | "failed"> {
 	try {
 		const web = Platform.OS === "web";
 		const res = await post("/api/auth/sign-in/social", {
@@ -168,7 +168,7 @@ export async function signInWithGoogle(): Promise<
 				? `${globalThis.location.origin}${process.env.EXPO_BASE_URL ?? ""}/account`
 				: `${SERVER}/auth/native/callback`,
 			disableRedirect: true,
-			provider: "google",
+			provider,
 		});
 		const data = (await res.json()) as { url?: string };
 		if (!(res.ok && data.url)) {

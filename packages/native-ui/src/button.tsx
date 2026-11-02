@@ -37,6 +37,9 @@ interface PrimaryButtonProps extends IconButtonProps {
 }
 
 function ink(tone: ClayTone) {
+	if (tone === "ink") {
+		return colors.star;
+	}
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }
 
