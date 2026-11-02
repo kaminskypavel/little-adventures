@@ -34,16 +34,24 @@ import { queryClient } from "@/src/data/query-client";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
-// The native splash cross-fades into the first screen (iOS cuts by default; Android already fades).
-setOptions({ duration: 400, fade: true });
+// The splash goes at once and the first screen's own enter (fade and rise) is the transition: a
+// cross-fade would show the splash star and the screen's star through each other.
+setOptions({ fade: false });
 
 /** Hides the splash once the start page has chosen the first screen, so it never shows a blank. */
 function SplashGate() {
 	const pathname = usePathname();
 	useEffect(() => {
-		if (pathname !== "/") {
-			hideAsync();
+		if (pathname === "/") {
+			return;
 		}
+		// After the screen's first paint, so the splash never gives way to a bare sky.
+		const frame = requestAnimationFrame(() =>
+			requestAnimationFrame(() => {
+				hideAsync();
+			})
+		);
+		return () => cancelAnimationFrame(frame);
 	}, [pathname]);
 	return null;
 }
