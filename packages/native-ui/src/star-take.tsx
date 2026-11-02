@@ -205,7 +205,11 @@ function StarSlot({ active, id, onEnd, onReady, take }: StarSlotProps) {
 			nativeControls={false}
 			player={player}
 			playsInline
-			style={[videoBox, { opacity: active ? 1 : HIDDEN_OPACITY }]}
+			style={[
+				videoBox,
+				{ opacity: active ? 1 : HIDDEN_OPACITY },
+				active ? characterShadow : null,
+			]}
 			surfaceType="textureView"
 		/>
 	);
@@ -269,7 +273,7 @@ export function StarTake({
 			accessibilityLabel="The happy star"
 			accessibilityRole="image"
 			pointerEvents="none"
-			style={[styles.box, characterShadow, { height: size, width: size }]}
+			style={[styles.box, { height: size, width: size }]}
 		>
 			{loaded ? null : (
 				<View style={styles.still}>
