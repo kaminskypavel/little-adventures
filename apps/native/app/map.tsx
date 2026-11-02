@@ -7,6 +7,7 @@ import {
 	StoryMap,
 } from "@little-adventures/native-ui/story-map";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
+import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
@@ -102,7 +103,13 @@ export default function StoryMapScreen() {
 				}}
 				here={progress.here}
 				next={next}
-				onWalked={() => walkTo && openPlace(walkTo)}
+				onWalked={() => {
+					if (walkTo) {
+						// A soft landing tap as the star arrives, then the place opens.
+						impactAsync(ImpactFeedbackStyle.Soft).catch(() => undefined);
+						openPlace(walkTo);
+					}
+				}}
 				places={places}
 				walkTo={walkTo}
 			/>

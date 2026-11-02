@@ -1,3 +1,9 @@
+import {
+	ImpactFeedbackStyle,
+	impactAsync,
+	NotificationFeedbackType,
+	notificationAsync,
+} from "expo-haptics";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
@@ -262,6 +268,15 @@ export function VoiceHalo({
 		}
 	}, [calm, recording, t]);
 
+	// A missed ask gets the warning tap, with the ring's one pulse.
+	useEffect(() => {
+		if (state === "missed") {
+			notificationAsync(NotificationFeedbackType.Warning).catch(
+				() => undefined
+			);
+		}
+	}, [state]);
+
 	const press = useAnimatedStyle(() => ({
 		transform: [
 			{ scale: interpolate(pressed.get(), [0, 1], [1, motion.pressScale]) },
@@ -316,8 +331,15 @@ export function VoiceHalo({
 					accessibilityLabel="Hold to ask"
 					accessibilityRole="button"
 					disabled={thinking}
-					onPressIn={onHoldStart}
-					onPressOut={onHoldEnd}
+					onPressIn={() => {
+						// A firm tap as the hold starts listening, a light one as it lets go.
+						impactAsync(ImpactFeedbackStyle.Medium).catch(() => undefined);
+						onHoldStart();
+					}}
+					onPressOut={() => {
+						impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
+						onHoldEnd();
+					}}
 					pressRetentionOffset={KEEP_HOLDING}
 					style={styles.button}
 				>

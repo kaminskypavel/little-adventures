@@ -1,3 +1,5 @@
+import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
+import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { ClayText } from "./clay-text";
 import { colors, type } from "./tokens";
@@ -12,6 +14,12 @@ const LINE = 18;
  * readers. The parent must not clip its overflow.
  */
 export function FieldError({ message }: { message?: string }) {
+	// The error tap iOS uses for a rejected entry, once per new message.
+	useEffect(() => {
+		if (message) {
+			notificationAsync(NotificationFeedbackType.Error).catch(() => undefined);
+		}
+	}, [message]);
 	if (!message) {
 		return null;
 	}
