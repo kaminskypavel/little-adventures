@@ -46,6 +46,37 @@ describe("engine client", () => {
 		});
 	});
 
+	test("createDraft posts the child and the question", async () => {
+		const { client, requests } = engine(
+			json({ id: "d1", status: "drafting" }, 201)
+		);
+		expect((await client.createDraft("child-1", "Why?")).id).toBe("d1");
+		expect(requests[0].path).toBe("/adventures/drafts");
+		expect(requests[0].init?.method).toBe("POST");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			childId: "child-1",
+			question: "Why?",
+		});
+	});
+
+	test("startDraft posts the style to the draft", async () => {
+		const { client, requests } = engine(
+			json({ id: "d1", source: "live", status: "making" })
+		);
+		await client.startDraft("d1", "wood");
+		expect(requests[0].path).toBe("/adventures/d1/start");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			style: "wood",
+		});
+	});
+
+	test("prepareChild posts to the child", async () => {
+		const { client, requests } = engine(json({}, 202));
+		await client.prepareChild("child-1");
+		expect(requests[0].path).toBe("/children/child-1/prepare");
+		expect(requests[0].init?.method).toBe("POST");
+	});
+
 	test("shortQuestion posts the question and returns the short one", async () => {
 		const { client, requests } = engine(
 			json({ isQuestion: true, short: "Why do whales sing?" })

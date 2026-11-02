@@ -94,6 +94,17 @@ test("the request carries the instructions, strict schema, model and safety id",
 	expect(format.json_schema.schema).toEqual(z.toJSONSchema(schema));
 });
 
+test("minimal reasoning effort reaches the request body", async () => {
+	await llm.generate({
+		instructions: "You name things.",
+		prompt: "Name it",
+		reasoningEffort: "minimal",
+		safetyId: "user-1",
+		schema,
+	});
+	expect(requests[0]?.body.reasoning_effort).toBe("minimal");
+});
+
 test("a non-2xx reply throws with the status", async () => {
 	reply = () => new Response("nope", { status: 429 });
 	const call = llm.generate({

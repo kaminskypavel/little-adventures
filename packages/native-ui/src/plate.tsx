@@ -3,6 +3,10 @@ import { Icon } from "./icons";
 import { colors, flat, fonts } from "./tokens";
 
 type PlateVariant = "big" | "hero" | "place" | "question";
+/** Sand is the plate; sun marks where you are; dim is a place not yet reachable. */
+type PlateTone = "dim" | "sand" | "sun";
+
+const DIM = { fill: "#D9CEAE", ink: "#37504A" } as const;
 
 const { big, icon: iconSize, iconGap, place, question } = flat.plate;
 
@@ -11,11 +15,13 @@ export function Plate({
 	icon,
 	label,
 	style,
+	tone = "sand",
 	variant = "place",
 }: {
 	icon?: "check" | "lock";
 	label: string;
 	style?: StyleProp<ViewStyle>;
+	tone?: PlateTone;
 	variant?: PlateVariant;
 }) {
 	if (variant === "question") {
@@ -51,13 +57,21 @@ export function Plate({
 	}
 
 	const size = variant === "place" ? place : big;
+	const dim = tone === "dim";
+	let fill: string = colors.sand;
+	if (variant === "hero" || tone === "sun") {
+		fill = colors.sun;
+	} else if (dim) {
+		({ fill } = DIM);
+	}
+	const ink = dim ? DIM.ink : colors.inkNavy;
 	return (
 		<View
 			style={[
 				{
 					alignItems: "center",
 					alignSelf: "flex-start",
-					backgroundColor: variant === "hero" ? colors.sun : colors.sand,
+					backgroundColor: fill,
 					borderRadius: size.radius,
 					flexDirection: "row",
 					gap: iconGap,
@@ -67,14 +81,12 @@ export function Plate({
 				style,
 			]}
 		>
-			{icon ? (
-				<Icon color={colors.inkNavy} name={icon} size={iconSize} />
-			) : null}
+			{icon ? <Icon color={ink} name={icon} size={iconSize} /> : null}
 			<Text
 				allowFontScaling={false}
 				numberOfLines={1}
 				style={{
-					color: colors.inkNavy,
+					color: ink,
 					fontFamily: fonts.heavy,
 					fontSize: size.size,
 				}}

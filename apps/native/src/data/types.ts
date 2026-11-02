@@ -13,6 +13,14 @@ export interface NarrationAudio {
 	url: string;
 	words: WordTiming[];
 }
+/** Making, playable (its file can be played), or failed. */
+export type PartStatus = "failed" | "making" | "playable";
+/** One part of a place's video. `id` is stable across reads; `url` is set only while playable. */
+export interface Part {
+	id: string;
+	status: PartStatus;
+	url: string | null;
+}
 export interface Place {
 	/** The spoken narration with its word timings. Absent for the bundled adventure. */
 	audio?: NarrationAudio | null;
@@ -23,11 +31,11 @@ export interface Place {
 	name: string;
 	/** Words of the read-along line, in order. */
 	narration: string[];
+	/** The video parts, played back to back. None: the picture is the frame. */
+	parts: Part[];
 	/** An image, or null = neutral placeholder. */
 	picture: Picture | null;
 	status: PlaceStatus;
-	/** require()'d video module or a video url, or null = show picture as the frame. */
-	video: number | string | null;
 }
 /** e.g. "Goodnight moon", gate image, open image. The pictures are null until they are made. */
 interface EndGoal {

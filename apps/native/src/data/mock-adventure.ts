@@ -11,9 +11,9 @@ const place = (
 	id,
 	name,
 	narration: line.split(" "),
+	parts: [],
 	picture,
 	status: "ready",
-	video: null,
 });
 
 export const mockAdventure: Adventure = {

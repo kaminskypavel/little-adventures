@@ -26,6 +26,7 @@ import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { PhoneFrame } from "@/components/phone-frame";
+import { TurnPrompt } from "@/components/turn-prompt";
 import { AdminHint } from "@/src/admin/admin-hint";
 import { AdminPanel } from "@/src/admin/admin-switches";
 import { useAdminHold } from "@/src/admin/use-admin-hold";
@@ -33,6 +34,7 @@ import { useSession } from "@/src/auth/use-session";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { queryClient } from "@/src/data/query-client";
+import { isAdventurePath } from "@/src/orientation";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
@@ -132,11 +134,21 @@ export default function Layout() {
 															animation: "none",
 															contentStyle: { backgroundColor: "transparent" },
 															headerShown: false,
+															// iOS: upright everywhere but the adventure screens, which turn the phone.
+															orientation: "portrait",
 														}}
 													>
 														<Stack.Protected guard={status === "signed-in"}>
 															{SIGNED_IN_SCREENS.map((name) => (
-																<Stack.Screen key={name} name={name} />
+																<Stack.Screen
+																	key={name}
+																	name={name}
+																	options={
+																		isAdventurePath(`/${name}`)
+																			? { orientation: "landscape" }
+																			: undefined
+																	}
+																/>
 															))}
 														</Stack.Protected>
 														{/* Signed out only: once signed in they leave the history, so back from
@@ -147,6 +159,7 @@ export default function Layout() {
 														</Stack.Protected>
 													</Stack>
 												</ThemeProvider>
+												<TurnPrompt />
 												<AdminHint />
 												<AdminPanel />
 												<SplashGate />

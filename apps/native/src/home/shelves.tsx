@@ -56,12 +56,13 @@ function Pictures({
 	if (ideas === null) {
 		return SKELETONS.map((n) => <IdeaSkeleton key={n} />);
 	}
-	return ideas.map((idea) => (
+	return ideas.map((idea, index) => (
 		<IdeaPicture
 			key={idea.question}
 			onPress={() => onAsk(idea.question)}
 			picture={idea.picture}
 			question={idea.question}
+			testID={`idea-${index}`}
 		/>
 	));
 }

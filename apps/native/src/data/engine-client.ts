@@ -15,8 +15,14 @@ interface EngineWord {
 	text: string;
 }
 type EngineNarration = EngineMedia & { words: EngineWord[] };
+/** One part of a node's video. `video` is set only when `status` is "playable". */
+export interface EnginePart {
+	id: string;
+	status: string;
+	video: EngineMedia | null;
+}
 export interface EngineNode {
-	/** Null until a clip is made, and when none could be made. */
+	/** The older single clip; null for nodes made in parts, and when none could be made. */
 	clip: EngineMedia | null;
 	fact: string | null;
 	id: string;
@@ -25,6 +31,8 @@ export interface EngineNode {
 	name: string | null;
 	narration: EngineNarration | null;
 	neighbours: string[];
+	/** The video in parts, played back to back. Null or absent: use `clip`. */
+	parts?: EnginePart[] | null;
 	picture: EngineMedia | null;
 	status: string;
 	visited: boolean;
@@ -118,6 +126,13 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
+		/** Starts preparing an adventure for the question; `startDraft` commits it. */
+		createDraft: (childId: string, question: string) =>
+			call<{ id: string; status: string }>("/adventures/drafts", {
+				body: JSON.stringify({ childId, question }),
+				headers: { "content-type": "application/json" },
+				method: "POST",
+			}),
 		getAdventure: (id: string) =>
 			call<EngineAdventure>(`/adventures/${encodeURIComponent(id)}`),
 		getMe: () => call<EngineMe>("/me"),
@@ -130,6 +145,12 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
+		/** Gets the child's next adventure ready ahead of time. Fire and forget. */
+		prepareChild: (childId: string) =>
+			call<Record<string, never>>(
+				`/children/${encodeURIComponent(childId)}/prepare`,
+				{ method: "POST" }
+			),
 		/** Admins only: sets some of the steps; the engine answers all four. */
 		setSteps: (steps: Partial<EngineSteps>) =>
 			call<{ steps: EngineSteps }>("/me/steps", {
@@ -147,6 +168,16 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
+		/** Commits a draft in the chosen style. Safe to repeat. */
+		startDraft: (id: string, style: Style) =>
+			call<{ id: string; source: string; status: string }>(
+				`/adventures/${encodeURIComponent(id)}/start`,
+				{
+					body: JSON.stringify({ style }),
+					headers: { "content-type": "application/json" },
+					method: "POST",
+				}
+			),
 		visitNode: (id: string, node: string) =>
 			call<VisitResult>(
 				`/adventures/${encodeURIComponent(id)}/nodes/${encodeURIComponent(node)}/visit`,

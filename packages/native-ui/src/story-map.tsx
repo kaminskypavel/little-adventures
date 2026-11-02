@@ -303,14 +303,14 @@ export function MapBackdrop() {
 }
 
 // The drop shadow follows the cut-out's shape.
-const goalShadow = dropShadow(shadows.character);
+export const goalShadow = dropShadow(shadows.character);
 const moonShadow = dropShadow(shadows.walker);
 
 /**
  * The end goal cut-out, `height` tall, its foot and center at (`x`, `y`). The assets are portrait or
  * square, so a square box of that height holds any of them at full height.
  */
-function Goal({
+export function Goal({
 	height,
 	image,
 	kind,

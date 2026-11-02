@@ -1,17 +1,19 @@
-import {
-	BODY_SCROLL_END,
-	BODY_SCROLL_START,
-} from "@little-adventures/native-ui/body-fade";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
+import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
+import { ClaySurface } from "@little-adventures/native-ui/clay-surface";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
-import { LookTile } from "@little-adventures/native-ui/look-tile";
+import {
+	CheckDisc,
+	CompanionTrack,
+} from "@little-adventures/native-ui/companion-track";
+import { Icon } from "@little-adventures/native-ui/icons";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { ToggleCard } from "@little-adventures/native-ui/toggle-card";
-import { colors, select } from "@little-adventures/native-ui/tokens";
+import { colors, radii, spacing } from "@little-adventures/native-ui/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { VideoConfirm } from "@/src/admin/live-confirm";
 import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
@@ -24,6 +26,8 @@ import {
 	useGrownUpPhoto,
 	useSaveProfile,
 } from "@/src/data/profile-queries";
+import { LIVE_STYLES } from "@/src/data/styles";
+import { mark } from "@/src/data/timeline";
 import type { Profile } from "@/src/data/types";
 
 const looks: { label: string; picture: number; style: Style }[] = [
@@ -49,18 +53,146 @@ const looks: { label: string; picture: number; style: Style }[] = [
 	},
 ];
 
-const subtitle = (
+// Phones shorter than this get the smaller sizes, so nothing scrolls on the smallest phone.
+const COMPACT_BELOW = 740;
+const sizes = {
+	compact: {
+		chip: 52,
+		gap: spacing.md,
+		hero: 92,
+		heroPad: 16,
+		thumb: 60,
+		top: spacing.md,
+	},
+	tall: {
+		chip: 60,
+		gap: spacing.lg,
+		hero: 120,
+		heroPad: 20,
+		thumb: 80,
+		top: spacing.lg,
+	},
+} as const;
+const CHIP_THUMB = 30;
+const CHIP_LOCK = 16;
+const CHIP_LOCK_ICON = 10;
+const CHIP_LOCK_SHIFT = -3;
+const LOCKED_OPACITY = 0.62;
+const HERO_DISC = 38;
+const HERO_DISC_ICON = 22;
+const THUMB_RING = "0px 0px 0px 3px rgba(244,236,216,0.67)";
+
+const youSubtitle = (
 	photo: GrownUpPhoto | null | undefined,
 	photoUri: string | null
 ) => {
 	if (!photoUri) {
-		return "Tap the circle to add a photo";
+		return "Add your photo";
 	}
-	return photo?.called?.name ?? "Tap your photo to change";
+	return photo?.called?.name ?? "Grown-up";
 };
 
+/** A look that is open: one wide card, picked. */
+function LookCard({
+	compact,
+	label,
+	onPress,
+	picture,
+	selected,
+}: {
+	compact: boolean;
+	label: string;
+	onPress: () => void;
+	picture: number;
+	selected: boolean;
+}) {
+	const size = compact ? sizes.compact : sizes.tall;
+	return (
+		<ClayPressable
+			accessibilityLabel={label}
+			accessibilityRole="button"
+			onPress={onPress}
+			radius={radii.card}
+			selected={selected}
+			style={[styles.hero, { height: size.hero, paddingLeft: size.heroPad }]}
+			tone="sage"
+		>
+			<View
+				style={{
+					borderRadius: size.thumb / 2,
+					boxShadow: THUMB_RING,
+					height: size.thumb,
+					overflow: "hidden",
+					width: size.thumb,
+				}}
+			>
+				<Image
+					accessibilityIgnoresInvertColors
+					contentFit="cover"
+					source={picture}
+					style={{ height: "100%", width: "100%" }}
+				/>
+			</View>
+			<ClayText style={styles.heroLabel} variant="toggleTitle">
+				{label}
+			</ClayText>
+			<CheckDisc icon={HERO_DISC_ICON} on={selected} size={HERO_DISC} />
+		</ClayPressable>
+	);
+}
+
+/** A look that is not open yet: a small dimmed chip with a lock, not pressable. */
+function LockedChip({
+	compact,
+	label,
+	picture,
+}: {
+	compact: boolean;
+	label: string;
+	picture: number;
+}) {
+	return (
+		<View
+			accessibilityLabel={`${label}, coming soon`}
+			accessibilityState={{ disabled: true }}
+			accessible
+			pointerEvents="none"
+			style={[
+				styles.chip,
+				{ height: compact ? sizes.compact.chip : sizes.tall.chip },
+			]}
+		>
+			<ClaySurface
+				radius={radii.chip}
+				style={StyleSheet.absoluteFill}
+				tone="locked"
+			/>
+			<View style={styles.chipThumb}>
+				<Image
+					accessibilityIgnoresInvertColors
+					contentFit="cover"
+					source={picture}
+					style={styles.chipPicture}
+				/>
+				<View style={styles.chipLock}>
+					<Icon color={colors.cream} name="lock" size={CHIP_LOCK_ICON} />
+				</View>
+			</View>
+			<ClayText style={styles.chipLabel} variant="label">
+				{label}
+			</ClayText>
+		</View>
+	);
+}
+
 /** Who comes along: the grown-up or the puppy, exactly one (as on the coming screen). */
-function Companion({ profile }: { profile: Profile }) {
+function Companion({
+	compact,
+	profile,
+}: {
+	compact: boolean;
+	profile: Profile;
+}) {
 	const router = useRouter();
 	const client = useQueryClient();
 	const saveProfile = useSaveProfile();
@@ -76,33 +208,25 @@ function Companion({ profile }: { profile: Profile }) {
 			router.push("/grownup-photo");
 		}
 	};
+	let value: "puppy" | "you" | null = null;
+	if (profile.grownUp) {
+		value = "you";
+	} else if (profile.puppy) {
+		value = "puppy";
+	}
 
 	return (
-		<>
-			<ToggleCard
-				avatar="you"
-				on={profile.grownUp}
-				onPress={pickYou}
-				photo={{
-					label: photoUri ? "Change your photo" : "Add your photo",
-					onPress: () =>
-						router.push({
-							params: { replace: "1" },
-							pathname: "/grownup-photo",
-						}),
-					uri: photoUri,
-				}}
-				subtitle={subtitle(photo, photoUri)}
-				title="You"
-			/>
-			<ToggleCard
-				avatar="puppy"
-				on={profile.puppy && !profile.grownUp}
-				onPress={() => saveProfile({ grownUp: false, puppy: true })}
-				subtitle="Best friend"
-				title="Puppy"
-			/>
-		</>
+		<CompanionTrack
+			compact={compact}
+			onChange={(next) =>
+				next === "you"
+					? pickYou()
+					: saveProfile({ grownUp: false, puppy: true })
+			}
+			photoUri={photoUri}
+			value={value}
+			youSubtitle={youSubtitle(photo, photoUri)}
+		/>
 	);
 }
 
@@ -119,44 +243,69 @@ export default function StylePicker() {
 	// Video is the costly step: an admin with video clips on chooses first.
 	const { data: child } = useChild();
 	const asksFirst = isAdminMe(me) && me?.steps.video === true;
-	const go = () =>
+	const go = () => {
+		mark("start-tap");
 		router.replace({
 			params: question ? { question, style: picked } : { style: picked },
 			pathname: "/making",
 		});
+	};
 	const start = () => (asksFirst ? setConfirming(true) : go());
+
+	const { height } = useWindowDimensions();
+	const compact = height < COMPACT_BELOW;
+	const size = compact ? sizes.compact : sizes.tall;
 
 	return (
 		<View style={styles.root}>
 			<Screen
-				dock={<PrimaryButton label="Start" onPress={start} />}
-				scrolls
+				bodyFade={false}
+				dock={<PrimaryButton label="Start" onPress={start} testID="start" />}
 				title="Get ready"
 			>
-				<ScrollView
-					contentContainerStyle={styles.content}
-					showsVerticalScrollIndicator={false}
+				{/* gap and paddingTop are the minimums; space-evenly shares the leftover height. */}
+				<View
+					style={[styles.blocks, { gap: size.gap, paddingTop: size.top }]}
+					testID="get-ready"
 				>
-					<ClayText color={colors.cream} style={styles.label} variant="label">
-						Style
-					</ClayText>
-					<View style={styles.row}>
-						{looks.map(({ label, picture, style }) => (
-							<LookTile
-								key={style}
-								label={label}
-								onPress={() => setPicked(style)}
-								picture={picture}
-								selected={picked === style}
-								style={styles.tile}
-							/>
-						))}
+					<View style={styles.section}>
+						<ClayText color={colors.cream} style={styles.label} variant="label">
+							Style
+						</ClayText>
+						{looks
+							.filter(({ style }) => LIVE_STYLES.includes(style))
+							.map(({ label, picture, style }) => (
+								<LookCard
+									compact={compact}
+									key={style}
+									label={label}
+									onPress={() => setPicked(style)}
+									picture={picture}
+									selected={picked === style}
+								/>
+							))}
+						<View style={styles.chips}>
+							{looks
+								.filter(({ style }) => !LIVE_STYLES.includes(style))
+								.map(({ label, picture, style }) => (
+									<LockedChip
+										compact={compact}
+										key={style}
+										label={label}
+										picture={picture}
+									/>
+								))}
+						</View>
 					</View>
-					<ClayText color={colors.cream} style={styles.label} variant="label">
-						{"Who's coming?"}
-					</ClayText>
-					{child ? <Companion profile={child.profile} /> : null}
-				</ScrollView>
+					<View style={styles.section}>
+						<ClayText color={colors.cream} style={styles.label} variant="label">
+							{"Who's coming?"}
+						</ClayText>
+						{child ? (
+							<Companion compact={compact} profile={child.profile} />
+						) : null}
+					</View>
+				</View>
 			</Screen>
 			{confirming ? (
 				<VideoConfirm
@@ -171,15 +320,42 @@ export default function StylePicker() {
 }
 
 const styles = StyleSheet.create({
-	// Bottom padding lets the last card scroll clear of the dock fade.
-	content: {
-		gap: 12,
-		paddingBottom: BODY_SCROLL_END,
-		paddingTop: BODY_SCROLL_START,
+	blocks: { flex: 1, justifyContent: "space-evenly" },
+	chip: {
+		alignItems: "center",
+		flex: 1,
+		flexDirection: "row",
+		gap: 7,
+		justifyContent: "center",
+		opacity: LOCKED_OPACITY,
 	},
-	label: { marginTop: 6, opacity: 0.92 },
+	chipLabel: { fontSize: 16, lineHeight: 20 },
+	chipLock: {
+		alignItems: "center",
+		backgroundColor: colors.inkNavy,
+		borderRadius: CHIP_LOCK / 2,
+		bottom: CHIP_LOCK_SHIFT,
+		height: CHIP_LOCK,
+		justifyContent: "center",
+		position: "absolute",
+		right: CHIP_LOCK_SHIFT,
+		width: CHIP_LOCK,
+	},
+	chipPicture: {
+		borderRadius: CHIP_THUMB / 2,
+		height: CHIP_THUMB,
+		width: CHIP_THUMB,
+	},
+	chips: { flexDirection: "row", gap: 8 },
+	chipThumb: { height: CHIP_THUMB, width: CHIP_THUMB },
+	hero: {
+		alignItems: "center",
+		flexDirection: "row",
+		gap: 16,
+		paddingRight: 20,
+	},
+	heroLabel: { flex: 1 },
+	label: { minHeight: 26, opacity: 0.94 },
 	root: { flex: 1 },
-	row: { flexDirection: "row", flexWrap: "wrap", gap: select.lookRowGap },
-	// Two across: 45% each wraps the third tile, and grow fills the row.
-	tile: { flexBasis: "45%", flexGrow: 1 },
+	section: { gap: 9 },
 });

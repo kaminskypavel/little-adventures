@@ -1,7 +1,9 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
+import { ForkMap } from "@little-adventures/native-ui/fork-map";
 import { Screen } from "@little-adventures/native-ui/screen";
 import {
 	MapBackdrop,
+	type MapGoodnight,
 	type MapPlace,
 	type MapPlaceNode,
 	StoryMap,
@@ -9,12 +11,16 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
+import { StyleSheet } from "react-native";
+import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
+import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useLandscape } from "@/src/orientation";
 
 const NODE_IDS: readonly string[] = [
 	"intro",
@@ -29,9 +35,73 @@ const PLACE_IDS: readonly MapPlaceNode[] = ["intro", "p1", "p2", "p1a", "p2a"];
 const isNode = (value?: string): value is NodeId =>
 	value !== undefined && NODE_IDS.includes(value);
 
+/** Sideways: the fork road. The star walks the roads, so its route is every stop on the way. */
+function SidewaysMap({
+	goodnight,
+	goodnightOpen,
+	next,
+	onOpen,
+	onWalked,
+	places,
+	progress,
+	title,
+	walkTo,
+}: {
+	goodnight: MapGoodnight;
+	goodnightOpen: boolean;
+	next: readonly NodeId[];
+	onOpen: (node: NodeId) => void;
+	onWalked: () => void;
+	places: Record<MapPlaceNode, MapPlace>;
+	progress: Progress;
+	title: string;
+	walkTo?: NodeId;
+}) {
+	const router = useRouter();
+	const { here, visited } = progress;
+	const ready: NodeId[] = PLACE_IDS.filter(
+		(node) => places[node].state === "ready"
+	);
+	if (goodnightOpen && next.includes("outro") && !visited.includes("outro")) {
+		ready.push("outro");
+	}
+	const atGoodnight = here === "outro";
+	return (
+		<ForkMap
+			action={{
+				accessibilityLabel: "Grown-ups",
+				icon: "lock",
+				onPress: () => router.push("/gate"),
+			}}
+			button={
+				<PrimaryButton
+					disabled={walkTo !== undefined}
+					icon={atGoodnight ? undefined : "play"}
+					label={atGoodnight ? "Say goodnight" : "Keep walking"}
+					labelSize={21}
+					onPress={() => onOpen(here)}
+					size="md"
+					style={styles.sidewaysButton}
+					testID="keep-walking"
+				/>
+			}
+			dots={dottedRoads(here, ready, visited)}
+			goodnight={goodnight}
+			here={here}
+			lit={litRoads(visited)}
+			onWalked={onWalked}
+			places={places}
+			route={walkTo ? pathBetween(here, walkTo, visited) : [here]}
+			title={title}
+			walkTo={walkTo}
+		/>
+	);
+}
+
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
 	const router = useRouter();
+	const sideways = useLandscape();
 	const params = useLocalSearchParams<{
 		id?: string;
 		visited?: string;
@@ -42,6 +112,8 @@ export default function StoryMapScreen() {
 	const { adventure, progress: stored } = useAdventure(id);
 	// From the shared cache, so the title is there on the first frame.
 	const childName = useChildName() ?? "";
+	// The last drawing count marked, so a screen is marked once per count (not on every render).
+	const marked = useRef<number | null>(null);
 
 	// Dev only: ?visited=intro,p1 pretends those places were walked, in that order.
 	const devVisited = dev(params.visited)?.split(",").filter(isNode);
@@ -53,6 +125,7 @@ export default function StoryMapScreen() {
 		router.replace(`/place?id=${id}&node=${node}`);
 
 	let content: ReactNode = null;
+	let fork: ReactNode = null;
 	if (adventure && progress) {
 		const next = neighbours(progress.here);
 		const stateOf = (node: NodeId): MapPlace["state"] => {
@@ -87,20 +160,42 @@ export default function StoryMapScreen() {
 		const places = Object.fromEntries(
 			PLACE_IDS.map((node) => [node, place(node)])
 		) as Record<MapPlaceNode, MapPlace>;
+		const drawing = PLACE_IDS.filter(
+			(node) => adventure.places[node].status === "drawing"
+		).length;
+		markScreen(marked, "map", drawing);
 		const goodnightOpen = !isOutroLocked(progress);
 		// The road just walked glows: from the node visited before this one, to this one.
 		const at = progress.visited.indexOf(progress.here);
 
+		const goodnight = {
+			image: goodnightOpen ? adventure.endGoal.open : adventure.endGoal.closed,
+			locked: !goodnightOpen,
+			name: adventure.places.outro.name,
+		};
+		fork = (
+			<SidewaysMap
+				goodnight={goodnight}
+				goodnightOpen={goodnightOpen}
+				next={next}
+				onOpen={openPlace}
+				onWalked={() => {
+					if (walkTo) {
+						impactAsync(ImpactFeedbackStyle.Soft).catch(() => undefined);
+						openPlace(walkTo);
+					}
+				}}
+				places={places}
+				progress={progress}
+				title={childName ? `${childName}'s map` : ""}
+				walkTo={walkTo}
+			/>
+		);
+
 		content = (
 			<StoryMap
 				glowFrom={at > 0 ? progress.visited[at - 1] : undefined}
-				goodnight={{
-					image: goodnightOpen
-						? adventure.endGoal.open
-						: adventure.endGoal.closed,
-					locked: !goodnightOpen,
-					name: adventure.places.outro.name,
-				}}
+				goodnight={goodnight}
 				here={progress.here}
 				next={next}
 				onWalked={() => {
@@ -116,7 +211,7 @@ export default function StoryMapScreen() {
 		);
 	}
 
-	return (
+	const screen = (
 		<>
 			<MapBackdrop />
 			<Screen
@@ -127,6 +222,7 @@ export default function StoryMapScreen() {
 						icon="play"
 						label="Keep walking"
 						onPress={() => progress && openPlace(progress.here)}
+						testID="keep-walking"
 					/>
 				}
 				topBar={
@@ -144,4 +240,14 @@ export default function StoryMapScreen() {
 			</Screen>
 		</>
 	);
+
+	// Sideways, the fork road takes the whole screen.
+	if (sideways) {
+		return fork;
+	}
+	return screen;
 }
+
+const styles = StyleSheet.create({
+	sidewaysButton: { height: 60, paddingHorizontal: 24 },
+});
