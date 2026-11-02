@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.little-adventures",
+      "bundleIdentifier": "app.littleadventures",
       "icon": {
         "dark": "./assets/images/icon-ios-dark.png",
         "light": "./assets/images/icon.png",
@@ -24,7 +24,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.littleadventures"
+      "package": "app.littleadventures"
     },
     "web": {
       "bundler": "metro",
