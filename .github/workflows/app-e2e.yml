@@ -1,0 +1,76 @@
+name: App e2e
+
+# The kids app's smoke flow, in a phone-sized browser. Runs only when the app or a package
+# it imports changes.
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - apps/native/**
+      - packages/native-ui/**
+      - packages/validation/**
+      - packages/api/**
+      - bun.lock
+      - .github/workflows/app-e2e.yml
+  pull_request:
+    paths:
+      - apps/native/**
+      - packages/native-ui/**
+      - packages/validation/**
+      - packages/api/**
+      - bun.lock
+      - .github/workflows/app-e2e.yml
+
+concurrency:
+  group: app-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        working-directory: apps/native
+      - uses: actions/cache@v4
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install browser and system libraries
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+        working-directory: apps/native
+      - name: Install system libraries only
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+        working-directory: apps/native
+      - name: Smoke flow
+        run: bun run test:e2e
+        working-directory: apps/native
+        env:
+          CI: "true"
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-playwright-report
+          path: apps/native/playwright-report
+          retention-days: 7
