@@ -11,7 +11,7 @@ import { optimisticSet, rollback, type Snapshot } from "./optimistic";
 
 type Me = EngineMe | null;
 
-export const engineKeys = {
+const engineKeys = {
 	me: ["engine", "me"] as const,
 };
 

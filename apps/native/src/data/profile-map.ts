@@ -41,7 +41,7 @@ export const emptyProfile: Profile = {
 	puppy: false,
 };
 
-export const rowToProfile = (row: ChildRow): Profile => ({
+const rowToProfile = (row: ChildRow): Profile => ({
 	artStatus: row.artStatus,
 	childAge: row.age,
 	childKind: row.kind,

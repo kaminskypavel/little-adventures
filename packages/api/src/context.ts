@@ -8,8 +8,8 @@ export interface Context {
 	/** Model calls that find and redraw the child in a photo. */
 	art: ImageEditing;
 	db: Database;
-	/** Whether a signed-in grown-up is in the private beta: only they reach the paid calls. */
-	isBeta: (principal: Principal) => boolean;
+	/** Whether a signed-in grown-up is in the private beta (the email list, or joined with the code). */
+	isBeta: (principal: Principal) => boolean | Promise<boolean>;
 	/** The signed-in grown-up, or null for a visitor. */
 	principal: Principal | null;
 	storage: Storage;

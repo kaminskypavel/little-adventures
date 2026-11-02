@@ -42,7 +42,7 @@ const sum = (list: readonly number[]) => list.reduce((a, b) => a + b, 0);
  * gaps shrink to half the design first, then the star shrinks to its minimum, then the gaps go on
  * shrinking. Extra space is shared by the gaps in the design's proportions.
  */
-export function fit(
+function fit(
 	free: number,
 	star: { max: number; min: number },
 	weights: readonly number[]

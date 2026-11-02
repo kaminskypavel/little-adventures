@@ -6,7 +6,7 @@ import { ENV } from "@/src/env";
 import { withRetryOn401 } from "./retry-on-401";
 import { clearToken, readToken, writeToken } from "./token-store";
 
-export interface User {
+interface User {
 	email: string | null;
 	id: string;
 	name: string | null;
@@ -163,8 +163,9 @@ export async function signInWithGoogle(): Promise<
 	try {
 		const web = Platform.OS === "web";
 		const res = await post("/api/auth/sign-in/social", {
+			// The web build may live under a base path (www.littleadventures.app/web): come back inside it.
 			callbackURL: web
-				? `${globalThis.location.origin}/account`
+				? `${globalThis.location.origin}${process.env.EXPO_BASE_URL ?? ""}/account`
 				: `${SERVER}/auth/native/callback`,
 			disableRedirect: true,
 			provider: "google",
@@ -200,7 +201,7 @@ export async function signOut() {
 }
 
 /** The current JWT, minting one from the session cookie when there is none yet. */
-export async function getToken() {
+async function getToken() {
 	await start();
 	return token ?? (await mint());
 }

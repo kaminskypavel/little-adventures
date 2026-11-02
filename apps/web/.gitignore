@@ -65,3 +65,6 @@ dev-dist
 # Playwright
 /playwright-report
 /test-results
+
+# The kids app web export (apps/native export:web), copied in at build time
+/public/web

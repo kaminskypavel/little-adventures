@@ -42,12 +42,6 @@ jobs:
         run: bun run check-types
       - name: Unit tests
         run: bun run test
-        working-directory: apps/web
-      - name: Package tests
-        run: |
-          for dir in packages/llm packages/decision packages/image-editing packages/transcribe packages/api packages/auth packages/storage packages/validation apps/native; do
-            (cd "$dir" && bun test) || exit 1
-          done
 
   e2e:
     needs: checks
@@ -83,8 +77,10 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true'
         run: bunx playwright install-deps chromium
         working-directory: apps/web
+      # The full build also copies the kids app's web export into /web; the landing
+      # tests never open /web, so CI builds the Next app alone.
       - name: Build
-        run: bun run build
+        run: bunx next build
         working-directory: apps/web
       - name: End-to-end tests
         run: bun run test:e2e

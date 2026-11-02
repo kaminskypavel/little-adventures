@@ -84,7 +84,7 @@ export function useMicOff(mic: string | undefined) {
  */
 export function useFocusRun() {
 	const [run, setRun] = useState(0);
-	const seen = useRef(false);
+	const seen = useRef<boolean>(false);
 	useFocusEffect(
 		useCallback(() => {
 			if (seen.current) {

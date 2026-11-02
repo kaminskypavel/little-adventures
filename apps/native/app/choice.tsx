@@ -148,7 +148,7 @@ export default function Choice() {
 		}
 	}, [goodnightOpen]);
 
-	if (!(adventure && visited) || childName === null) {
+	if (!(adventure && visited) || childName === undefined) {
 		return null;
 	}
 

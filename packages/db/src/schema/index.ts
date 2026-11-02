@@ -18,7 +18,32 @@ export const waitlist = littleAdventures.table("waitlist", {
 		.defaultNow(),
 	email: text("email").notNull().unique(),
 	id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-	platform: text("platform", { enum: ["ios", "android"] }).notNull(),
+	// Older rows say which store badge was tapped; the landing now asks for the email only.
+	platform: text("platform", { enum: ["ios", "android"] }),
+});
+
+// Invite codes for the private beta (the one in the hackathon submission). Stored lower case;
+// `livePerDay` is copied to each grown-up who joins with it. Turn a code off with `active`.
+export const inviteCodes = littleAdventures.table("invite_codes", {
+	active: boolean("active").notNull().default(true),
+	code: text("code").primaryKey(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	livePerDay: integer("live_per_day").notNull().default(3),
+});
+
+// Grown-ups who joined the private beta with an invite code (the judges). Grown-ups on the
+// BETA_EMAILS list need no row. `livePerDay` caps their live adventures in any 24 hours; past
+// it they get the recorded adventure.
+export const betaMembers = littleAdventures.table("beta_members", {
+	code: text("code"),
+	email: text("email"),
+	joinedAt: timestamp("joined_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	livePerDay: integer("live_per_day").notNull().default(3),
+	ownerId: text("owner_id").primaryKey(),
 });
 
 export const ART_STATUSES = ["idle", "working", "ready", "failed"] as const;

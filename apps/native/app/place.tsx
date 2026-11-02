@@ -15,6 +15,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -190,7 +191,9 @@ function TimerPlayer({
 	const [playing, setPlaying] = useState(true);
 
 	const endRef = useRef(onEnd);
-	endRef.current = onEnd;
+	useLayoutEffect(() => {
+		endRef.current = onEnd;
+	}, [onEnd]);
 	const fireEnd = useCallback(() => endRef.current(), []);
 
 	const total = words.length;
@@ -305,7 +308,9 @@ function MediaPlayer({
 	const [narrationEnded, setNarrationEnded] = useState(false);
 
 	const endRef = useRef(onEnd);
-	endRef.current = onEnd;
+	useLayoutEffect(() => {
+		endRef.current = onEnd;
+	}, [onEnd]);
 	const fireEnd = useCallback(() => {
 		if (!ended.current) {
 			ended.current = true;
@@ -482,7 +487,7 @@ export default function Place() {
 		[id, router]
 	);
 
-	if (!adventure || childName === null) {
+	if (!adventure || childName === undefined) {
 		return null;
 	}
 	const place = adventure.places[node];

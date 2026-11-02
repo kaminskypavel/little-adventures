@@ -1,5 +1,11 @@
 import { Image } from "expo-image";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+} from "react";
 import Animated, {
 	cancelAnimation,
 	Easing,
@@ -59,7 +65,9 @@ export function Walker({
 	const walking = last > 0;
 
 	const handlers = useRef({ onDone, onLand });
-	handlers.current = { onDone, onLand };
+	useLayoutEffect(() => {
+		handlers.current = { onDone, onLand };
+	}, [onDone, onLand]);
 	const land = useCallback(
 		(index: number) => handlers.current.onLand?.(index),
 		[]

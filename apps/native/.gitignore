@@ -49,3 +49,11 @@ uniwind-types.d.ts
 # Expo prebuild output (CNG)
 /ios
 /android
+
+# The web export for the landing site (export:web)
+dist-web/
+
+# Playwright smoke flow (e2e/)
+/dist
+/playwright-report
+/test-results

@@ -7,14 +7,20 @@ export const t = initTRPC.context<Context>().create();
 
 export const { procedure: publicProcedure, router } = t;
 
-/** Needs a signed-in grown-up. Inside, `ctx.principal` is never null. */
-/** Signed in and in the private beta: everyone else is refused before any paid call. */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+/** Needs a signed-in grown-up, in the beta or not (joining the beta). `ctx.principal` is never null. */
+export const signedInProcedure = t.procedure.use(({ ctx, next }) => {
 	if (!ctx.principal) {
 		throw new TRPCError({ code: "UNAUTHORIZED" });
 	}
-	if (!ctx.isBeta(ctx.principal)) {
-		throw new TRPCError({ code: "FORBIDDEN", message: BETA_ONLY });
-	}
 	return next({ ctx: { ...ctx, principal: ctx.principal } });
 });
+
+/** Signed in and in the private beta: everyone else is refused before any paid call. */
+export const protectedProcedure = signedInProcedure.use(
+	async ({ ctx, next }) => {
+		if (!(await ctx.isBeta(ctx.principal))) {
+			throw new TRPCError({ code: "FORBIDDEN", message: BETA_ONLY });
+		}
+		return next();
+	}
+);

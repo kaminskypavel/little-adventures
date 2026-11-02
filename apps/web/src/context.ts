@@ -1,4 +1,5 @@
 import type { Context as ApiContext } from "@little-adventures/api/context";
+import { isBetaMember } from "@little-adventures/api/routers/beta";
 import { resolvePrincipal } from "@little-adventures/auth/bearer";
 import { betaEmails, inBeta } from "@little-adventures/auth/beta";
 import { createImageEditing } from "@little-adventures/image-editing";
@@ -36,12 +37,11 @@ export async function createContext(req: Request): Promise<ApiContext> {
 	return {
 		art,
 		db,
-		isBeta: ({ user }) => inBeta(beta, user.email),
+		isBeta: async ({ user }) =>
+			inBeta(beta, user.email) || (await isBetaMember(db, user.id)),
 		principal,
 		storage,
 		voice,
 		waitUntil: (work) => after(work),
 	};
 }
-
-export type Context = Awaited<ReturnType<typeof createContext>>;

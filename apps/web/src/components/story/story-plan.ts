@@ -21,7 +21,7 @@ export interface Screen {
 	tall: boolean;
 }
 
-export type MediaKind = "loop" | "move" | "still";
+type MediaKind = "loop" | "move" | "still";
 
 export interface PlanItem {
 	/** Index of the element of that kind: still and loop by scene, move by the scene it lands on. */

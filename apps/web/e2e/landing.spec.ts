@@ -4,7 +4,8 @@ import { expect, type Page, test } from "@playwright/test";
 const LOADER_TIMEOUT = 45_000;
 const LOAD_TEST_TIMEOUT = 90_000;
 
-const HOME_LINE = "Bedtime stories that start with your child's own questions.";
+const HOME_LINE =
+	"Little adventures that start with your child's own questions.";
 const SCENE_1_TITLE = "Children are curious. Help them learn.";
 
 const ES_TITLE = /cuentos que nacen de la curiosidad/u;
@@ -109,6 +110,21 @@ test.describe("languages", () => {
 			await expect(page.locator('[data-copy="0"]')).toContainText(HOME_LINE);
 		});
 	});
+});
+
+test("early access opens a form that asks for the email only", async ({
+	page,
+}) => {
+	test.setTimeout(LOAD_TEST_TIMEOUT);
+	await page.goto("/");
+	await waitForStory(page);
+	await page.locator("[data-early]").click();
+	const dialog = page.locator("dialog[open]");
+	await expect(dialog.locator('input[type="email"]')).toBeVisible();
+	await expect(
+		dialog.getByRole("button", { name: "Send me an invitation" })
+	).toBeVisible();
+	await expect(dialog.locator("input")).toHaveCount(1);
 });
 
 for (const path of ["/", "/es", "/fr"]) {

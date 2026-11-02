@@ -1,0 +1,1 @@
+ALTER TABLE "little_adventures"."waitlist" ALTER COLUMN "platform" DROP NOT NULL;

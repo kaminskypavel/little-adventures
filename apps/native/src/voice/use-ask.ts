@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import {
 	loaderFacts,
 	shortQuestion,
@@ -43,7 +43,9 @@ export function useAsk(onQuestion: () => void) {
 	const downAt = useRef<number>(0);
 	const finishRef = useRef<() => void>(() => undefined);
 	const questionRef = useRef(onQuestion);
-	questionRef.current = onQuestion;
+	useLayoutEffect(() => {
+		questionRef.current = onQuestion;
+	}, [onQuestion]);
 	const [pressing, setPressing] = useState(false);
 	const [thinking, setThinking] = useState(false);
 	const [hint, setHint] = useState<Hint>("ask");
@@ -103,7 +105,9 @@ export function useAsk(onQuestion: () => void) {
 		setThinking(false);
 		busy.current = false;
 	}, [stop]);
-	finishRef.current = finish;
+	useLayoutEffect(() => {
+		finishRef.current = finish;
+	}, [finish]);
 
 	const onHoldStart = useCallback(async () => {
 		if (busy.current || held.current) {

@@ -1,0 +1,108 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "80fdbf6f-e911-43ea-a2a5-8ade084105b6",
+  "prevIds": ["8251293b-626f-40a9-8503-8696962e56ab"],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "little_adventures", "beta_members"],
+      "writes": [
+        "s|tbl|little_adventures.beta_members",
+        "n|tbl|little_adventures.beta_members",
+        "e|tbl|little_adventures.beta_members",
+        "n|rel|little_adventures.beta_members",
+        "n|type|little_adventures.beta_members",
+        "n|rel|little_adventures.beta_members_pkey"
+      ],
+      "reads": ["n|sch|little_adventures"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "name": "beta_members",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "email",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "joined_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "live_per_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "3",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "owner_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "beta_members_pkey",
+        "columns": ["owner_id"],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

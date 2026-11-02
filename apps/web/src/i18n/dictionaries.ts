@@ -11,12 +11,6 @@ export type SceneId =
 	| "goodnight";
 
 export interface Dictionary {
-	badges: {
-		appStore: string;
-		comingSoon: string;
-		googlePlay: string;
-		joinWaitlist: string;
-	};
 	/** The scroll cue: "scroll" on computers, "swipe" on touch screens. */
 	hint: { scroll: string; swipe: string };
 	language: { label: string; name: string };
@@ -32,10 +26,16 @@ export interface Dictionary {
 	waitlist: {
 		body: string;
 		close: string;
+		/** Under the form on the last scene. */
+		comingSoon: string;
 		done: string;
 		emailLabel: string;
 		error: string;
 		invalid: string;
+		/** The early access button on every scene. */
+		open: string;
+		/** After joining: tell another parent. */
+		share: { copied: string; copy: string; prompt: string; x: string };
 		submit: string;
 		title: string;
 	};
@@ -47,12 +47,6 @@ export interface Dictionary {
 // \u2060 (word joiner) after a hyphen keeps a big title from breaking there ("Aidez-" / "les").
 export const dictionaries: Record<Locale, Dictionary> = {
 	en: {
-		badges: {
-			appStore: "Download on the App Store",
-			comingSoon: "Coming soon to iPhone and Android.",
-			googlePlay: "Get it on Google Play",
-			joinWaitlist: "(join the waitlist)",
-		},
 		hint: { scroll: "Scroll down", swipe: "Swipe down" },
 		language: { label: "Language", name: "English" },
 		loader: "Getting the adventure ready",
@@ -62,7 +56,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 			ogLocale: "en_US",
 			shareDescription:
 				"Your child asks a question out loud. A short illustrated story answers it, starring your child, then says goodnight.",
-			title: "Little Adventures: bedtime stories sparked by your child",
+			title: "Little Adventures: stories born from your child's curiosity",
 		},
 		quote: ["“", "”"],
 		scenes: {
@@ -83,7 +77,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
 				question: "What's under the ocean?",
 			},
 			playroom: {
-				line: "Bedtime stories that start with your child's own questions.",
+				line: "Little adventures that start with your child's own questions.",
 			},
 			saturn: {
 				line: "Your child is the hero, drawn from a photo you add.",
@@ -97,21 +91,23 @@ export const dictionaries: Record<Locale, Dictionary> = {
 		waitlist: {
 			body: "We'll only use your email to tell you when the app is ready.",
 			close: "Close",
+			comingSoon: "Coming soon to iPhone and Android.",
 			done: "You're on the list. We'll write when it's ready.",
 			emailLabel: "Your email",
 			error: "We couldn't reach the list just now. Please try again.",
 			invalid: "That email doesn't look right. Check it and try again.",
-			submit: "Keep me posted",
+			open: "Get early access",
+			share: {
+				copied: "Link copied",
+				copy: "Copy link",
+				prompt: "Know a parent with a curious kid?",
+				x: "Share on X",
+			},
+			submit: "Send me an invitation",
 			title: "Get it when it's ready",
 		},
 	},
 	es: {
-		badges: {
-			appStore: "Descárgalo en el App Store",
-			comingSoon: "Muy pronto en iPhone y Android.",
-			googlePlay: "Disponible en Google Play",
-			joinWaitlist: "(únete a la lista de espera)",
-		},
 		hint: { scroll: "Desplázate hacia abajo", swipe: "Desliza hacia abajo" },
 		language: { label: "Idioma", name: "Español" },
 		loader: "Preparando la aventura",
@@ -156,21 +152,23 @@ export const dictionaries: Record<Locale, Dictionary> = {
 		waitlist: {
 			body: "Solo usaremos tu correo para avisarte cuando la app esté lista.",
 			close: "Cerrar",
+			comingSoon: "Muy pronto en iPhone y Android.",
 			done: "Ya estás en la lista. Te escribiremos cuando esté lista.",
 			emailLabel: "Tu correo",
 			error: "No pudimos conectar con la lista. Inténtalo de nuevo.",
 			invalid: "Ese correo no parece correcto. Revísalo e inténtalo de nuevo.",
-			submit: "Avísame",
+			open: "Acceso anticipado",
+			share: {
+				copied: "Enlace copiado",
+				copy: "Copiar enlace",
+				prompt: "¿Conoces a otra familia con peques curiosos?",
+				x: "Compartir en X",
+			},
+			submit: "Envíame una invitación",
 			title: "Recíbela cuando esté lista",
 		},
 	},
 	fr: {
-		badges: {
-			appStore: "Télécharger dans l'App Store",
-			comingSoon: "Bientôt sur iPhone et Android.",
-			googlePlay: "Disponible sur Google Play",
-			joinWaitlist: "(rejoindre la liste d'attente)",
-		},
 		hint: {
 			scroll: "Faites défiler vers le bas",
 			swipe: "Glissez vers le bas",
@@ -218,12 +216,20 @@ export const dictionaries: Record<Locale, Dictionary> = {
 		waitlist: {
 			body: "Nous utiliserons votre e-mail uniquement pour vous prévenir quand l'app sera prête.",
 			close: "Fermer",
+			comingSoon: "Bientôt sur iPhone et Android.",
 			done: "Vous êtes sur la liste. Nous vous écrirons dès qu'elle sera prête.",
 			emailLabel: "Votre e-mail",
 			error:
 				"Impossible de joindre la liste pour le moment. Veuillez réessayer.",
 			invalid: "Cet e-mail ne semble pas valide. Vérifiez-le et réessayez.",
-			submit: "Prévenez-moi",
+			open: "Accès anticipé",
+			share: {
+				copied: "Lien copié",
+				copy: "Copier le lien",
+				prompt: "Vous connaissez d'autres parents d'enfants curieux\u00A0?",
+				x: "Partager sur X",
+			},
+			submit: "Envoyez-moi une invitation",
 			title: "Recevez-la dès qu'elle est prête",
 		},
 	},

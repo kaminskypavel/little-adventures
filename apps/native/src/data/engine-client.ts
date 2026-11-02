@@ -9,12 +9,12 @@ export interface EngineMedia {
 	id: string;
 	url: string;
 }
-export interface EngineWord {
+interface EngineWord {
 	endSec: number;
 	startSec: number;
 	text: string;
 }
-export type EngineNarration = EngineMedia & { words: EngineWord[] };
+type EngineNarration = EngineMedia & { words: EngineWord[] };
 export interface EngineNode {
 	/** Null until a clip is made, and when none could be made. */
 	clip: EngineMedia | null;

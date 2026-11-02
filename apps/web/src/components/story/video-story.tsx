@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import { StoreBadges } from "@/components/waitlist/store-badges";
+import { EarlyAccess } from "@/components/waitlist/early-access";
+import { WaitlistForm } from "@/components/waitlist/waitlist-form";
 import { Wordmark } from "@/components/wordmark";
-import type { Dictionary, SceneId } from "@/i18n/dictionaries";
+import type { Dictionary, Locale, SceneId } from "@/i18n/dictionaries";
 import { gsap, Observer, useGSAP } from "@/lib/gsap";
 import { GATE, loadPlan, type Screen, storyUrls } from "./story-plan";
 import { createStoryStore } from "./story-store";
@@ -34,8 +35,48 @@ const NAV_KEYS = {
 	next: ["ArrowDown", "PageDown", " "],
 };
 
-export function VideoStory({ copy }: { copy: Dictionary }) {
+const AV1 = 'video/mp4; codecs="av01.0.12M.08"';
+const AV1_CHECK: MediaDecodingConfiguration = {
+	type: "file",
+	video: {
+		bitrate: 2_000_000,
+		contentType: AV1,
+		framerate: 24,
+		height: 1080,
+		width: 1920,
+	},
+};
+const canPlayAv1 = () =>
+	document.createElement("video").canPlayType(AV1) !== "";
+// Some Safari builds answer "probably" to AV1 in canPlayType and then cannot decode it
+// (black story). mediaCapabilities answers honestly there, so it gets the last word.
+const decodesAv1 = async () => {
+	if (!canPlayAv1()) {
+		return false;
+	}
+	try {
+		return (await navigator.mediaCapabilities.decodingInfo(AV1_CHECK))
+			.supported;
+	} catch {
+		return true;
+	}
+};
+
+// Shares point at the short address; it redirects to the page in the same language.
+const SHARE_BASE = "https://littleadventures.app";
+
+export function VideoStory({
+	copy,
+	locale,
+}: {
+	copy: Dictionary;
+	locale: Locale;
+}) {
 	const root = useRef<HTMLDivElement>(null);
+	const share = {
+		text: copy.meta.title,
+		url: locale === "en" ? SHARE_BASE : `${SHARE_BASE}/${locale}`,
+	};
 
 	useGSAP(
 		() => {
@@ -55,30 +96,30 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 			const loader = el.querySelector<HTMLElement>("[data-loader]");
 			const bar = el.querySelector<HTMLElement>("[data-bar]");
 			const hint = el.querySelector<HTMLElement>("[data-hint]");
+			const early = el.querySelector<HTMLElement>("[data-early]");
 
-			const probe = document.createElement("video");
-			const codec = probe.canPlayType('video/mp4; codecs="av01.0.12M.08"')
-				? ""
-				: "-hevc";
-			const screenNow: Screen = {
+			const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+			const forScreen = (codec: Screen["codec"]): Screen => ({
 				big: !codec && screen.width * devicePixelRatio >= 3400,
-				calm: matchMedia("(prefers-reduced-motion: reduce)").matches,
+				calm,
 				codec,
 				tall: matchMedia("(max-aspect-ratio: 1/1)").matches,
-			};
-			const { calm } = screenNow;
-			const url = storyUrls(screenNow);
+			});
+			// The quick codec answer serves anything asked for while the honest one is on its
+			// way; the honest one picks every file that loads.
+			let url = storyUrls(forScreen(canPlayAv1() ? "" : "-hevc"));
 
 			// ---- Loading: whole files into blob URLs, so playback never waits on the network ----
 			const blobs: string[] = [];
 			let alive = true;
 			const media = { loop: loops, move: moves, still: stills };
-			const plan = loadPlan(screenNow).map((item) => ({
-				...item,
-				media: media[item.kind][item.index] as
-					| HTMLImageElement
-					| HTMLVideoElement,
-			}));
+			const planFor = (s: Screen) =>
+				loadPlan(s).map((item) => ({
+					...item,
+					media: media[item.kind][item.index] as
+						| HTMLImageElement
+						| HTMLVideoElement,
+				}));
 			const readWhole = async (res: Response, onBytes: (n: number) => void) => {
 				const reader = res.body?.getReader();
 				const parts: BlobPart[] = [];
@@ -124,6 +165,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				queue = queue.then(() => fill(m, src));
 			};
 			const loadAll = async (onProgress: (p: number) => void) => {
+				const screenNow = forScreen((await decodesAv1()) ? "" : "-hevc");
+				url = storyUrls(screenNow);
+				const plan = planFor(screenNow);
 				const gate = plan.filter((f) => f.scene < GATE);
 				const later = plan.filter((f) => f.scene >= GATE);
 				try {
@@ -320,6 +364,12 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				loops[from].pause();
 				swapCopy(from, to);
 				setDots(to);
+				gsap.to(early, {
+					autoAlpha: to === N - 1 ? 0 : 1,
+					duration: 0.3,
+					ease: "brandOut",
+					overwrite: true,
+				});
 				if (calm) {
 					fadeTo(to);
 				} else {
@@ -410,9 +460,16 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				});
 				rest(0);
 				showHint();
+				gsap.fromTo(
+					early,
+					{ autoAlpha: 0 },
+					{ autoAlpha: 1, delay: 0.6, duration: 0.5, ease: "brandOut" }
+				);
 			});
 
 			const observer = Observer.create({
+				// Taps and swipes on the waitlist belong to the form, not the story.
+				ignore: "[data-waitlist], [data-early], dialog",
 				onDown: (self) => go(-1, self.event.type !== "wheel"),
 				onPress: () => story.getState().press(),
 				onUp: (self) => go(1, self.event.type !== "wheel"),
@@ -423,9 +480,12 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				wheelSpeed: -1,
 			});
 			const onKey = (e: KeyboardEvent) => {
-				// Typing in the waitlist form must never move the story.
+				// Typing in the waitlist form must never move the story, and Space on a focused
+				// button presses it; arrow keys still move the story from a button.
+				const target = e.target as HTMLElement;
 				if (
-					(e.target as HTMLElement).closest("input, textarea, dialog, button")
+					target.closest("input, textarea, dialog") ||
+					(e.key === " " && target.closest("button, a"))
 				) {
 					return;
 				}
@@ -569,7 +629,17 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 								</div>
 							</div>
 						) : null}
-						{i === N - 1 ? <StoreBadges copy={copy} /> : null}
+						{i === N - 1 ? (
+							<div
+								className="bg-plate-dark mx-auto mt-[1vh] w-[min(100%,520px)] rounded-[28px] p-4 text-left shadow-[0_18px_40px_rgba(0,0,0,0.45)] max-[899px]:w-[calc(100%-40px)] min-[900px]:p-5"
+								data-waitlist
+							>
+								<WaitlistForm copy={copy.waitlist} share={share} />
+								<p className="text-cream/85 mt-3 text-center text-[15px] font-bold">
+									{copy.waitlist.comingSoon}
+								</p>
+							</div>
+						) : null}
 					</section>
 				);
 			})}
@@ -588,6 +658,8 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 					</span>
 				))}
 			</div>
+
+			<EarlyAccess copy={copy.waitlist} share={share} />
 
 			<div
 				className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-[18px] bg-[image:var(--sky-puffy)]"

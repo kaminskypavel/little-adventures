@@ -1,5 +1,5 @@
 /** The most words the read-along card shows at once: about three lines at the narration size. */
-export const WINDOW_WORDS = 12;
+const WINDOW_WORDS = 12;
 
 const SENTENCE_END = /[.!?]["')’”]*$/u;
 

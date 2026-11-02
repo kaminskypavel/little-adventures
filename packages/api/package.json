@@ -16,7 +16,6 @@
     "@little-adventures/storage": "workspace:*",
     "@little-adventures/transcribe": "workspace:*",
     "@little-adventures/validation": "workspace:*",
-    "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "drizzle-orm": "1.0.0-rc.5",
     "zod": "catalog:"

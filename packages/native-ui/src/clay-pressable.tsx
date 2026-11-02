@@ -1,5 +1,11 @@
 import { selectionAsync } from "expo-haptics";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	type AccessibilityRole,
 	type AccessibilityState,
@@ -80,7 +86,9 @@ export function ClayPressable({
 	});
 
 	const onPressRef = useRef(onPress);
-	onPressRef.current = onPress;
+	useLayoutEffect(() => {
+		onPressRef.current = onPress;
+	}, [onPress]);
 	const fire = useCallback(() => onPressRef.current?.(), []);
 
 	const { focused, props: focusProps } = useFocusRing(!disabled);
