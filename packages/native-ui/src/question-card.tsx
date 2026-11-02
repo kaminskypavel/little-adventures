@@ -28,6 +28,7 @@ export function QuestionCard({
 			]}
 		>
 			<Text
+				allowFontScaling={false}
 				style={{
 					color: colors.inkNavy,
 					fontFamily: fonts.heavy,

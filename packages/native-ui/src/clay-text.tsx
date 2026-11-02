@@ -50,6 +50,7 @@ export function ClayText({
 	const merged = StyleSheet.flatten([type[variant], style]);
 	return (
 		<Text
+			allowFontScaling={false}
 			style={[
 				type[variant],
 				{ color, textAlign: align },

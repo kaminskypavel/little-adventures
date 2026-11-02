@@ -27,6 +27,7 @@ export function NamePill({
 			]}
 		>
 			<Text
+				allowFontScaling={false}
 				numberOfLines={1}
 				style={{
 					color: colors.cream,

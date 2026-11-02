@@ -36,6 +36,7 @@ export function StatusPill({
 				}}
 			>
 				<Text
+					allowFontScaling={false}
 					style={{
 						color: colors.sun,
 						fontFamily: fonts.label,

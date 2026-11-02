@@ -24,6 +24,7 @@ export function SpeechPlate({
 			<Text
 				accessibilityRole="header"
 				adjustsFontSizeToFit
+				allowFontScaling={false}
 				minimumFontScale={0.7}
 				numberOfLines={2}
 				style={styles.text}

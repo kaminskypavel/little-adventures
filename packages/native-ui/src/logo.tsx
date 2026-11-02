@@ -99,6 +99,7 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 		>
 			<View style={{ transform: [{ rotate: `${letter.tilt}deg` }] }}>
 				<Text
+					allowFontScaling={false}
 					style={[
 						...glyph,
 						{
@@ -112,6 +113,7 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 					{letter.ch}
 				</Text>
 				<Text
+					allowFontScaling={false}
 					style={[
 						...glyph,
 						StyleSheet.absoluteFill,

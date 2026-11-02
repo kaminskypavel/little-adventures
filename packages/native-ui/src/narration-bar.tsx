@@ -67,6 +67,7 @@ export function NarrationBar({
 						}
 					>
 						<Text
+							allowFontScaling={false}
 							style={[
 								type.narration,
 								{ color: index === current ? colors.nowWordInk : colors.cream },

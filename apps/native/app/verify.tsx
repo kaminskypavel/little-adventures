@@ -60,6 +60,7 @@ export default function Verify() {
 					<View style={styles.card}>
 						<Text
 							adjustsFontSizeToFit
+							allowFontScaling={false}
 							minimumFontScale={0.6}
 							numberOfLines={CARD_LINES}
 							style={styles.text}

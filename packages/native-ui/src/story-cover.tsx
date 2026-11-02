@@ -113,6 +113,7 @@ export function StoryCover({
 				}}
 			>
 				<Text
+					allowFontScaling={false}
 					style={{
 						color: colors.inkNavy,
 						fontFamily: fonts.heavy,
@@ -125,6 +126,7 @@ export function StoryCover({
 				</Text>
 				{caption ? (
 					<Text
+						allowFontScaling={false}
 						style={{
 							color: colors.inkNavy,
 							fontFamily: fonts.label,

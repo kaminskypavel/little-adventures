@@ -29,6 +29,7 @@ export function FoundPanel({
 			]}
 		>
 			<Text
+				allowFontScaling={false}
 				style={{
 					color: colors.inkNavy,
 					fontFamily: fonts.heavy,
@@ -52,6 +53,7 @@ export function FoundPanel({
 						}}
 					/>
 					<Text
+						allowFontScaling={false}
 						style={{
 							color: colors.inkNavy,
 							fontFamily: fonts.label,

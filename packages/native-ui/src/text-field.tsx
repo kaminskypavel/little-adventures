@@ -81,6 +81,7 @@ export function TextField({
 				>
 					<TextInput
 						accessibilityLabel={label}
+						allowFontScaling={false}
 						cursorColor={colors.caret}
 						placeholderTextColor={colors.fieldPlaceholder}
 						selectionColor={colors.caret}

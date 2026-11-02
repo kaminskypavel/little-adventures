@@ -35,6 +35,7 @@ export function Plate({
 				]}
 			>
 				<Text
+					allowFontScaling={false}
 					style={{
 						color: colors.inkNavy,
 						fontFamily: fonts.label,
@@ -70,6 +71,7 @@ export function Plate({
 				<Icon color={colors.inkNavy} name={icon} size={iconSize} />
 			) : null}
 			<Text
+				allowFontScaling={false}
 				numberOfLines={1}
 				style={{
 					color: colors.inkNavy,
