@@ -1,12 +1,13 @@
 import { useEventListener } from "expo";
+import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Character, characterShadow } from "./character";
-import { Hop } from "./hop";
 import { useCalm } from "./motion-provider";
 import { starSource } from "./star-source";
 import type { StarTakeName } from "./star-source-files";
+import { starWebp } from "./star-webp";
 
 export type { StarTakeName } from "./star-source-files";
 
@@ -219,6 +220,55 @@ function StarSlot({ active, id, onEnd, onReady, take }: StarSlotProps) {
 	);
 }
 
+// Every take is 124 frames at 24 fps.
+const TAKE_MS = Math.round((124 * 1000) / 24);
+
+/**
+ * Android: the takes as animated WebP. A take plays once and the star rests on idle (`onTakeEnd`
+ * then), like the video chain; held, it repeats for as long as it is asked for. A new take starts
+ * at once (the parent remounts this per take).
+ */
+function PictureTakes({
+	hold,
+	onTakeEnd,
+	pictures,
+	size,
+	take,
+}: {
+	hold: boolean;
+	onTakeEnd?: (take: StarTakeName) => void;
+	pictures: Record<StarTakeName, number>;
+	size: number;
+	take: StarTakeName;
+}) {
+	const [shown, setShown] = useState(take);
+	useEffect(() => {
+		if (hold || take === "idle") {
+			return;
+		}
+		const timer = setTimeout(() => {
+			setShown("idle");
+			onTakeEnd?.(take);
+		}, TAKE_MS);
+		return () => clearTimeout(timer);
+	}, [hold, onTakeEnd, take]);
+	return (
+		<View
+			accessibilityLabel="The happy star"
+			accessibilityRole="image"
+			pointerEvents="none"
+			style={[styles.box, { height: size, width: size }]}
+		>
+			<Image
+				accessibilityIgnoresInvertColors
+				contentFit="contain"
+				source={pictures[shown]}
+				style={videoBox}
+			/>
+		</View>
+	);
+}
+
 interface StarTakeProps {
 	/**
 	 * Follow `take` live: a new take starts at once instead of waiting for the current one to end,
@@ -268,13 +318,19 @@ export function StarTake({
 		}
 	}, []);
 
-	// Android's players drop the takes' transparency (VP9 alpha), so it shows the still star with
-	// the shared bob. Reduced motion: still (Hop does not move then).
-	if (calm || Platform.OS === "android") {
+	if (calm) {
+		return <Character kind="star" size={size} />;
+	}
+	if (starWebp) {
 		return (
-			<Hop>
-				<Character kind="star" size={size} />
-			</Hop>
+			<PictureTakes
+				hold={hold}
+				key={`${take}-${hold}`}
+				onTakeEnd={onTakeEnd}
+				pictures={starWebp}
+				size={size}
+				take={take}
+			/>
 		);
 	}
 
