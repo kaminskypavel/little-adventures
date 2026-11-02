@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { EaseView } from "react-native-ease";
 import { iosTextNudge } from "./clay-text";
 import { useCalm } from "./motion-provider";
 import { fonts } from "./tokens";
@@ -65,12 +65,6 @@ const lines: Letter[][] = spec.map((line) =>
 	})
 );
 
-const bob = {
-	"0%": { transform: [{ translateY: 0 }] },
-	"50%": { transform: [{ translateY: -BOB }] },
-	"100%": { transform: [{ translateY: 0 }] },
-};
-
 const glyph = [
 	{
 		fontFamily: fonts.heavy,
@@ -81,19 +75,26 @@ const glyph = [
 	iosTextNudge({ fontSize: SIZE, lineHeight: SIZE }),
 ];
 
+/**
+ * The bob (0, up BOB, back, ease-in-out) runs on the platform's own animator (react-native-ease:
+ * Core Animation on iOS, ObjectAnimator on Android, CSS on the web). As Reanimated CSS animations
+ * the 16 letters made it rebuild the screen's view tree on every frame.
+ */
 function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 	const { color } = letter;
 	return (
-		<Animated.View
-			style={
+		<EaseView
+			animate={{ translateY: calm ? 0 : -BOB }}
+			initialAnimate={{ translateY: 0 }}
+			transition={
 				calm
-					? null
+					? { type: "none" }
 					: {
-							animationDelay: `${letter.delay}s`,
-							animationDuration: `${BOB_MS}ms`,
-							animationIterationCount: "infinite",
-							animationName: bob,
-							animationTimingFunction: "ease-in-out",
+							delay: letter.delay * 1000,
+							duration: BOB_MS / 2,
+							easing: "easeInOut",
+							loop: "reverse",
+							type: "timing",
 						}
 			}
 		>
@@ -128,7 +129,7 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 					{letter.ch}
 				</Text>
 			</View>
-		</Animated.View>
+		</EaseView>
 	);
 }
 
