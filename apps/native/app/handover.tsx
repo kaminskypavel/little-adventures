@@ -4,10 +4,8 @@ import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { getProfile } from "@/src/data/adventure-client";
-import type { Profile } from "@/src/data/types";
+import { useChild } from "@/src/data/profile-queries";
 
 // Round 7 06 at 0.72 scale: star 180 px = 250 pt at top 104 px, title 34 px = 47 pt at 318 px,
 // line 17 px = 24 pt at 372 px.
@@ -17,11 +15,7 @@ const LINE = { fontSize: 24, lineHeight: 30, opacity: 0.92 } as const;
 
 export default function Handover() {
 	const router = useRouter();
-	const [profile, setProfile] = useState<Profile | null>(null);
-
-	useEffect(() => {
-		getProfile().then(setProfile);
-	}, []);
+	const profile = useChild().data?.profile;
 
 	if (!profile) {
 		return null;

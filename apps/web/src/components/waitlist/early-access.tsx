@@ -16,7 +16,7 @@ export function EarlyAccess({
 	copy: Dictionary["waitlist"];
 	share: Share;
 }) {
-	const dialog = useRef<WaitlistDialogHandle>(null);
+	const dialog = useRef<WaitlistDialogHandle | null>(null);
 
 	return (
 		<>

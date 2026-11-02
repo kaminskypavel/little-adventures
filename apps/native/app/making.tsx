@@ -308,6 +308,8 @@ export default function Making() {
 	// nothing here.
 	const hydrated = useSpokenHydrated();
 	const [question, setQuestion] = useState<string | null>(null);
+	// Read with the question, for the same reason: the store is cleared when the adventure starts.
+	const [facts, setFacts] = useState<string[]>([]);
 	useEffect(() => {
 		if (hydrated && question === null) {
 			const asked = picked || getSpokenQuestion();
@@ -322,8 +324,6 @@ export default function Making() {
 			}
 		}
 	}, [hydrated, picked, question]);
-	// Read with the question, for the same reason: the store is cleared when the adventure starts.
-	const [facts, setFacts] = useState<string[]>([]);
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
 	const [noun, setNoun] = useState(FALLBACK_NOUN);

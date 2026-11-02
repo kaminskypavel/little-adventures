@@ -15,6 +15,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -30,8 +31,8 @@ import {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { getProfile } from "@/src/data/adventure-client";
 import { endSource, wordIndexAt } from "@/src/data/playback";
+import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
 import type {
 	Adventure,
@@ -186,7 +187,9 @@ function TimerPlayer({
 	const [playing, setPlaying] = useState(true);
 
 	const endRef = useRef(onEnd);
-	endRef.current = onEnd;
+	useLayoutEffect(() => {
+		endRef.current = onEnd;
+	}, [onEnd]);
 	const fireEnd = useCallback(() => endRef.current(), []);
 
 	const total = words.length;
@@ -301,7 +304,9 @@ function MediaPlayer({
 	const [narrationEnded, setNarrationEnded] = useState(false);
 
 	const endRef = useRef(onEnd);
-	endRef.current = onEnd;
+	useLayoutEffect(() => {
+		endRef.current = onEnd;
+	}, [onEnd]);
 	const fireEnd = useCallback(() => {
 		if (!ended.current) {
 			ended.current = true;
@@ -461,15 +466,7 @@ export default function Place() {
 	const id = params.id ?? "box";
 	const node = (params.node ?? "p1") as NodeId;
 	const { adventure, onMediaError, visit } = useAdventure(id);
-	const [childName, setChildName] = useState<string | null>(null);
-
-	useEffect(() => {
-		let live = true;
-		getProfile().then((profile) => live && setChildName(profile.childName));
-		return () => {
-			live = false;
-		};
-	}, []);
+	const childName = useChildName();
 
 	const goodnight = node === "outro";
 
@@ -485,7 +482,7 @@ export default function Place() {
 		[id, router]
 	);
 
-	if (!adventure || childName === null) {
+	if (!adventure || childName === undefined) {
 		return null;
 	}
 	const place = adventure.places[node];

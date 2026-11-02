@@ -71,15 +71,6 @@ export const mockAdventure: Adventure = {
 	title: "The Box That Flew",
 };
 
-/** Variant for the "still being drawn" edge state. */
-export const withDrawing = (node: NodeId): Adventure => ({
-	...mockAdventure,
-	places: {
-		...mockAdventure.places,
-		[node]: { ...mockAdventure.places[node], status: "drawing" },
-	},
-});
-
 const summary = (
 	id: string,
 	title: string,

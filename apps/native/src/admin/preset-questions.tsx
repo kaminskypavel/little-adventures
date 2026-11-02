@@ -7,7 +7,7 @@ import { setSpokenFacts, setSpokenQuestion } from "@/src/data/spoken-question";
 import { useAdminPanel } from "./admin-panel-store";
 
 /** Ready-made questions so an admin can test the flow without recording. */
-export const PRESET_QUESTIONS = [
+const PRESET_QUESTIONS = [
 	"Why do dogs bark?",
 	"How do bees make honey?",
 	"Why is the sky blue?",

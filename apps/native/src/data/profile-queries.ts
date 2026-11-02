@@ -20,7 +20,7 @@ type GrownUp = Awaited<ReturnType<typeof trpcClient.grownUp.mine.query>>;
 // While the art is drawn, the child is read again this often.
 const POLL_MS = 1500;
 
-export const childOptions = () =>
+const childOptions = () =>
 	trpc.child.mine.queryOptions(undefined, {
 		refetchInterval: (query) =>
 			query.state.data?.some((row: ChildRow) => row.artStatus === "working")
@@ -42,6 +42,13 @@ export const grownUpOptions = () =>
 
 /** The child as the screens know it. Undefined data while loading. */
 export const useChild = () => useQuery({ ...childOptions(), select: toChild });
+
+/** The child's name from the same cache: undefined while loading, "" before setup. */
+export const useChildName = () =>
+	useQuery({
+		...childOptions(),
+		select: (rows: ChildRows) => toChild(rows).profile.childName,
+	}).data;
 
 /** The grown-up's own photo: undefined while loading, null when none is saved. */
 export const useGrownUpPhoto = () =>

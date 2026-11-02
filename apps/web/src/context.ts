@@ -43,5 +43,3 @@ export async function createContext(req: Request): Promise<ApiContext> {
 		waitUntil: (work) => after(work),
 	};
 }
-
-export type Context = Awaited<ReturnType<typeof createContext>>;

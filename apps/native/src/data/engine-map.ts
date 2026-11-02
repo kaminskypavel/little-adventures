@@ -18,8 +18,8 @@ import type {
 	Progress,
 } from "./types";
 
-export const NODE_IDS: readonly NodeId[] = ["intro", ...PLACES, "outro"];
-export const PLACES_TOTAL = PLACES.length;
+const NODE_IDS: readonly NodeId[] = ["intro", ...PLACES, "outro"];
+const PLACES_TOTAL = PLACES.length;
 
 /** The first url seen for each file (by storage key), so a fresh read never swaps a playing file. */
 export type KnownUrls = Map<string, string>;

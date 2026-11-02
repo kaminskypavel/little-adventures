@@ -3,7 +3,7 @@ import {
 	notificationAsync,
 	selectionAsync,
 } from "expo-haptics";
-import { useCallback, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import {
 	GestureDetector,
@@ -58,7 +58,9 @@ export function HoldGate({
 	const pressed = useSharedValue(0);
 
 	const onOpenRef = useRef(onOpen);
-	onOpenRef.current = onOpen;
+	useLayoutEffect(() => {
+		onOpenRef.current = onOpen;
+	}, [onOpen]);
 	const open = useCallback(() => onOpenRef.current(), []);
 	const openWithTick = useCallback(() => {
 		notificationAsync(NotificationFeedbackType.Success);

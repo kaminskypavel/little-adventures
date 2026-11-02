@@ -60,7 +60,11 @@
         "useExhaustiveDependencies": "info",
         "useHookAtTopLevel": "warn",
         "noUnusedFunctionParameters": "warn",
-        "noReactNativeRawText": "warn"
+        // ClayText (packages/native-ui) renders a React Native <Text>.
+        "noReactNativeRawText": {
+          "level": "warn",
+          "options": { "skip": ["ClayText"] }
+        }
       },
       "performance": {
         "noJsxPropsBind": "off",
@@ -90,6 +94,15 @@
       }
     }
   },
+  "overrides": [
+    {
+      // Web code renders to the DOM, where raw text is valid.
+      "includes": ["apps/web/**", "packages/ui/**"],
+      "linter": {
+        "rules": { "correctness": { "noReactNativeRawText": "off" } }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
