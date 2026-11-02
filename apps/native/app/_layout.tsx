@@ -14,9 +14,14 @@ import { Sky } from "@little-adventures/native-ui/sky";
 import { TitleHoldProvider } from "@little-adventures/native-ui/title-hold";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { DarkTheme, Stack, ThemeProvider } from "expo-router";
-import { preventAutoHideAsync } from "expo-splash-screen";
+import { DarkTheme, Stack, ThemeProvider, usePathname } from "expo-router";
+import {
+	hideAsync,
+	preventAutoHideAsync,
+	setOptions,
+} from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PhoneFrame } from "@/components/phone-frame";
@@ -26,10 +31,22 @@ import { useAdminHold } from "@/src/admin/use-admin-hold";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { queryClient } from "@/src/data/query-client";
-import { LaunchHandover } from "@/src/launch-handover";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
+// The native splash cross-fades into the first screen (iOS cuts by default; Android already fades).
+setOptions({ duration: 400, fade: true });
+
+/** Hides the splash once the start page has chosen the first screen, so it never shows a blank. */
+function SplashGate() {
+	const pathname = usePathname();
+	useEffect(() => {
+		if (pathname !== "/") {
+			hideAsync();
+		}
+	}, [pathname]);
+	return null;
+}
 
 // The navigation theme paints its own background; make it clear so the Sky shows.
 const clearTheme = {
@@ -77,8 +94,7 @@ export default function Layout() {
 											</ThemeProvider>
 											<AdminHint />
 											<AdminPanel />
-											{/* Hides the native splash once it is drawn (see LaunchHandover). */}
-											<LaunchHandover />
+											<SplashGate />
 										</View>
 									</QueryClientProvider>
 								</BodyFadeProvider>
