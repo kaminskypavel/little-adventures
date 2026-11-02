@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+	Platform,
 	type StyleProp,
 	StyleSheet,
 	TextInput,
@@ -95,7 +96,7 @@ export function TextField({
 							onFocus?.(event);
 						}}
 						style={[
-							long ? type.fieldLong : type.headline,
+							inputType(long ? type.fieldLong : type.headline),
 							styles.input,
 							webCaret,
 							inputStyle,
@@ -106,6 +107,18 @@ export function TextField({
 			<FieldError message={error} />
 		</View>
 	);
+}
+
+/**
+ * The field's type. iOS centres a one-line field's text on the font's own line height, so a
+ * lineHeight there (tighter than Nunito's) only pushes the text off centre.
+ */
+function inputType(style: TextStyle): TextStyle {
+	if (Platform.OS !== "ios") {
+		return style;
+	}
+	const { lineHeight: _, ...font } = style;
+	return font;
 }
 
 // Colour on native too; the caret and "no outline" parts only matter on web, and RN's TextStyle
