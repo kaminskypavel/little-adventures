@@ -106,7 +106,7 @@ function Coming({ profile }: { profile: Profile }) {
 		<Screen
 			bodyStyle={styles.body}
 			dock={<PrimaryButton disabled={!who} label="Next" onPress={next} />}
-			title={"Who's\ncoming along?"}
+			title="Who else?"
 		>
 			<Portrait faceUrl={profile.faceUrl} name={profile.childName} />
 			<Plate

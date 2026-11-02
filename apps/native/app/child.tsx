@@ -72,7 +72,7 @@ function ChildForm({ profile }: { profile: Profile }) {
 		<Screen
 			bodyStyle={styles.body}
 			dock={<PrimaryButton label="Next" onPress={next} />}
-			title={"Who's\nthe hero?"}
+			title="Your hero"
 		>
 			<Controller
 				control={control}

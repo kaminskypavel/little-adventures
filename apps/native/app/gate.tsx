@@ -14,7 +14,7 @@ export default function Gate() {
 	const router = useRouter();
 
 	return (
-		<Screen title={"For\ngrown-ups"}>
+		<Screen title="Grown-ups">
 			<ClayText
 				align="center"
 				color={colors.cream}

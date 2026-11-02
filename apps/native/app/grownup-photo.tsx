@@ -112,7 +112,7 @@ export default function GrownUpPhoto() {
 					/>
 				}
 				scrolls
-				title={"Add a\nphoto of you"}
+				title="Your photo"
 			>
 				<ScrollView
 					automaticallyAdjustKeyboardInsets
@@ -158,7 +158,7 @@ export default function GrownUpPhoto() {
 					/>
 				)
 			}
-			title={"Add a\nphoto of you"}
+			title="Your photo"
 		>
 			<PhotoRing done={false} photoUri={pending ?? photoUri} />
 			<SecondaryButton

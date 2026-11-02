@@ -51,7 +51,7 @@ export default function Verify() {
 						onPress={() => router.push("/style")}
 					/>
 				}
-				title={"Did I hear\nyou right?"}
+				title="Is that it?"
 			>
 				<View style={styles.reader}>
 					<StarTake size={STAR_SIZE} take="idle" />

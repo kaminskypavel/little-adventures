@@ -47,7 +47,7 @@ export default function End() {
 			}
 			scrolls
 			// A blank line keeps the headline's room while the name loads.
-			title={childName ? `Goodnight,\n${childName}!` : " "}
+			title="Goodnight!"
 		>
 			{adventure && childName ? (
 				<Animated.View

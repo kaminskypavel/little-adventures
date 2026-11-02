@@ -155,7 +155,7 @@ export default function Account() {
 			<Screen
 				bodyStyle={styles.fieldBody}
 				dock={<PrimaryButton label="Send me a code" onPress={send} />}
-				title={"Hi,\ngrown-up"}
+				title="Hello!"
 			>
 				<Controller
 					control={emailForm.control}
@@ -192,7 +192,7 @@ export default function Account() {
 			<Screen
 				bodyStyle={styles.fieldBody}
 				dock={<PrimaryButton label="Sign in" onPress={signIn} />}
-				title={"Hi,\ngrown-up"}
+				title="Hello!"
 			>
 				<Controller
 					control={codeForm.control}
@@ -239,7 +239,7 @@ export default function Account() {
 					onPress={google}
 				/>
 			}
-			title={"Hi,\ngrown-up"}
+			title="Hello!"
 		>
 			<ClayText
 				align="center"

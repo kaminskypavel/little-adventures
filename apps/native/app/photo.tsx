@@ -73,7 +73,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 					onPress={() => choose("camera")}
 				/>
 			}
-			title={`Add a\nphoto of ${profile.childName}`}
+			title="Photo time"
 		>
 			<PhotoRing done={done} photoUri={photoUri} />
 			<SecondaryButton
