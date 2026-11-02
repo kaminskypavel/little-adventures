@@ -24,6 +24,7 @@ import {
 	useGrownUpPhoto,
 	useSaveProfile,
 } from "@/src/data/profile-queries";
+import { mark } from "@/src/data/timeline";
 import type { Profile } from "@/src/data/types";
 
 const looks: { label: string; picture: number; style: Style }[] = [
@@ -119,17 +120,19 @@ export default function StylePicker() {
 	// Video is the costly step: an admin with video clips on chooses first.
 	const { data: child } = useChild();
 	const asksFirst = isAdminMe(me) && me?.steps.video === true;
-	const go = () =>
+	const go = () => {
+		mark("start-tap");
 		router.replace({
 			params: question ? { question, style: picked } : { style: picked },
 			pathname: "/making",
 		});
+	};
 	const start = () => (asksFirst ? setConfirming(true) : go());
 
 	return (
 		<View style={styles.root}>
 			<Screen
-				dock={<PrimaryButton label="Start" onPress={start} />}
+				dock={<PrimaryButton label="Start" onPress={start} testID="start" />}
 				scrolls
 				title="Get ready"
 			>

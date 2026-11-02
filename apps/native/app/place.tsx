@@ -34,6 +34,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { endSource, wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
+import { mark } from "@/src/data/timeline";
 import type {
 	Adventure,
 	NarrationAudio,
@@ -112,7 +113,7 @@ function PlayerChrome({
 	);
 	const shown = useMemo(() => words.slice(start, end), [words, start, end]);
 	return (
-		<View style={styles.root}>
+		<View style={styles.root} testID="place-player">
 			{frame}
 			<Scrim />
 			<View
@@ -175,6 +176,7 @@ function TimerPlayer({
 	durationMs,
 	frame,
 	name,
+	node,
 	onBack,
 	onEnd,
 	words,
@@ -182,6 +184,7 @@ function TimerPlayer({
 	durationMs: number;
 	frame: ReactNode;
 	name: string;
+	node: NodeId;
 	onBack: () => void;
 	onEnd: () => void;
 	words: string[];
@@ -194,7 +197,10 @@ function TimerPlayer({
 	useLayoutEffect(() => {
 		endRef.current = onEnd;
 	}, [onEnd]);
-	const fireEnd = useCallback(() => endRef.current(), []);
+	const fireEnd = useCallback(() => {
+		mark("place-end", { detail: { cause: "grace" }, place: node });
+		endRef.current();
+	}, [node]);
 
 	const total = words.length;
 	useAnimatedReaction(
@@ -266,6 +272,7 @@ function MediaPlayer({
 	clip,
 	cover,
 	name,
+	node,
 	onBack,
 	onEnd,
 	onMediaError,
@@ -277,6 +284,7 @@ function MediaPlayer({
 	/** The picture, shown when there is no clip and until the clip has a frame. */
 	cover: ReactNode;
 	name: string;
+	node: NodeId;
 	onBack: () => void;
 	onEnd: () => void;
 	onMediaError: () => void;
@@ -311,41 +319,56 @@ function MediaPlayer({
 	useLayoutEffect(() => {
 		endRef.current = onEnd;
 	}, [onEnd]);
-	const fireEnd = useCallback(() => {
-		if (!ended.current) {
-			ended.current = true;
-			endRef.current();
+	const fireEnd = useCallback(
+		(cause: "grace" | "last-part" | "narration") => {
+			if (!ended.current) {
+				ended.current = true;
+				mark("place-end", { detail: { cause }, place: node });
+				endRef.current();
+			}
+		},
+		[node]
+	);
+	// The picture goes when the clip shows its first frame; the mark is the first time only.
+	const frameMarked = useRef<boolean>(false);
+	const showFrame = useCallback(() => {
+		if (!frameMarked.current) {
+			frameMarked.current = true;
+			mark("first-frame", { part: 1, place: node });
 		}
-	}, []);
+		setFramed(true);
+	}, [node]);
 
 	useEventListener(videoPlayer, "statusChange", ({ status }) =>
 		setClipStatus(status)
 	);
 	useEventListener(videoPlayer, "timeUpdate", ({ currentTime }) => {
 		if (currentTime > 0) {
-			setFramed(true);
+			showFrame();
 		}
 	});
 	useEventListener(videoPlayer, "playToEnd", () => {
 		if (hasClip) {
-			fireEnd();
+			mark("part-end", { part: 1, place: node });
+			fireEnd("last-part");
 		}
 	});
 	useEffect(() => {
 		if (heard.didJustFinish) {
+			mark("narration-end", { place: node });
 			setNarrationEnded(true);
 		}
-	}, [heard.didJustFinish]);
+	}, [heard.didJustFinish, node]);
 	useEffect(() => {
 		if (source === "narration" && narrationEnded) {
-			fireEnd();
+			fireEnd("narration");
 		}
 	}, [fireEnd, narrationEnded, source]);
 	useEffect(() => {
 		if (source !== "timer" || !playing) {
 			return;
 		}
-		const timer = setTimeout(fireEnd, timerMs);
+		const timer = setTimeout(() => fireEnd("grace"), timerMs);
 		return () => clearTimeout(timer);
 	}, [fireEnd, playing, source, timerMs]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
@@ -364,12 +387,13 @@ function MediaPlayer({
 		}
 		started.current = true;
 		if (hasNarration) {
+			mark("narration-start", { place: node });
 			audioPlayer.play();
 		}
 		if (hasClip) {
 			videoPlayer.play();
 		}
-	}, [audioPlayer, hasClip, hasNarration, playing, ready, videoPlayer]);
+	}, [audioPlayer, hasClip, hasNarration, node, playing, ready, videoPlayer]);
 
 	const toggle = () => {
 		if (started.current) {
@@ -393,7 +417,7 @@ function MediaPlayer({
 					allowsPictureInPicture={false}
 					contentFit="cover"
 					nativeControls={false}
-					onFirstFrameRender={() => setFramed(true)}
+					onFirstFrameRender={showFrame}
 					player={videoPlayer}
 					playsInline
 					pointerEvents="none"
@@ -517,6 +541,7 @@ export default function Place() {
 				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
 				frame={cover}
 				name={place.name}
+				node={node}
 				onBack={onBack}
 				onEnd={onEnd}
 				words={words}
@@ -530,6 +555,7 @@ export default function Place() {
 			cover={cover}
 			key={`${place.video}|${audio?.url}`}
 			name={place.name}
+			node={node}
 			onBack={onBack}
 			onEnd={onEnd}
 			onMediaError={onMediaError}

@@ -21,6 +21,7 @@ import {
 	missingPlaces,
 } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
+import { mark, markScreen } from "@/src/data/timeline";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -115,6 +116,8 @@ export default function Choice() {
 	const childName = useChildName();
 	const [picked, setPicked] = useState<NodeId | null>(null);
 	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	// The last drawing count marked, so a screen is marked once per count (not on every render).
+	const marked = useRef<number | null>(null);
 
 	useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -159,8 +162,11 @@ export default function Choice() {
 			return;
 		}
 		setPicked(node);
+		mark("choice", { place: node });
 		timer.current = setTimeout(() => walkTo(node), SELECT_MS);
 	};
+	const drawingCount = cards.filter((c) => c.state === "drawing").length;
+	markScreen(marked, "choice", drawingCount);
 	const peek = drawing ? other : undefined;
 	const starTake = starTakeFor({ drawing, goodnightOpen, waiting });
 	const missing = missingPlaces(visited);
@@ -208,6 +214,7 @@ export default function Choice() {
 								? { height: choice.heightTight }
 								: undefined
 						}
+						testID={`choice-${card.node}`}
 					/>
 				))}
 			</View>

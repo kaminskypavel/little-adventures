@@ -9,9 +9,10 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
+import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -42,6 +43,8 @@ export default function StoryMapScreen() {
 	const { adventure, progress: stored } = useAdventure(id);
 	// From the shared cache, so the title is there on the first frame.
 	const childName = useChildName() ?? "";
+	// The last drawing count marked, so a screen is marked once per count (not on every render).
+	const marked = useRef<number | null>(null);
 
 	// Dev only: ?visited=intro,p1 pretends those places were walked, in that order.
 	const devVisited = dev(params.visited)?.split(",").filter(isNode);
@@ -87,6 +90,10 @@ export default function StoryMapScreen() {
 		const places = Object.fromEntries(
 			PLACE_IDS.map((node) => [node, place(node)])
 		) as Record<MapPlaceNode, MapPlace>;
+		const drawing = PLACE_IDS.filter(
+			(node) => adventure.places[node].status === "drawing"
+		).length;
+		markScreen(marked, "map", drawing);
 		const goodnightOpen = !isOutroLocked(progress);
 		// The road just walked glows: from the node visited before this one, to this one.
 		const at = progress.visited.indexOf(progress.here);
@@ -127,6 +134,7 @@ export default function StoryMapScreen() {
 						icon="play"
 						label="Keep walking"
 						onPress={() => progress && openPlace(progress.here)}
+						testID="keep-walking"
 					/>
 				}
 				topBar={

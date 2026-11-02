@@ -51,6 +51,7 @@ import {
 	useSpokenHydrated,
 } from "@/src/data/spoken-question";
 import { toStyle } from "@/src/data/styles";
+import { mark } from "@/src/data/timeline";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
@@ -413,6 +414,7 @@ export default function Making() {
 
 	useEffect(() => {
 		if (revealed) {
+			mark("wait-ready");
 			notificationAsync(NotificationFeedbackType.Success);
 		}
 	}, [revealed]);
@@ -451,6 +453,7 @@ export default function Making() {
 									pathname: "/map",
 								})
 							}
+							testID="ready-start"
 						/>
 					</Fade>
 				}

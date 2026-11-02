@@ -158,6 +158,7 @@ export function ChoiceCard({
 	selected = false,
 	state = "open",
 	style,
+	testID,
 }: {
 	kind?: "goal" | "place";
 	name: string;
@@ -168,6 +169,7 @@ export function ChoiceCard({
 	selected?: boolean;
 	state?: ChoiceState;
 	style?: StyleProp<ViewStyle>;
+	testID?: string;
 }) {
 	const calm = useCalm();
 	const locked = state === "locked";
@@ -266,6 +268,7 @@ export function ChoiceCard({
 					onPress={handlePress}
 					radius={choice.radius}
 					style={{ flex: 1 }}
+					testID={testID}
 					tone={TONES[state]}
 				>
 					<View
