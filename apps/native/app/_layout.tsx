@@ -24,12 +24,43 @@ import { PhoneFrame } from "@/components/phone-frame";
 import { AdminHint } from "@/src/admin/admin-hint";
 import { AdminPanel } from "@/src/admin/admin-switches";
 import { useAdminHold } from "@/src/admin/use-admin-hold";
+import { useSession } from "@/src/auth/use-session";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { queryClient } from "@/src/data/query-client";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
+
+// Every screen past sign-in needs a signed-in grown-up; signed out, the router falls back to the
+// start (index), which sends them to Welcome. Only index, welcome, account and +not-found are open.
+const SIGNED_IN_SCREENS = [
+	"beta",
+	"child",
+	"choice",
+	"coming",
+	"end",
+	"gate",
+	"grownup-photo",
+	"grownups",
+	"handover",
+	"hello",
+	"home",
+	"kit",
+	"kit-cards",
+	"kit-flat",
+	"kit-map",
+	"kit-select",
+	"library",
+	"listening",
+	"making",
+	"map",
+	"oops",
+	"photo",
+	"place",
+	"style",
+	"verify",
+] as const;
 
 // The navigation theme paints its own background; make it clear so the Sky shows.
 const clearTheme = {
@@ -48,6 +79,8 @@ export default function Layout() {
 		Nunito_900Black,
 	});
 	const ready = loaded || error !== null;
+	// Nothing renders until the session is known, so no screen shows for a moment to a visitor.
+	const { status } = useSession();
 
 	useEffect(() => {
 		if (ready) {
@@ -55,7 +88,7 @@ export default function Layout() {
 		}
 	}, [ready]);
 
-	if (!ready) {
+	if (!ready || status === "loading") {
 		return null;
 	}
 
@@ -77,7 +110,13 @@ export default function Layout() {
 														contentStyle: { backgroundColor: "transparent" },
 														headerShown: false,
 													}}
-												/>
+												>
+													<Stack.Protected guard={status === "signed-in"}>
+														{SIGNED_IN_SCREENS.map((name) => (
+															<Stack.Screen key={name} name={name} />
+														))}
+													</Stack.Protected>
+												</Stack>
 											</ThemeProvider>
 											<AdminHint />
 											<AdminPanel />
