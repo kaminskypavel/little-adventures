@@ -34,6 +34,33 @@ const NAV_KEYS = {
 	next: ["ArrowDown", "PageDown", " "],
 };
 
+const AV1 = 'video/mp4; codecs="av01.0.12M.08"';
+const AV1_CHECK: MediaDecodingConfiguration = {
+	type: "file",
+	video: {
+		bitrate: 2_000_000,
+		contentType: AV1,
+		framerate: 24,
+		height: 1080,
+		width: 1920,
+	},
+};
+const canPlayAv1 = () =>
+	document.createElement("video").canPlayType(AV1) !== "";
+// Some Safari builds answer "probably" to AV1 in canPlayType and then cannot decode it
+// (black story). mediaCapabilities answers honestly there, so it gets the last word.
+const decodesAv1 = async () => {
+	if (!canPlayAv1()) {
+		return false;
+	}
+	try {
+		return (await navigator.mediaCapabilities.decodingInfo(AV1_CHECK))
+			.supported;
+	} catch {
+		return true;
+	}
+};
+
 export function VideoStory({ copy }: { copy: Dictionary }) {
 	const root = useRef<HTMLDivElement>(null);
 
@@ -56,29 +83,28 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 			const bar = el.querySelector<HTMLElement>("[data-bar]");
 			const hint = el.querySelector<HTMLElement>("[data-hint]");
 
-			const probe = document.createElement("video");
-			const codec = probe.canPlayType('video/mp4; codecs="av01.0.12M.08"')
-				? ""
-				: "-hevc";
-			const screenNow: Screen = {
+			const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+			const forScreen = (codec: Screen["codec"]): Screen => ({
 				big: !codec && screen.width * devicePixelRatio >= 3400,
-				calm: matchMedia("(prefers-reduced-motion: reduce)").matches,
+				calm,
 				codec,
 				tall: matchMedia("(max-aspect-ratio: 1/1)").matches,
-			};
-			const { calm } = screenNow;
-			const url = storyUrls(screenNow);
+			});
+			// The quick codec answer serves anything asked for while the honest one is on its
+			// way; the honest one picks every file that loads.
+			let url = storyUrls(forScreen(canPlayAv1() ? "" : "-hevc"));
 
 			// ---- Loading: whole files into blob URLs, so playback never waits on the network ----
 			const blobs: string[] = [];
 			let alive = true;
 			const media = { loop: loops, move: moves, still: stills };
-			const plan = loadPlan(screenNow).map((item) => ({
-				...item,
-				media: media[item.kind][item.index] as
-					| HTMLImageElement
-					| HTMLVideoElement,
-			}));
+			const planFor = (s: Screen) =>
+				loadPlan(s).map((item) => ({
+					...item,
+					media: media[item.kind][item.index] as
+						| HTMLImageElement
+						| HTMLVideoElement,
+				}));
 			const readWhole = async (res: Response, onBytes: (n: number) => void) => {
 				const reader = res.body?.getReader();
 				const parts: BlobPart[] = [];
@@ -124,6 +150,9 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				queue = queue.then(() => fill(m, src));
 			};
 			const loadAll = async (onProgress: (p: number) => void) => {
+				const screenNow = forScreen((await decodesAv1()) ? "" : "-hevc");
+				url = storyUrls(screenNow);
+				const plan = planFor(screenNow);
 				const gate = plan.filter((f) => f.scene < GATE);
 				const later = plan.filter((f) => f.scene >= GATE);
 				try {
