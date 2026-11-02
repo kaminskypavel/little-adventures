@@ -6,7 +6,9 @@ import { colors, flat, fonts } from "@little-adventures/native-ui/tokens";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { beginDraft } from "@/src/data/adventure-client";
 import {
+	getSpokenQuestion,
 	useSpokenHydrated,
 	useSpokenQuestion,
 } from "@/src/data/spoken-question";
@@ -48,7 +50,10 @@ export default function Verify() {
 					<PrimaryButton
 						label="Yes, let's go!"
 						// The adventure starts from the full transcript, not the short one.
-						onPress={() => router.push("/style")}
+						onPress={() => {
+							beginDraft(getSpokenQuestion());
+							router.push("/style");
+						}}
 					/>
 				}
 				title="Is that it?"

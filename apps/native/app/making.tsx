@@ -38,7 +38,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import {
 	getAdventure,
 	loaderFacts,
-	startAdventure,
+	startDrafted,
 	watchMaking,
 } from "@/src/data/adventure-client";
 import type { Style } from "@/src/data/engine-client";
@@ -368,7 +368,7 @@ export default function Making() {
 			let id = resumeId ?? "";
 			if (!id) {
 				try {
-					({ id } = await startAdventure(question, style));
+					id = await startDrafted({ question, style });
 				} catch {
 					if (live) {
 						router.replace("/oops");

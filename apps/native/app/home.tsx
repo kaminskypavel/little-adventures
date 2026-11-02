@@ -22,6 +22,7 @@ import {
 } from "react-native-safe-area-context";
 import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
 import { PresetQuestions } from "@/src/admin/preset-questions";
+import { beginDraft, prepareChild } from "@/src/data/adventure-client";
 import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 import {
@@ -351,6 +352,12 @@ export default function Home() {
 		}, [router])
 	);
 	const { arm, disarm } = ask;
+	// Once per app session, however often Home opens.
+	useFocusEffect(
+		useCallback(() => {
+			prepareChild();
+		}, [])
+	);
 	const { deny } = mic;
 
 	const close = useCallback(() => {
@@ -421,9 +428,10 @@ export default function Home() {
 					ask={ask}
 					ideas={data.ideas}
 					listening={listening}
-					onAsk={(question) =>
-						router.push({ params: { question }, pathname: "/style" })
-					}
+					onAsk={(question) => {
+						beginDraft(question);
+						router.push({ params: { question }, pathname: "/style" });
+					}}
 					progress={progress}
 					stage={stage}
 				/>

@@ -4,6 +4,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
+import { createDraftStore } from "./draft-store";
 import {
 	createEngineClient,
 	type EngineAdventure,
@@ -256,6 +257,43 @@ export const startAdventure = async (
 	const made = await engine.createAdventure(childId, question, style);
 	return { id: made.id };
 };
+
+const drafts = engine
+	? createDraftStore({
+			create: (question, style) => startAdventure(question, style),
+			createDraft: async (question) => {
+				const { id: childId } = await loadChild();
+				if (!childId) {
+					throw new Error("No child is set up yet");
+				}
+				return engine.createDraft(childId, question);
+			},
+			prepare: async () => {
+				const { id: childId } = await loadChild();
+				if (!childId) {
+					throw new Error("No child is set up yet");
+				}
+				return engine.prepareChild(childId);
+			},
+			sleep,
+			start: (id, style) => engine.startDraft(id, style),
+		})
+	: null;
+
+/** Starts preparing an adventure for the confirmed question. Returns at once. */
+export const beginDraft = (question: string) => drafts?.beginDraft(question);
+
+/** Gets the child's next adventure ready: once per app session, errors ignored. */
+export const prepareChild = () => drafts?.prepareOnce();
+
+/** Starts the adventure (the prepared one when there is one) and gives its id. */
+export const startDrafted = async (input: {
+	question: string;
+	style: Style;
+}): Promise<string> =>
+	drafts
+		? drafts.startDrafted(input)
+		: (await startAdventure(input.question, input.style)).id;
 
 /**
  * Reports "making" until about 12 s have passed, then "ready". Returns unsubscribe. With the
