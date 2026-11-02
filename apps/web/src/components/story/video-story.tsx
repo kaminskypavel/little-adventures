@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import { StoreBadges } from "@/components/waitlist/store-badges";
+import { EarlyAccess } from "@/components/waitlist/early-access";
+import { WaitlistForm } from "@/components/waitlist/waitlist-form";
 import { Wordmark } from "@/components/wordmark";
-import type { Dictionary, SceneId } from "@/i18n/dictionaries";
+import type { Dictionary, Locale, SceneId } from "@/i18n/dictionaries";
 import { gsap, Observer, useGSAP } from "@/lib/gsap";
 import { GATE, loadPlan, type Screen, storyUrls } from "./story-plan";
 import { createStoryStore } from "./story-store";
@@ -61,8 +62,21 @@ const decodesAv1 = async () => {
 	}
 };
 
-export function VideoStory({ copy }: { copy: Dictionary }) {
+// Shares point at the short address; it redirects to the page in the same language.
+const SHARE_BASE = "https://littleadventures.app";
+
+export function VideoStory({
+	copy,
+	locale,
+}: {
+	copy: Dictionary;
+	locale: Locale;
+}) {
 	const root = useRef<HTMLDivElement>(null);
+	const share = {
+		text: copy.meta.title,
+		url: locale === "en" ? SHARE_BASE : `${SHARE_BASE}/${locale}`,
+	};
 
 	useGSAP(
 		() => {
@@ -82,6 +96,7 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 			const loader = el.querySelector<HTMLElement>("[data-loader]");
 			const bar = el.querySelector<HTMLElement>("[data-bar]");
 			const hint = el.querySelector<HTMLElement>("[data-hint]");
+			const early = el.querySelector<HTMLElement>("[data-early]");
 
 			const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
 			const forScreen = (codec: Screen["codec"]): Screen => ({
@@ -349,6 +364,12 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				loops[from].pause();
 				swapCopy(from, to);
 				setDots(to);
+				gsap.to(early, {
+					autoAlpha: to === N - 1 ? 0 : 1,
+					duration: 0.3,
+					ease: "brandOut",
+					overwrite: true,
+				});
 				if (calm) {
 					fadeTo(to);
 				} else {
@@ -439,9 +460,16 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				});
 				rest(0);
 				showHint();
+				gsap.fromTo(
+					early,
+					{ autoAlpha: 0 },
+					{ autoAlpha: 1, delay: 0.6, duration: 0.5, ease: "brandOut" }
+				);
 			});
 
 			const observer = Observer.create({
+				// Taps and swipes on the waitlist belong to the form, not the story.
+				ignore: "[data-waitlist], [data-early], dialog",
 				onDown: (self) => go(-1, self.event.type !== "wheel"),
 				onPress: () => story.getState().press(),
 				onUp: (self) => go(1, self.event.type !== "wheel"),
@@ -452,9 +480,12 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 				wheelSpeed: -1,
 			});
 			const onKey = (e: KeyboardEvent) => {
-				// Typing in the waitlist form must never move the story.
+				// Typing in the waitlist form must never move the story, and Space on a focused
+				// button presses it; arrow keys still move the story from a button.
+				const target = e.target as HTMLElement;
 				if (
-					(e.target as HTMLElement).closest("input, textarea, dialog, button")
+					target.closest("input, textarea, dialog") ||
+					(e.key === " " && target.closest("button, a"))
 				) {
 					return;
 				}
@@ -598,7 +629,17 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 								</div>
 							</div>
 						) : null}
-						{i === N - 1 ? <StoreBadges copy={copy} /> : null}
+						{i === N - 1 ? (
+							<div
+								className="bg-plate-dark mx-auto mt-[1vh] w-[min(100%,520px)] rounded-[28px] p-4 text-left shadow-[0_18px_40px_rgba(0,0,0,0.45)] max-[899px]:w-[calc(100%-40px)] min-[900px]:p-5"
+								data-waitlist
+							>
+								<WaitlistForm copy={copy.waitlist} share={share} />
+								<p className="text-cream/85 mt-3 text-center text-[15px] font-bold">
+									{copy.waitlist.comingSoon}
+								</p>
+							</div>
+						) : null}
 					</section>
 				);
 			})}
@@ -617,6 +658,8 @@ export function VideoStory({ copy }: { copy: Dictionary }) {
 					</span>
 				))}
 			</div>
+
+			<EarlyAccess copy={copy.waitlist} share={share} />
 
 			<div
 				className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-[18px] bg-[image:var(--sky-puffy)]"

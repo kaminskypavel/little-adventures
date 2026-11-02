@@ -112,6 +112,21 @@ test.describe("languages", () => {
 	});
 });
 
+test("early access opens a form that asks for the email only", async ({
+	page,
+}) => {
+	test.setTimeout(LOAD_TEST_TIMEOUT);
+	await page.goto("/");
+	await waitForStory(page);
+	await page.locator("[data-early]").click();
+	const dialog = page.locator("dialog[open]");
+	await expect(dialog.locator('input[type="email"]')).toBeVisible();
+	await expect(
+		dialog.getByRole("button", { name: "Send me an invitation" })
+	).toBeVisible();
+	await expect(dialog.locator("input")).toHaveCount(1);
+});
+
 for (const path of ["/", "/es", "/fr"]) {
 	test(`share tags and canonical on ${path}`, async ({ page }) => {
 		await page.goto(path, { waitUntil: "domcontentloaded" });
