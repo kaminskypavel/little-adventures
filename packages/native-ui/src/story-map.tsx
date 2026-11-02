@@ -1,6 +1,6 @@
 import { Image, type ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	type LayoutChangeEvent,
 	StyleSheet,
@@ -537,7 +537,9 @@ export function StoryMap({
 	);
 	const walking = stops.length > 1;
 	const walked = useRef(onWalked);
-	walked.current = onWalked;
+	useLayoutEffect(() => {
+		walked.current = onWalked;
+	}, [onWalked]);
 	// Already standing at the place: nothing to walk, open it.
 	useEffect(() => {
 		if (walkTo && !walking && measured) {
