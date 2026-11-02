@@ -5,6 +5,10 @@
   "type": "module",
   "exports": {
     "./tokens": "./src/tokens.ts",
+    "./sky": {
+      "browser": "./src/sky.web.tsx",
+      "default": "./src/sky.tsx"
+    },
     "./*": "./src/*.tsx"
   },
   "scripts": {
