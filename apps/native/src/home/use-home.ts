@@ -1,10 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { devFlags, getHome, getIdeas } from "@/src/data/adventure-client";
+import {
+	devFlags,
+	homeOptions,
+	ideasOptions,
+} from "@/src/data/adventure-client";
 import { micPermission } from "@/src/data/mic-permission";
 import { useChild } from "@/src/data/profile-queries";
-import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
 
 /**
@@ -15,40 +19,27 @@ import { dev } from "@/src/dev-param";
 export function useHomeData(first: string | undefined) {
 	const child = useChild();
 	const refetchChild = child.refetch;
-	const [adventures, setAdventures] = useState<AdventureSummary[] | null>(null);
-	const [ideas, setIdeas] = useState<Idea[] | null>(null);
+	const home = useQuery(homeOptions());
+	const refetchHome = home.refetch;
+	const ideas = useQuery(ideasOptions());
 
 	useFocusEffect(
 		useCallback(() => {
-			let live = true;
 			// Dev query: /home?first=1 shows the first-home state (no stories yet).
 			if (first !== undefined) {
 				devFlags.isFirstHome = first === "1";
 			}
-			getHome()
-				.then((home) => [...home.keepGoing, ...home.finished])
-				.catch(() => [])
-				.then((list) => live && setAdventures(list));
-			// Read the child again on every focus (fresh picture urls); a read already running is kept.
+			// The cached list and child paint at once; both are read again on every focus (fresh
+			// picture urls). A read already running is kept, unless the dev query must apply.
+			refetchHome({ cancelRefetch: first !== undefined });
 			refetchChild({ cancelRefetch: false });
-			return () => {
-				live = false;
-			};
-		}, [first, refetchChild])
+		}, [first, refetchChild, refetchHome])
 	);
 
-	useEffect(() => {
-		let live = true;
-		getIdeas().then((list) => live && setIdeas(list));
-		return () => {
-			live = false;
-		};
-	}, []);
-
 	return {
-		adventures,
+		adventures: home.data ?? null,
 		avatarUrl: child.data?.avatarUrl ?? null,
-		ideas,
+		ideas: ideas.data ?? null,
 		name: child.data?.profile.childName ?? null,
 	};
 }

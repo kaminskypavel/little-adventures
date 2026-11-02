@@ -14,10 +14,17 @@ mock.module("@/src/auth/auth-client", () => ({
 		throw new Error("the engine must not be called without its url");
 	},
 }));
+// The child is read through the shared cache (React Query options over tRPC).
+const options = (key: string, value: unknown) => () => ({
+	queryFn: () => Promise.resolve(value),
+	queryKey: [key],
+});
 mock.module("./trpc", () => ({
-	trpcClient: {
-		child: { mine: { query: () => Promise.resolve([stubChild]) } },
+	trpc: {
+		child: { mine: { queryOptions: options("child", [stubChild]) } },
+		grownUp: { mine: { queryOptions: options("grown-up", null) } },
 	},
+	trpcClient: {},
 }));
 mock.module("./mock-adventure", () => ({
 	finished: [],

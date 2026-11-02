@@ -6,7 +6,11 @@ import {
 	visit as visitNode,
 } from "./adventure-client";
 import { makeExpiryGuard, pollAdventure, sleep } from "./engine-client";
+import { queryClient } from "./query-client";
 import type { Adventure, NodeId, Progress } from "./types";
+
+// In the shared cache, which signing out clears.
+const adventureKey = (id: string) => ["adventure", id] as const;
 
 const keepIfSame =
 	<T>(next: T) =>
@@ -22,7 +26,10 @@ const keepIfSame =
  * adventure again for fresh ones.
  */
 export function useAdventure(id: string) {
-	const [adventure, setAdventure] = useState<Adventure | null>(null);
+	// The last read of this adventure paints at once (map, place and choice each open it again).
+	const [adventure, setAdventure] = useState<Adventure | null>(
+		() => queryClient.getQueryData<Adventure>(adventureKey(id)) ?? null
+	);
 	const [progress, setProgress] = useState<Progress | null>(null);
 
 	useEffect(() => {
@@ -30,6 +37,7 @@ export function useAdventure(id: string) {
 		pollAdventure({
 			isLive: () => live,
 			onRead: (a) => {
+				queryClient.setQueryData(adventureKey(id), a);
 				setAdventure(keepIfSame(a));
 				getProgress(id).then((p) => live && setProgress(keepIfSame(p)));
 			},

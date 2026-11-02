@@ -1,6 +1,7 @@
 // The only module screens import data functions from. With EXPO_PUBLIC_ENGINE_URL set the
 // adventure bodies call the engine; unset, they play the bundled adventure. The profile, photo
 // and looks always stay on the app's own server (screens read those through profile-queries.ts).
+import { queryOptions } from "@tanstack/react-query";
 import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
 import {
@@ -26,6 +27,8 @@ import {
 	transcribedQuestion,
 } from "./mock-adventure";
 import { toChild } from "./profile-map";
+import { childOptions, grownUpOptions } from "./profile-queries";
+import { queryClient } from "./query-client";
 import { trpcClient } from "./trpc";
 import type {
 	Adventure,
@@ -173,6 +176,22 @@ export const getLatestAdventure =
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
 
 /**
+ * Home's stories in the shared cache, so Home paints the last list at once and reads it again
+ * behind it. Unfinished first, then finished. A list that cannot be read shows as none.
+ */
+export const homeOptions = () =>
+	queryOptions({
+		queryFn: () =>
+			getHome()
+				.then((home) => [...home.keepGoing, ...home.finished])
+				.catch((): AdventureSummary[] => []),
+		queryKey: ["home"],
+	});
+
+export const ideasOptions = () =>
+	queryOptions({ queryFn: getIdeas, queryKey: ["ideas"] });
+
+/**
  * A spoken question (WAV bytes) as text. With the bundled adventure the canned question comes
  * back, as it always did. With the engine an empty recording is never sent and gives "".
  */
@@ -313,7 +332,14 @@ export const getAdventures = (): Promise<AdventureSummary[]> =>
 
 /** The caller's first child, or the empty profile when there is none yet. */
 async function loadChild(): Promise<{ id?: string; profile: Profile }> {
-	const { id, profile } = toChild(await trpcClient.child.mine.query());
+	// From the shared cache when it is there (read again behind it when stale), so a screen that
+	// asks for the child's name paints at once instead of after a round trip.
+	const rows = await queryClient.ensureQueryData({
+		...childOptions(),
+		retry: false,
+		revalidateIfStale: true,
+	});
+	const { id, profile } = toChild(rows);
 	return { id, profile };
 }
 
@@ -340,6 +366,10 @@ const isOutsideBeta = (error: unknown) =>
  * (a child is set up) or the first welcome.
  */
 export const startRoute = async (): Promise<"/beta" | "/hello" | "/home"> => {
+	// Read what the next screens show while the child is read, so they paint from the cache.
+	queryClient.prefetchQuery(grownUpOptions());
+	queryClient.prefetchQuery(homeOptions());
+	queryClient.prefetchQuery(ideasOptions());
 	try {
 		const { id } = await loadChild();
 		return id === undefined ? "/hello" : "/home";
