@@ -1,7 +1,12 @@
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import {
+	type LayoutChangeEvent,
+	Platform,
+	StyleSheet,
+	View,
+} from "react-native";
 import Animated from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
 import { useCalm } from "./motion-provider";
@@ -427,6 +432,21 @@ const twinkle = {
 	"100%": { opacity: 0.1, transform: [{ scale: 0.6 }] },
 };
 
+/**
+ * The glow around a star. On iOS a box shadow costs the GPU several offscreen passes per star on
+ * every frame of the twinkle; the layer's own shadow around the solid dot is drawn from its
+ * outline instead, at no extra pass (shadowRadius is half the CSS blur).
+ */
+const starGlow = (size: number) =>
+	Platform.OS === "ios"
+		? {
+				shadowColor: "rgba(255,255,255,0.75)",
+				shadowOffset: { height: 0, width: 0 },
+				shadowOpacity: 1,
+				shadowRadius: (size * 2.5) / 2,
+			}
+		: { boxShadow: `0px 0px ${size * 2.5}px rgba(255,255,255,0.75)` };
+
 function Stars({ calm }: { calm: boolean }) {
 	return (
 		<>
@@ -439,7 +459,7 @@ function Stars({ calm }: { calm: boolean }) {
 						{
 							backgroundColor: colors.star,
 							borderRadius: s.size / 2,
-							boxShadow: `0px 0px ${s.size * 2.5}px rgba(255,255,255,0.75)`,
+							...starGlow(s.size),
 							height: s.size,
 							left: s.left,
 							opacity: 0.75,
