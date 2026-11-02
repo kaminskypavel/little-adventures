@@ -13,6 +13,10 @@ export const END_MARGIN_SEC = 0.1;
 export const GRACE_MS = 3000;
 /** How long a finished narration keeps the picture up for a first part that is still being made. */
 export const LEAD_HOLD_MS = 12_000;
+/** Own audio: how long the picture stands alone before part 1's audio starts over it. */
+export const LEAD_OWN_HOLD_MS = 1500;
+/** Own audio: how long a first part is waited for once its audio has ended, before the rest play over the picture. */
+export const LEAD_AFTER_VOICE_MS = 20_000;
 
 /** The part on screen has reached its end: its end event came, or its time is nearly its length. */
 export const reachedEnd = (currentTime: number, duration: number) =>
@@ -331,7 +335,7 @@ const waitsOnVoice = (s: PlayState) =>
  * place ends), or the narration is paused for a part that is not here (it talks on).
  */
 export const graceDue = (s: PlayState) =>
-	!s.done &&
+	!(s.done || (s.own && leadHolding(s))) &&
 	((s.phase === "waiting" &&
 		(s.narrationEnded || (s.stall !== null && !s.speaking))) ||
 		waitsOnVoice(s));
@@ -349,6 +353,14 @@ export const leadHolding = (s: PlayState) =>
 	!s.lead.ended &&
 	!s.lead.expired &&
 	s.parts[0]?.status === "making";
+
+/** How long the picture waits (`leadHolding`) before the lead hold runs out. */
+export const leadHoldMs = (s: PlayState) => {
+	if (!s.own) {
+		return LEAD_HOLD_MS;
+	}
+	return s.half === 0 ? LEAD_OWN_HOLD_MS : LEAD_AFTER_VOICE_MS;
+};
 
 const sameParts = (a: Part[], b: Part[]) =>
 	a.length === b.length &&
@@ -466,7 +478,20 @@ function endVoice(s: PlayState, now: number): Step {
 	if (!(s.own && s.speaking)) {
 		return unchanged(s);
 	}
-	return settle(giveUp({ ...s, speaking: false }), "narration", now);
+	const base = giveUp({ ...s, speaking: false });
+	// Part 1's audio is over and part 1 is still being made: the picture waits for it again
+	// before the next audio plays.
+	const waits =
+		s.half === 0 &&
+		s.at < 0 &&
+		s.lead &&
+		!s.lead.ended &&
+		s.parts[0]?.status === "making";
+	return settle(
+		waits && s.lead ? { ...base, lead: { ...s.lead, expired: false } } : base,
+		"narration",
+		now
+	);
 }
 
 /** The narration's time: a half of the words may end, which lets the next part start. */

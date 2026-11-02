@@ -47,10 +47,10 @@ import {
 	graceDue,
 	hasParts,
 	LEAD_FADE_MS,
-	LEAD_HOLD_MS,
 	LEAD_ZOOM_MS,
 	LEAD_ZOOM_TO,
 	leadHolding,
+	leadHoldMs,
 	leadZoom,
 	neighbourUrls,
 	ownVoices,
@@ -815,16 +815,14 @@ function MediaPlayer({
 	}, [playing, send, waitingOnPart]);
 	// The picture waits for part 1 only so long, then the words play over it.
 	const waitingOnFirst = leadHolding(view);
+	const holdMs = leadHoldMs(view);
 	useEffect(() => {
 		if (!(waitingOnFirst && playing)) {
 			return;
 		}
-		const timer = setTimeout(
-			() => send({ type: "lead-timeout" }),
-			LEAD_HOLD_MS
-		);
+		const timer = setTimeout(() => send({ type: "lead-timeout" }), holdMs);
 		return () => clearTimeout(timer);
-	}, [playing, send, waitingOnFirst]);
+	}, [holdMs, playing, send, waitingOnFirst]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
 	useEffect(() => {
 		if (narrationFailed) {
@@ -839,6 +837,7 @@ function MediaPlayer({
 		view.phase === "playing"
 			? statuses[view.slot] !== "readyToPlay"
 			: view.at < 0 && upcoming(view) !== null;
+	const slotStatus = statuses[view.slot];
 	const ready =
 		(!hasNarration || shownVoice.isLoaded || narrationFailed) && !videoPending;
 	useEffect(() => {
@@ -870,6 +869,19 @@ function MediaPlayer({
 		view.phase,
 		view.slot,
 	]);
+	// A part whose video landed late was given its file after play() was called: play again once
+	// the file is loaded (a part already playing is not touched).
+	const slotPlayer = view.slot === 0 ? player0 : player1;
+	useEffect(() => {
+		if (
+			playing &&
+			view.phase === "playing" &&
+			slotStatus === "readyToPlay" &&
+			!inPart.current
+		) {
+			slotPlayer.play();
+		}
+	}, [playing, slotPlayer, slotStatus, view.phase]);
 
 	const toggle = () => {
 		playingRef.current = !playing;

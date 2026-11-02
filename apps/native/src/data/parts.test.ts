@@ -6,8 +6,11 @@ import {
 	GRACE_MS,
 	graceDue,
 	hasParts,
+	LEAD_AFTER_VOICE_MS,
+	LEAD_OWN_HOLD_MS,
 	LEAD_ZOOM_TO,
 	leadHolding,
+	leadHoldMs,
 	leadZoom,
 	neighbourUrls,
 	ownVoices,
@@ -475,13 +478,114 @@ describe("each part has its own audio", () => {
 			13_000
 		);
 		expect(out.state.speaking).toBe(true);
-		const next = drive(out.state, voiceEnded);
-		expect(next.marks).toEqual(["narration-start 2"]);
+		// Part 1's audio ends: part 1 is waited for again before the next audio plays.
+		const wait = drive(out.state, voiceEnded);
+		expect(wait.marks).toEqual(["lead-hold-start 1"]);
+		const next = step(wait.state, leadTimeout, 40_000);
 		expect(next.state.speaking).toBe(true);
 		// Part 1 landing now plays at once; the audios go on.
-		const landed = step(next.state, parts(own[0], first[1]), 20_000);
+		const landed = step(next.state, parts(own[0], first[1]), 41_000);
 		expect(landed.state.at).toBe(0);
 		expect(landed.state.speaking).toBe(true);
+	});
+
+	describe("part 1 is still being made when the place starts", () => {
+		const late = [voiced("a", 15, 8, "making"), voiced("b", 15, 6, "making")];
+		const holding = () => step(begin(late, true, true), started, 1000);
+		const names = (marks: { name: string; part: number }[]) =>
+			marks.map((m) => `${m.name} ${m.part}`);
+
+		test("the audio starts over the picture after 1.5 s, part 1 lands mid-audio and plays whole", () => {
+			const hold = holding();
+			expect(leadHoldMs(hold.state)).toBe(LEAD_OWN_HOLD_MS);
+			expect(LEAD_OWN_HOLD_MS).toBe(1500);
+			const over = step(hold.state, leadTimeout, 2500);
+			expect(names(over.marks)).toEqual([
+				"lead-hold-end 1",
+				"narration-start 1",
+			]);
+			expect(over.state.speaking).toBe(true);
+			// Part 1 lands while its audio plays: it plays whole, the audio is not restarted.
+			const landed = step(over.state, parts(own[0], late[1]), 6000);
+			expect(names(landed.marks)).toEqual(["picture-lead-end 1"]);
+			expect(landed.state.at).toBe(0);
+			expect(landed.state.speaking).toBe(true);
+			expect(drive(landed.state, tick(0.5), tick(3.5)).marks).toEqual([]);
+			// The audio ends, then part 1 does; part 2 is not here yet.
+			const quiet = drive(landed.state, voiceEnded);
+			expect(quiet.marks).toEqual([]);
+			expect(quiet.state.speaking).toBe(false);
+			const gap = drive(quiet.state, ended);
+			expect(gap.marks).toEqual(["part-end 1", "stall-start 2"]);
+			// Part 2 lands: it plays whole with its own audio centred.
+			const second = drive(gap.state, parts(own[0], own[1]));
+			expect(second.marks).toEqual(["stall-end 2"]);
+			expect(second.state.at).toBe(1);
+			expect(drive(second.state, tick(4.4)).state.speaking).toBe(false);
+			const centred = step(second.state, tick(4.5));
+			expect(names(centred.marks)).toEqual(["narration-start 2"]);
+			const done = drive(centred.state, voiceEnded, ended);
+			expect(done.marks).toEqual(["part-end 2"]);
+			expect(done.end).toBe("last-part");
+		});
+
+		test("part 1 lands after its audio ended: it still plays whole, then part 2", () => {
+			const over = step(holding().state, leadTimeout, 2500).state;
+			const quiet = step(over, voiceEnded, 8000);
+			expect(names(quiet.marks)).toEqual(["lead-hold-start 1"]);
+			expect(leadHolding(quiet.state)).toBe(true);
+			expect(leadHoldMs(quiet.state)).toBe(LEAD_AFTER_VOICE_MS);
+			// Part 2's audio does not play over the picture while part 1 is waited for.
+			expect(quiet.state.speaking).toBe(false);
+			expect(graceDue(quiet.state)).toBe(false);
+			const landed = step(quiet.state, parts(own[0], own[1]), 12_000);
+			expect(names(landed.marks)).toEqual([
+				"lead-hold-end 1",
+				"picture-lead-end 1",
+			]);
+			expect(landed.state.at).toBe(0);
+			expect(landed.state.speaking).toBe(false);
+			const next = drive(landed.state, tick(5), ended);
+			expect(next.marks).toEqual(["part-end 1"]);
+			expect(next.state.at).toBe(1);
+			const centred = step(next.state, tick(4.5));
+			expect(names(centred.marks)).toEqual(["narration-start 2"]);
+		});
+
+		test("part 1 never lands: the other audios play over the picture and the place ends", () => {
+			const quiet = step(
+				step(holding().state, leadTimeout, 2500).state,
+				voiceEnded,
+				8000
+			).state;
+			const out = step(quiet, leadTimeout, 28_000);
+			expect(names(out.marks)).toEqual([
+				"lead-hold-end 1",
+				"narration-start 2",
+			]);
+			expect(out.state.speaking).toBe(true);
+			const last = step(out.state, voiceEnded, 33_000);
+			expect(graceDue(last.state)).toBe(true);
+			expect(step(last.state, grace, 36_000).end).toBe("grace");
+		});
+
+		test("part 1 failing after its audio ended plays the other audios at once", () => {
+			const quiet = step(
+				step(holding().state, leadTimeout, 2500).state,
+				voiceEnded,
+				8000
+			).state;
+			const lost = step(
+				quiet,
+				parts(voiced("a", 15, 8, "failed"), late[1]),
+				9000
+			);
+			expect(names(lost.marks)).toEqual([
+				"lead-hold-end 1",
+				"narration-start 2",
+			]);
+			expect(lost.state.speaking).toBe(true);
+		});
 	});
 
 	test("an old adventure (no audio on its parts) keeps one narration for the place", () => {
