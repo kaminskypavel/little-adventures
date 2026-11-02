@@ -149,8 +149,12 @@ function ListenWords({
 		>
 			<ClayText
 				accessibilityRole="header"
+				adjustsFontSizeToFit
 				align="center"
 				color={colors.cream}
+				minimumFontScale={0.7}
+				// One line: the hint sits right under it ("That wasn't a question" shrinks to fit).
+				numberOfLines={1}
 				style={[styles.at, { top: stage.listen.headlineTop }]}
 				variant="headline"
 			>
