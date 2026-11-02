@@ -8,7 +8,7 @@ import {
 } from "@little-adventures/native-ui/companion-track";
 import { Icon } from "@little-adventures/native-ui/icons";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { colors, radii } from "@little-adventures/native-ui/tokens";
+import { colors, radii, spacing } from "@little-adventures/native-ui/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -56,8 +56,22 @@ const looks: { label: string; picture: number; style: Style }[] = [
 // Phones shorter than this get the smaller sizes, so nothing scrolls on the smallest phone.
 const COMPACT_BELOW = 740;
 const sizes = {
-	compact: { chip: 52, gap: 16, hero: 92, heroPad: 16, thumb: 60, top: 10 },
-	tall: { chip: 60, gap: 24, hero: 120, heroPad: 20, thumb: 80, top: 16 },
+	compact: {
+		chip: 52,
+		gap: spacing.md,
+		hero: 92,
+		heroPad: 16,
+		thumb: 60,
+		top: spacing.md,
+	},
+	tall: {
+		chip: 60,
+		gap: spacing.lg,
+		hero: 120,
+		heroPad: 20,
+		thumb: 80,
+		top: spacing.lg,
+	},
 } as const;
 const CHIP_THUMB = 30;
 const CHIP_LOCK = 16;
@@ -249,8 +263,9 @@ export default function StylePicker() {
 				dock={<PrimaryButton label="Start" onPress={start} testID="start" />}
 				title="Get ready"
 			>
+				{/* gap and paddingTop are the minimums; space-evenly shares the leftover height. */}
 				<View
-					style={{ gap: size.gap, paddingTop: size.top }}
+					style={[styles.blocks, { gap: size.gap, paddingTop: size.top }]}
 					testID="get-ready"
 				>
 					<View style={styles.section}>
@@ -305,6 +320,7 @@ export default function StylePicker() {
 }
 
 const styles = StyleSheet.create({
+	blocks: { flex: 1, justifyContent: "space-evenly" },
 	chip: {
 		alignItems: "center",
 		flex: 1,
