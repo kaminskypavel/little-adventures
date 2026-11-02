@@ -10,7 +10,7 @@ Everything in this repo was written during the hackathon (building period Oct 27
 
 This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe). All of it was written this week. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app. The engine runs on our startup's proprietary technology, which existed before the hackathon. That technology uses Meta's models, through the public packages in this repo; how it uses them is what we cannot disclose during the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
 
-The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
+The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
 
 ```
 apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* ─► Meta models
@@ -24,12 +24,16 @@ apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* �
 | --- | --- | --- |
 | `apps/native` | The app the child and parent use. Runs in the browser first, then ships to iOS from the same code. | Expo, React Native, Uniwind |
 | `apps/web` | Public landing page and the tRPC API the app talks to. | Next.js, GSAP, tRPC |
-| `packages/api` | tRPC routers (waitlist). | tRPC, Zod |
+| `packages/api` | tRPC routers: child and grown-up profiles, photo upload, voice transcription, waitlist. | tRPC, Zod |
+| `packages/auth` | Sign-in, the app's bearer token and the private beta allowlist. | Neon Auth |
 | `packages/llm` | Structured-output client for Muse Spark. | Zod |
 | `packages/decision` | Yes or no question sets on Muse Spark, with a pass threshold. | Zod |
 | `packages/image-editing` | SAM 3.1 person cut-out and Muse Image looks, edits and generation. | |
 | `packages/transcribe` | Muse Voice Transcribe for the child's spoken question. | |
+| `packages/storage` | Photos and drawn looks in an S3-compatible bucket, with signed URLs. | AWS SDK (S3) |
+| `packages/validation` | Zod schemas the app and the server share (child, photo, sign-in). | Zod |
 | `packages/db` | Database schema and client. | Drizzle, Postgres (Neon) |
+| `packages/native-ui` | The app's clay design system: tokens, text, buttons, the map and the sky. | React Native, Reanimated |
 | `packages/ui` | Shared web UI primitives. | shadcn/ui, Tailwind CSS |
 | `packages/config` | Shared TypeScript config. | |
 
@@ -78,6 +82,7 @@ The production prompts were written this week and are held by the private engine
 | `bun run dev:native` | Start the Expo dev server |
 | `bun run build` | Build every app |
 | `bun run check-types` | Type-check the whole repo |
+| `bun run test` | Run every unit test suite |
 | `bun run db:generate` / `bun run db:migrate` | Create and apply database migrations |
 | `bunx ultracite check` / `bunx ultracite fix` | Lint and format (Biome) |
 
@@ -91,9 +96,18 @@ little-adventures/
 │   ├── native/   # Expo app (web first, then iOS)
 │   └── web/      # Next.js landing page and tRPC API
 ├── packages/
-│   ├── api/      # tRPC routers
-│   ├── config/   # Shared TypeScript config
-│   ├── db/       # Drizzle schema and client
-│   └── ui/       # Shared shadcn/ui components and styles
-└── PRODUCT.md    # Who it is for and what it must do
+│   ├── api/            # tRPC routers
+│   ├── auth/           # Sign-in and the private beta
+│   ├── config/         # Shared TypeScript config
+│   ├── db/             # Drizzle schema and client
+│   ├── decision/       # Muse Spark yes or no checks
+│   ├── image-editing/  # SAM 3.1 and Muse Image
+│   ├── llm/            # Muse Spark structured output
+│   ├── native-ui/      # The app's design system
+│   ├── storage/        # Photo and art bucket
+│   ├── transcribe/     # Muse Voice Transcribe
+│   ├── ui/             # Shared shadcn/ui components and styles
+│   └── validation/     # Shared zod schemas
+├── ARCHITECTURE.md     # The public and private split, for judges
+└── PRODUCT.md          # Who it is for and what it must do
 ```
