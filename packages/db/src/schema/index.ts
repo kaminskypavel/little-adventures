@@ -22,6 +22,18 @@ export const waitlist = littleAdventures.table("waitlist", {
 	platform: text("platform", { enum: ["ios", "android"] }),
 });
 
+// Grown-ups who joined the private beta with the invite code (the judges). Grown-ups on the
+// BETA_EMAILS list need no row. `livePerDay` caps their live adventures in any 24 hours; past
+// it they get the recorded adventure.
+export const betaMembers = littleAdventures.table("beta_members", {
+	email: text("email"),
+	joinedAt: timestamp("joined_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	livePerDay: integer("live_per_day").notNull().default(3),
+	ownerId: text("owner_id").primaryKey(),
+});
+
 export const ART_STATUSES = ["idle", "working", "ready", "failed"] as const;
 
 /** Look name to R2 key of the drawing, for example `{ clay: "little-adventures/users/..." }`. */

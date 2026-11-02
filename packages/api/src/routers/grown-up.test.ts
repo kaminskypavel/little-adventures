@@ -48,6 +48,7 @@ describe("grownUp", () => {
 		appRouter.createCaller({
 			art: { isConfigured: false } as ImageEditing,
 			db,
+			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage,

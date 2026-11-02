@@ -53,6 +53,7 @@
   },
   "globalEnv": [
     "BETA_EMAILS",
+    "BETA_INVITE_CODE",
     "CI",
     "DATABASE_URL",
     "EXPO_PUBLIC_ENGINE_URL",

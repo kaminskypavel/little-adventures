@@ -73,6 +73,7 @@ describe("voice.transcribe", () => {
 		appRouter.createCaller({
 			art: {} as ImageEditing,
 			db,
+			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: userId ? { user: { id: userId } } : null,
 			storage: {} as Storage,
