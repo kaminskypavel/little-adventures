@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
 	Platform,
 	type StyleProp,
@@ -9,7 +8,13 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import Animated, { cubicBezier } from "react-native-reanimated";
+import Animated, {
+	Easing,
+	interpolateColor,
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
 import { ClayText } from "./clay-text";
 import { FieldError } from "./field-error";
 import { useCalm } from "./motion-provider";
@@ -25,7 +30,7 @@ type TextFieldProps = Omit<TextInputProps, "style"> & {
 	style?: StyleProp<ViewStyle>;
 };
 
-const ease = cubicBezier(...motion.easeOut);
+const ease = Easing.bezier(...motion.easeOut);
 
 /**
  * A real, recessed text input. Not clay: no lift, no squash, no haptic.
@@ -42,12 +47,20 @@ export function TextField({
 	...input
 }: TextFieldProps) {
 	const calm = useCalm();
-	const [focused, setFocused] = useState(false);
+	// Focus lives in a shared value, not React state: a React commit right before the keyboard
+	// shows would skip the dock's ride above the keyboard on iOS (keyboard-controller, Fabric).
+	const focus = useSharedValue(0);
 	const duration = calm ? 0 : select.focus;
-	const fade = {
-		transitionDuration: duration,
-		transitionTimingFunction: ease,
-	} as const;
+	const setFocus = (to: number) =>
+		focus.set(withTiming(to, { duration, easing: ease }));
+	const ring = useAnimatedStyle(() => ({ opacity: focus.get() }));
+	const border = useAnimatedStyle(() => ({
+		borderColor: interpolateColor(
+			focus.get(),
+			[0, 1],
+			[colors.fieldBorder, colors.sun]
+		),
+	}));
 
 	return (
 		<View style={style}>
@@ -62,23 +75,21 @@ export function TextField({
 						{
 							borderRadius: radii.field,
 							boxShadow: shadows.fieldRing,
-							opacity: focused ? 1 : 0,
-							transitionProperty: "opacity",
-							...fade,
 						},
+						ring,
 					]}
 				/>
 				<Animated.View
-					style={{
-						backgroundColor: colors.fieldFill,
-						borderColor: focused ? colors.sun : colors.fieldBorder,
-						borderRadius: radii.field,
-						borderWidth: select.fieldBorder,
-						boxShadow: shadows.fieldWell,
-						height: select.fieldHeight,
-						transitionProperty: "borderColor",
-						...fade,
-					}}
+					style={[
+						{
+							backgroundColor: colors.fieldFill,
+							borderRadius: radii.field,
+							borderWidth: select.fieldBorder,
+							boxShadow: shadows.fieldWell,
+							height: select.fieldHeight,
+						},
+						border,
+					]}
 				>
 					<TextInput
 						accessibilityLabel={label}
@@ -88,11 +99,11 @@ export function TextField({
 						selectionColor={colors.caret}
 						{...input}
 						onBlur={(event) => {
-							setFocused(false);
+							setFocus(0);
 							onBlur?.(event);
 						}}
 						onFocus={(event) => {
-							setFocused(true);
+							setFocus(1);
 							onFocus?.(event);
 						}}
 						style={[

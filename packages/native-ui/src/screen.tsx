@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import {
+	Keyboard,
 	Platform,
+	Pressable,
 	type StyleProp,
 	StyleSheet,
 	View,
 	type ViewStyle,
 } from "react-native";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { cubicBezier } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton, useBackAction } from "./back-button";
@@ -81,6 +84,38 @@ function FadedBody({
 		>
 			{children}
 		</View>
+	);
+}
+
+/** The docked actions. They ride on top of the keyboard, the home-indicator gap traded for it. */
+function Dock({
+	calm,
+	children,
+	float,
+}: {
+	calm: boolean;
+	children: ReactNode;
+	float: boolean;
+}) {
+	const insets = useSafeAreaInsets();
+	const touches = float ? "box-none" : "auto";
+	return (
+		<KeyboardStickyView
+			offset={{ closed: 0, opened: insets.bottom }}
+			pointerEvents={touches}
+			style={float ? styles.floatDock : null}
+		>
+			<Animated.View
+				pointerEvents={touches}
+				style={[
+					styles.dock,
+					{ paddingBottom: insets.bottom + layout.dockBottom },
+					enter(2, calm),
+				]}
+			>
+				{children}
+			</Animated.View>
+		</KeyboardStickyView>
 	);
 }
 
@@ -188,21 +223,20 @@ export function Screen({
 					</TitleHold>
 				</Animated.View>
 			) : null}
-			<FadedBody bottom={fadeBottom} top={fadeTop}>
-				{body}
-			</FadedBody>
+			{/* A tap on the screen's empty space puts the keyboard away. */}
+			<Pressable
+				accessible={false}
+				onPress={Keyboard.dismiss}
+				style={styles.bodyWrap}
+			>
+				<FadedBody bottom={fadeBottom} top={fadeTop}>
+					{body}
+				</FadedBody>
+			</Pressable>
 			{dock ? (
-				<Animated.View
-					pointerEvents={floatDock ? "box-none" : "auto"}
-					style={[
-						styles.dock,
-						floatDock && styles.floatDock,
-						{ paddingBottom: insets.bottom + layout.dockBottom },
-						enter(2, calm),
-					]}
-				>
+				<Dock calm={calm} float={floatDock}>
 					{dock}
-				</Animated.View>
+				</Dock>
 			) : null}
 			{floatBack ? (
 				<View

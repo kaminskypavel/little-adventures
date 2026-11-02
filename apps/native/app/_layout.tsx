@@ -24,6 +24,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { PhoneFrame } from "@/components/phone-frame";
 import { AdminHint } from "@/src/admin/admin-hint";
 import { AdminPanel } from "@/src/admin/admin-switches";
@@ -80,38 +81,40 @@ export default function Layout() {
 
 	return (
 		<GestureHandlerRootView style={styles.root}>
-			<PhoneFrame>
-				<MotionProvider>
-					<FallbackArtProvider art={fallbackArt}>
-						<BackProvider useBack={useBack}>
-							<TitleHoldProvider useHold={useAdminHold}>
-								<BodyFadeProvider mask={FadeBottom}>
-									<QueryClientProvider client={queryClient}>
-										<View style={styles.field}>
-											<Sky />
-											<ThemeProvider value={clearTheme}>
-												<Stack
-													screenOptions={{
-														// No native cross-fade: like the web preview, the old screen goes at
-														// once and the new one's own enter (fade and rise) is the transition.
-														animation: "none",
-														contentStyle: { backgroundColor: "transparent" },
-														headerShown: false,
-													}}
-												/>
-											</ThemeProvider>
-											<AdminHint />
-											<AdminPanel />
-											<SplashGate />
-										</View>
-									</QueryClientProvider>
-								</BodyFadeProvider>
-							</TitleHoldProvider>
-						</BackProvider>
-					</FallbackArtProvider>
-					<StatusBar style="light" />
-				</MotionProvider>
-			</PhoneFrame>
+			<KeyboardProvider>
+				<PhoneFrame>
+					<MotionProvider>
+						<FallbackArtProvider art={fallbackArt}>
+							<BackProvider useBack={useBack}>
+								<TitleHoldProvider useHold={useAdminHold}>
+									<BodyFadeProvider mask={FadeBottom}>
+										<QueryClientProvider client={queryClient}>
+											<View style={styles.field}>
+												<Sky />
+												<ThemeProvider value={clearTheme}>
+													<Stack
+														screenOptions={{
+															// No native cross-fade: like the web preview, the old screen goes at
+															// once and the new one's own enter (fade and rise) is the transition.
+															animation: "none",
+															contentStyle: { backgroundColor: "transparent" },
+															headerShown: false,
+														}}
+													/>
+												</ThemeProvider>
+												<AdminHint />
+												<AdminPanel />
+												<SplashGate />
+											</View>
+										</QueryClientProvider>
+									</BodyFadeProvider>
+								</TitleHoldProvider>
+							</BackProvider>
+						</FallbackArtProvider>
+						<StatusBar style="light" />
+					</MotionProvider>
+				</PhoneFrame>
+			</KeyboardProvider>
 		</GestureHandlerRootView>
 	);
 }
