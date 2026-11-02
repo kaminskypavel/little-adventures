@@ -21,6 +21,8 @@ import { TitleHold } from "./title-hold";
 import { colors, layout, motion, spacing } from "./tokens";
 
 const [x1, y1, x2, y2] = motion.easeOut;
+// Space between the back button and the title.
+const TITLE_GAP = 8;
 const enterEase = cubicBezier(x1, y1, x2, y2);
 
 const riseIn = {
@@ -100,7 +102,7 @@ export function Screen({
 	onTitleLongPress,
 	scrolls = false,
 	title,
-	titleTop = layout.titleTop,
+	titleTop,
 	topBar,
 }: {
 	bodyStyle?: StyleProp<ViewStyle>;
@@ -117,8 +119,9 @@ export function Screen({
 	onTitleLongPress?: () => void;
 	/** The body holds a scroll view: content fades out under the headline instead of a flat cut. */
 	scrolls?: boolean;
+	/** One line: it sits on the back button's row, centred between the button and the right edge. */
 	title?: string;
-	/** Distance of the headline from the screen top. */
+	/** Distance of the headline from the screen top (default: on the back button's row). */
 	titleTop?: number;
 	topBar?: ReactNode;
 }) {
@@ -158,19 +161,23 @@ export function Screen({
 			{title ? (
 				<Animated.View
 					style={[
-						styles.title,
-						{
-							marginTop: topBar ? spacing.lg : titleTop,
-						},
+						topBar
+							? [styles.title, { marginTop: spacing.lg }]
+							: [
+									styles.titleRow,
+									{ marginTop: titleTop ?? insets.top + layout.topBarOffset },
+								],
 						enter(0, calm),
 					]}
 				>
 					<TitleHold onTitleLongPress={onTitleLongPress}>
 						<ClayText
 							accessibilityRole="header"
+							adjustsFontSizeToFit
 							align="center"
 							color={colors.cream}
-							numberOfLines={2}
+							minimumFontScale={0.8}
+							numberOfLines={1}
 							variant={compactTitle ? "headlineLong" : "headline"}
 						>
 							{title}
@@ -213,6 +220,12 @@ const styles = StyleSheet.create({
 	floatDock: { bottom: 0, left: 0, position: "absolute", right: 0 },
 	root: { flex: 1 },
 	title: { paddingHorizontal: layout.sideMargin },
+	// The back button's row: the title is centred in it and kept clear of the button on both sides.
+	titleRow: {
+		height: layout.minTarget,
+		justifyContent: "center",
+		paddingHorizontal: layout.sideMargin + layout.minTarget + TITLE_GAP,
+	},
 	topBar: {
 		alignItems: "center",
 		flexDirection: "row",
