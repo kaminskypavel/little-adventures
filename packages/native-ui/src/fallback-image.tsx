@@ -6,6 +6,7 @@ import {
 	pickSource,
 	sourceKey,
 } from "./fallback-source";
+import { motion } from "./tokens";
 
 export type { ArtKind, FallbackArt } from "./fallback-source";
 
@@ -46,6 +47,10 @@ export function FallbackImage({
 	}
 	return (
 		<Image
+			// Kept in memory too, so a picture seen (or read ahead) a moment ago paints at once, and
+			// one that still has to load fades in rather than popping.
+			cachePolicy="memory-disk"
+			transition={motion.select}
 			{...props}
 			onError={(event) => {
 				setFailedKey(sourceKey(source));

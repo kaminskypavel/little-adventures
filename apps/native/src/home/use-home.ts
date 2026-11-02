@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import {
 	devFlags,
@@ -9,7 +9,11 @@ import {
 } from "@/src/data/adventure-client";
 import { micPermission } from "@/src/data/mic-permission";
 import { useChild } from "@/src/data/profile-queries";
+import { prefetchAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+
+// How many stories on the shelf are read ahead.
+const SHELF_AHEAD = 4;
 
 /**
  * What Home shows: the child, the child's adventures (unfinished first, then finished, each newest
@@ -35,6 +39,14 @@ export function useHomeData(first: string | undefined) {
 			refetchChild({ cancelRefetch: false });
 		}, [first, refetchChild, refetchHome])
 	);
+
+	// The stories on the shelf are read ahead, pictures and all, so a tap opens a finished map.
+	const shelf = home.data;
+	useEffect(() => {
+		for (const story of shelf?.slice(0, SHELF_AHEAD) ?? []) {
+			prefetchAdventure(story.id).catch(() => undefined);
+		}
+	}, [shelf]);
 
 	return {
 		adventures: home.data ?? null,
