@@ -53,7 +53,7 @@ export interface LlmResult<T> {
 export interface GenerateInput<T extends z.ZodType> {
 	instructions: string;
 	prompt: string;
-	reasoningEffort?: "high" | "low" | "medium";
+	reasoningEffort?: "high" | "low" | "medium" | "minimal";
 	/** An opaque, stable id of the grown-up (never an email). */
 	safetyId: string;
 	schema: T;
