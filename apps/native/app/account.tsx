@@ -205,7 +205,7 @@ export default function Account() {
 							inputStyle={CODE_STYLE}
 							key="code"
 							keyboardType="number-pad"
-							label="Code"
+							label="6-digit code from your email"
 							maxLength={CODE_LENGTH}
 							onBlur={field.onBlur}
 							onChangeText={(text) => {
@@ -233,11 +233,20 @@ export default function Account() {
 		<Screen
 			bodyStyle={styles.body}
 			dock={
-				<PrimaryButton
-					label="Continue with Google"
-					leading={<GoogleMark />}
-					onPress={google}
-				/>
+				<>
+					<PrimaryButton
+						label="Continue with Google"
+						leading={<GoogleMark />}
+						onPress={google}
+					/>
+					<SecondaryButton
+						label="Continue with email"
+						onPress={() => {
+							setNote(null);
+							setStep("email");
+						}}
+					/>
+				</>
 			}
 			title={"Hi,\ngrown-up"}
 		>
@@ -249,15 +258,6 @@ export default function Account() {
 			>
 				Your account keeps your child's adventures safe.
 			</ClayText>
-			<View style={styles.email}>
-				<SecondaryButton
-					label="Continue with email"
-					onPress={() => {
-						setNote(null);
-						setStep("email");
-					}}
-				/>
-			</View>
 			<ClayText
 				align="center"
 				color={colors.cream}
@@ -283,14 +283,10 @@ export default function Account() {
 
 const styles = StyleSheet.create({
 	body: { paddingTop: spacing.lg },
-	email: { marginTop: spacing.lg },
 	fieldBody: { paddingTop: spacing.xl },
 	kids: { marginTop: spacing.md },
 	lead: { paddingHorizontal: spacing.md },
-	links: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		justifyContent: "space-between",
-	},
+	// Starts below the field's error line, which is drawn in the gap under the field.
+	links: { alignItems: "flex-start", marginTop: spacing.lg },
 	note: { marginTop: spacing.lg },
 });
