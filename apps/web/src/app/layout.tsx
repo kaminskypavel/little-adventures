@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import Script from "next/script";
 
 // The brand font sits behind one variable, so a font change is a swap here only.
 const brandFont = localFont({
@@ -10,6 +11,12 @@ const brandFont = localFont({
 	variable: "--font-nunito",
 });
 
+// Cloudflare Web Analytics: free, cookieless page views for www.littleadventures.app.
+// The token is public by design: it ships in every page.
+const ANALYTICS_BEACON = JSON.stringify({
+	token: "0a4850c0ff5e4689bc28c27cf2c72d65",
+});
+
 export default function RootLayout({
 	children,
 }: Readonly<{
@@ -17,7 +24,16 @@ export default function RootLayout({
 }>) {
 	return (
 		<html className={brandFont.variable} lang="en" suppressHydrationWarning>
-			<body>{children}</body>
+			<body>
+				{children}
+				{process.env.NODE_ENV === "production" && (
+					<Script
+						data-cf-beacon={ANALYTICS_BEACON}
+						src="https://static.cloudflareinsights.com/beacon.min.js"
+						strategy="afterInteractive"
+					/>
+				)}
+			</body>
 		</html>
 	);
 }
