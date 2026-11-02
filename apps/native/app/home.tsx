@@ -194,6 +194,7 @@ function HaloSpot({
 			]}
 		>
 			<VoiceHalo
+				landed={landed}
 				level={ask.level}
 				onHoldEnd={ask.onHoldEnd}
 				onHoldStart={ask.onHoldStart}

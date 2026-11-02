@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
 	cancelAnimation,
+	cubicBezier,
 	Easing,
 	interpolate,
 	type SharedValue,
@@ -38,6 +39,7 @@ const BUBBLE_LOOP = BUBBLE_EVERY * 4;
 const KEEP_HOLDING = { bottom: 400, left: 400, right: 400, top: 400 } as const;
 
 const easeOut = Easing.bezier(...motion.easeOut);
+const ringEase = cubicBezier(...motion.easeOut);
 
 // Three layers at 10, 16 and 22% sun. Each grows by its share of GROW; lobes (bumps around the
 // edge), travel direction, speed and phase keep the three edges out of step.
@@ -151,20 +153,27 @@ function Bubble({
 	);
 }
 
+/**
+ * A still ring around the button. It comes in growing out from the button's edge as it fades in
+ * (`order` staggers the rings, inner first) and leaves with a quick fade.
+ */
 function Ring({
 	alpha,
 	motionStyle,
+	order = 0,
 	shown,
 	size,
 	width,
 }: {
 	alpha: number;
 	motionStyle?: object | null;
+	order?: number;
 	shown: boolean;
 	size: number;
 	width: number;
 }) {
 	const calm = useCalm();
+	const enter = !calm && shown;
 	return (
 		<Animated.View
 			pointerEvents="none"
@@ -178,9 +187,13 @@ function Ring({
 					opacity: shown ? 1 : 0,
 					position: "absolute",
 					top: (BUTTON - size) / 2,
-					transitionDuration: calm ? "0ms" : `${motion.release}ms`,
-					transitionProperty: "opacity",
-					transitionTimingFunction: "ease-out",
+					transform: [{ scale: shown || calm ? 1 : BUTTON / size }],
+					transitionDelay: enter ? `${order * motion.enterStagger}ms` : "0ms",
+					transitionDuration: calm
+						? "0ms"
+						: `${shown ? motion.enter : motion.release}ms`,
+					transitionProperty: ["opacity", "transform"],
+					transitionTimingFunction: ringEase,
 					width: size,
 				},
 				motionStyle,
@@ -196,11 +209,14 @@ function Ring({
  * show still rings (missed pulses once). Reduced motion: one still ring in three sizes.
  */
 export function VoiceHalo({
+	landed = true,
 	level,
 	onHoldEnd,
 	onHoldStart,
 	state,
 }: {
+	/** False while the button is still arriving (Home's morph): the rings wait for it. */
+	landed?: boolean;
 	level: number;
 	onHoldEnd: () => void;
 	onHoldStart: () => void;
@@ -278,8 +294,8 @@ export function VoiceHalo({
 					))}
 				</View>
 			)}
-			<Ring {...rings[0]} shown={state === "ready"} />
-			<Ring {...rings[1]} shown={state === "ready"} />
+			<Ring {...rings[0]} order={0} shown={landed && state === "ready"} />
+			<Ring {...rings[1]} order={1} shown={landed && state === "ready"} />
 			<Ring
 				{...MISSED_RING}
 				motionStyle={
