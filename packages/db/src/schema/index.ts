@@ -18,7 +18,8 @@ export const waitlist = littleAdventures.table("waitlist", {
 		.defaultNow(),
 	email: text("email").notNull().unique(),
 	id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-	platform: text("platform", { enum: ["ios", "android"] }).notNull(),
+	// Older rows say which store badge was tapped; the landing now asks for the email only.
+	platform: text("platform", { enum: ["ios", "android"] }),
 });
 
 export const ART_STATUSES = ["idle", "working", "ready", "failed"] as const;

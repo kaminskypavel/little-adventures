@@ -59,6 +59,14 @@ describe("waitlist.join", () => {
 		expect(rows[0]?.platform).toBe("ios");
 	});
 
+	test("an email alone is enough", async () => {
+		expect(await caller.waitlist.join({ email: "parent@example.com" })).toEqual(
+			{ ok: true }
+		);
+		const rows = await db.select().from(waitlist);
+		expect(rows[0]?.platform).toBeNull();
+	});
+
 	test("joining again with the same email in another case is a silent no-op", async () => {
 		await caller.waitlist.join({ email: "test@example.com", platform: "ios" });
 		const again = await caller.waitlist.join({
