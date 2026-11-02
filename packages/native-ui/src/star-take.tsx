@@ -3,6 +3,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Character, characterShadow } from "./character";
+import { Hop } from "./hop";
 import { useCalm } from "./motion-provider";
 import { starSource } from "./star-source";
 import type { StarTakeName } from "./star-source-files";
@@ -267,9 +268,14 @@ export function StarTake({
 		}
 	}, []);
 
-	// Android's players drop the takes' transparency (VP9 alpha), so it shows the still star.
+	// Android's players drop the takes' transparency (VP9 alpha), so it shows the still star with
+	// the shared bob. Reduced motion: still (Hop does not move then).
 	if (calm || Platform.OS === "android") {
-		return <Character kind="star" size={size} />;
+		return (
+			<Hop>
+				<Character kind="star" size={size} />
+			</Hop>
+		);
 	}
 
 	return (
