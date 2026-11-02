@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import type { Context as ApiContext } from "@little-adventures/api/context";
 import { isBetaMember } from "@little-adventures/api/routers/beta";
 import { resolvePrincipal } from "@little-adventures/auth/bearer";
@@ -15,18 +14,6 @@ import { db } from "./services";
 const art = createImageEditing({ apiKey: ENV.META_API_KEY });
 const voice = createTranscription({ apiKey: ENV.META_API_KEY });
 const beta = betaEmails(ENV.BETA_EMAILS);
-const invite = ENV.BETA_INVITE_CODE?.trim().toLowerCase() ?? "";
-
-/** The invite code from the submission, compared in constant time and case-insensitively. */
-const inviteMatches = (code: string) => {
-	const given = Buffer.from(code.trim().toLowerCase());
-	const wanted = Buffer.from(invite);
-	return (
-		invite.length > 0 &&
-		given.length === wanted.length &&
-		timingSafeEqual(given, wanted)
-	);
-};
 
 export async function createContext(req: Request): Promise<ApiContext> {
 	const principal = await resolvePrincipal({
@@ -50,7 +37,6 @@ export async function createContext(req: Request): Promise<ApiContext> {
 	return {
 		art,
 		db,
-		inviteMatches,
 		isBeta: async ({ user }) =>
 			inBeta(beta, user.email) || (await isBetaMember(db, user.id)),
 		principal,

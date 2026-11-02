@@ -1,7 +1,7 @@
 import type { Database } from "@little-adventures/db";
-import { betaMembers } from "@little-adventures/db/schema/index";
+import { betaMembers, inviteCodes } from "@little-adventures/db/schema/index";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { router, signedInProcedure } from "../index";
@@ -18,17 +18,28 @@ export async function isBetaMember(db: Database, ownerId: string) {
 }
 
 export const betaRouter = router({
-	/** Joins the private beta with the invite code; joining twice is fine. */
+	/** Joins the private beta with an active invite code (any case); joining twice is fine. */
 	join: signedInProcedure
 		.input(z.object({ code: z.string().trim().min(1).max(100) }))
 		.mutation(async ({ ctx, input }) => {
-			if (!ctx.inviteMatches(input.code)) {
+			const [invite] = await ctx.db
+				.select({ code: inviteCodes.code, livePerDay: inviteCodes.livePerDay })
+				.from(inviteCodes)
+				.where(
+					and(
+						eq(inviteCodes.code, input.code.toLowerCase()),
+						eq(inviteCodes.active, true)
+					)
+				);
+			if (!invite) {
 				throw new TRPCError({ code: "FORBIDDEN", message: INVITE_REFUSED });
 			}
 			await ctx.db
 				.insert(betaMembers)
 				.values({
+					code: invite.code,
 					email: ctx.principal.user.email ?? null,
+					livePerDay: invite.livePerDay,
 					ownerId: ctx.principal.user.id,
 				})
 				.onConflictDoNothing();

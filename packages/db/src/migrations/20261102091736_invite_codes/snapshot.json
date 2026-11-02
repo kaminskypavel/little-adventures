@@ -1,0 +1,142 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cd0deda0-c156-4c0b-bcd5-f1f7bc4eda37",
+  "prevIds": ["80fdbf6f-e911-43ea-a2a5-8ade084105b6"],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "little_adventures", "invite_codes"],
+      "writes": [
+        "s|tbl|little_adventures.invite_codes",
+        "n|tbl|little_adventures.invite_codes",
+        "e|tbl|little_adventures.invite_codes",
+        "n|rel|little_adventures.invite_codes",
+        "n|type|little_adventures.invite_codes",
+        "n|rel|little_adventures.invite_codes_pkey"
+      ],
+      "reads": ["n|sch|little_adventures"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "beta_members",
+        "code"
+      ],
+      "writes": [
+        "s|col|little_adventures.beta_members.code",
+        "n|col|little_adventures.beta_members.code",
+        "e|col|little_adventures.beta_members.code"
+      ],
+      "reads": [
+        "n|tbl|little_adventures.beta_members",
+        "n|sch|little_adventures"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "name": "invite_codes",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "beta_members",
+        "name": "code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "invite_codes",
+        "name": "active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "invite_codes",
+        "name": "code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "invite_codes",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "invite_codes",
+        "name": "live_per_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "3",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "invite_codes",
+        "name": "invite_codes_pkey",
+        "columns": ["code"],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

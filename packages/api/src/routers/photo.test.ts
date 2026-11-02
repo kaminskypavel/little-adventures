@@ -25,7 +25,6 @@ const callerFor = (userId: string | null) =>
 	appRouter.createCaller({
 		art: {} as ImageEditing,
 		db: {} as Database,
-		inviteMatches: () => false,
 		isBeta: () => true,
 		principal: userId ? { user: { id: userId } } : null,
 		storage,

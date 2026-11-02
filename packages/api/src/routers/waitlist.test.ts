@@ -39,7 +39,6 @@ describe("waitlist.join", () => {
 		caller = appRouter.createCaller({
 			art: {} as ImageEditing,
 			db: db as unknown as Database,
-			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: null,
 			storage: {} as Storage,

@@ -5,9 +5,11 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import type { Database } from "@little-adventures/db";
 import { relations } from "@little-adventures/db/relations";
+import { betaMembers, inviteCodes } from "@little-adventures/db/schema/index";
 import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
 import type { Transcription } from "@little-adventures/transcribe";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 
 import { isBetaMember } from "./beta";
@@ -30,6 +32,10 @@ async function freshDb() {
 let db: Database;
 beforeEach(async () => {
 	db = await freshDb();
+	await db.insert(inviteCodes).values([
+		{ code: "moon-whale", livePerDay: 5 },
+		{ active: false, code: "old-code" },
+	]);
 });
 
 // As in production: the email list is empty here, so only members are in.
@@ -37,7 +43,6 @@ const callerFor = (userId: string) =>
 	appRouter.createCaller({
 		art: {} as ImageEditing,
 		db,
-		inviteMatches: (code) => code.trim().toLowerCase() === "moon-whale",
 		isBeta: ({ user }) => isBetaMember(db, user.id),
 		principal: { user: { email: `${userId}@judges.test`, id: userId } },
 		storage: {} as Storage,
@@ -55,9 +60,21 @@ test("the invite code lets a signed-in grown-up into the beta, once is enough", 
 	expect(await judge.child.mine()).toEqual([]);
 });
 
-test("a wrong code is refused and lets nobody in", async () => {
+test("the member keeps the code they joined with and its daily cap", async () => {
+	await callerFor("judge-2").beta.join({ code: "MOON-WHALE" });
+	const [row] = await db
+		.select()
+		.from(betaMembers)
+		.where(eq(betaMembers.ownerId, "judge-2"));
+	expect(row).toMatchObject({ code: "moon-whale", livePerDay: 5 });
+});
+
+test("a wrong or turned-off code is refused and lets nobody in", async () => {
 	const stranger = callerFor("stranger");
 	await expect(stranger.beta.join({ code: "sun-whale" })).rejects.toThrow(
+		"That code did not work"
+	);
+	await expect(stranger.beta.join({ code: "old-code" })).rejects.toThrow(
 		"That code did not work"
 	);
 	expect(await stranger.beta.status()).toEqual({ member: false });

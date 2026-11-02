@@ -39,7 +39,6 @@ describe("child", () => {
 			// The PGlite db and the Neon db share the query API but not the type.
 			art: { isConfigured: false } as ImageEditing,
 			db,
-			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage: {} as Storage,
@@ -55,7 +54,6 @@ describe("child", () => {
 		const outsider = appRouter.createCaller({
 			art: { isConfigured: false } as ImageEditing,
 			db,
-			inviteMatches: () => false,
 			isBeta: () => false,
 			principal: { user: { email: "someone@else.test", id: "u9" } },
 			storage: {} as Storage,
@@ -149,7 +147,6 @@ describe("photo.delete", () => {
 		appRouter.createCaller({
 			art: { isConfigured: false } as ImageEditing,
 			db,
-			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage,
@@ -277,7 +274,6 @@ describe("child art", () => {
 		appRouter.createCaller({
 			art,
 			db,
-			inviteMatches: () => false,
 			isBeta: () => true,
 			principal: { user: { id: userId } },
 			storage,
