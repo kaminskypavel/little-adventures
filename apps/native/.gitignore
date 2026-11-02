@@ -45,3 +45,6 @@ uniwind-types.d.ts
 
 !.env.schema
 /src/env.ts
+
+# The web export for the landing site (export:web)
+dist-web/

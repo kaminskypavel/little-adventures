@@ -38,6 +38,14 @@
     "db:studio": {
       "cache": false,
       "persistent": true
+    },
+    "native#export:web": {
+      "outputs": ["dist-web/**"]
+    },
+    "web#build": {
+      "dependsOn": ["^build", "native#export:web"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"]
     }
   },
   "globalEnv": [

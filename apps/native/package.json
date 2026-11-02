@@ -8,6 +8,7 @@
     "check-types": "tsc --noEmit",
     "dev": "expo start --clear",
     "env:generate": "varlock codegen",
+    "export:web": "bun scripts/export-web.ts",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
     "start": "expo start",
