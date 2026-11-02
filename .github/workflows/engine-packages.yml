@@ -1,0 +1,54 @@
+name: Engine packages changed
+
+# The story engine vendors packages/db, packages/decision, packages/image-editing and
+# packages/llm. When one changes on main, this moves the engine repo's pin of this repo
+# to the new commit and pushes it; that push redeploys the engine. ENGINE_REPO
+# (owner/name) and ENGINE_DEPLOY_KEY (an SSH deploy key with write access on that repo)
+# are repo secrets; without them the step only reports.
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - packages/db/**
+      - packages/decision/**
+      - packages/image-editing/**
+      - packages/llm/**
+
+permissions: {}
+
+concurrency:
+  group: engine-packages
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Move the engine's pin to this commit
+        env:
+          ENGINE_REPO: ${{ secrets.ENGINE_REPO }}
+          ENGINE_DEPLOY_KEY: ${{ secrets.ENGINE_DEPLOY_KEY }}
+        run: |
+          if [ -z "$ENGINE_REPO" ] || [ -z "$ENGINE_DEPLOY_KEY" ]; then
+            echo "ENGINE_REPO or ENGINE_DEPLOY_KEY is not set; nothing pushed."
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$ENGINE_DEPLOY_KEY" > ~/.ssh/engine_key
+          chmod 600 ~/.ssh/engine_key
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/engine_key -o IdentitiesOnly=yes"
+          git clone -q --depth 1 --branch master "git@github.com:${ENGINE_REPO}.git" engine
+          cd engine
+          old=$(git ls-tree HEAD vendor/little-adventures | awk '{print $3}')
+          if [ "$old" = "$GITHUB_SHA" ]; then
+            echo "The engine already pins ${GITHUB_SHA::7}."
+            exit 0
+          fi
+          git update-index --cacheinfo "160000,$GITHUB_SHA,vendor/little-adventures"
+          git -c user.name="engine packages" -c user.email="actions@users.noreply.github.com" \
+            commit -q -m "chore(engine): vendor the app at ${GITHUB_SHA::7}" \
+            -m "An engine package changed in the app repo (${GITHUB_SHA})."
+          git push -q origin HEAD:master
+          echo "Pinned ${GITHUB_SHA::7} (was ${old::7}); the engine deploy starts on that push."
