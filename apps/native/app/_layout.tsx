@@ -15,9 +15,8 @@ import { TitleHoldProvider } from "@little-adventures/native-ui/title-hold";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, Stack, ThemeProvider } from "expo-router";
-import { hideAsync, preventAutoHideAsync } from "expo-splash-screen";
+import { preventAutoHideAsync } from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PhoneFrame } from "@/components/phone-frame";
@@ -27,6 +26,7 @@ import { useAdminHold } from "@/src/admin/use-admin-hold";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { queryClient } from "@/src/data/query-client";
+import { LaunchHandover } from "@/src/launch-handover";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
@@ -48,12 +48,6 @@ export default function Layout() {
 		Nunito_900Black,
 	});
 	const ready = loaded || error !== null;
-
-	useEffect(() => {
-		if (ready) {
-			hideAsync();
-		}
-	}, [ready]);
 
 	if (!ready) {
 		return null;
@@ -83,6 +77,8 @@ export default function Layout() {
 											</ThemeProvider>
 											<AdminHint />
 											<AdminPanel />
+											{/* Hides the native splash once it is drawn (see LaunchHandover). */}
+											<LaunchHandover />
 										</View>
 									</QueryClientProvider>
 								</BodyFadeProvider>
