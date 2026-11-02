@@ -1,6 +1,12 @@
+import {
+	BackButton,
+	useBackAction,
+} from "@little-adventures/native-ui/back-button";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ChoiceCard } from "@little-adventures/native-ui/choice-card";
+import { ChoiceHalf } from "@little-adventures/native-ui/choice-half";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { Plate } from "@little-adventures/native-ui/plate";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
@@ -15,6 +21,7 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	choicesFrom,
 	isOutroLocked,
@@ -25,6 +32,7 @@ import { mark, markScreen } from "@/src/data/timeline";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useLandscape } from "@/src/orientation";
 
 const { choice } = listCards;
 
@@ -38,6 +46,10 @@ const STAR_BOTTOM = 19;
 // Round 7 message lines: 800 at 21 pt.
 const LINE = { fontSize: 21, lineHeight: 26 } as const;
 const WAITING_LINE = "Still being drawn. One moment.";
+// Sideways the star waits in the gap between the two halves.
+const SIDEWAYS_STAR_SIZE = 96;
+// The gap between the halves shows the night through.
+const HALF_GAP = 3;
 
 interface Card {
 	goal: boolean;
@@ -92,10 +104,127 @@ function starTakeFor({
 }
 
 /** The small star. No still under it: the take's arm would leave a ghost; the screen fade covers the load. */
-function Star({ take }: { take: "jump" | "point" | "think" }) {
+function Star({
+	size = STAR_SIZE,
+	take,
+}: {
+	size?: number;
+	take: "jump" | "point" | "think";
+}) {
 	return (
 		<View pointerEvents="none" style={styles.starRow}>
-			<StarTake size={STAR_SIZE} take={take} />
+			<StarTake size={size} take={take} />
+		</View>
+	);
+}
+
+/** What has been walked: the dev override (which never locks the goodnight), else the real progress. */
+function walked(
+	devVisited: string | undefined,
+	progress: Progress | null | undefined
+) {
+	if (devVisited) {
+		return {
+			outroLocked: undefined,
+			visited: devVisited.split(",") as NodeId[],
+		};
+	}
+	return { outroLocked: progress?.outroLocked, visited: progress?.visited };
+}
+
+/** The place tapped: it shows its ring for a moment, then the map walks the star there. */
+function usePick(id: string) {
+	const router = useRouter();
+	const [picked, setPicked] = useState<NodeId | null>(null);
+	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	useEffect(() => () => clearTimeout(timer.current), []);
+	const pick = (node: NodeId) => {
+		if (picked) {
+			return;
+		}
+		setPicked(node);
+		mark("choice", { place: node });
+		timer.current = setTimeout(
+			() => router.replace(`/map?id=${id}&walkTo=${node}`),
+			SELECT_MS
+		);
+	};
+	return { pick, picked };
+}
+
+/** The pill at the top of the sideways choice: it also carries the waiting and peek lines. */
+function sidewaysTitle({
+	goodnightOpen,
+	peek,
+	waiting,
+}: {
+	goodnightOpen: boolean;
+	peek: Card | undefined;
+	waiting: boolean;
+}) {
+	if (goodnightOpen) {
+		return "All 4 places done!";
+	}
+	if (waiting) {
+		return WAITING_LINE;
+	}
+	return peek ? `Peek at ${peek.name} first?` : "Pick a way";
+}
+
+/** Sideways: two full-height pictures, one place each, the star between them, and a title pill. */
+function Halves({
+	cards,
+	missing,
+	onPick,
+	picked,
+	starTake,
+	title,
+}: {
+	cards: Card[];
+	missing: number;
+	onPick: (node: NodeId) => void;
+	picked: NodeId | null;
+	starTake: "jump" | "point" | "think" | null;
+	title: string;
+}) {
+	const insets = useSafeAreaInsets();
+	const onBack = useBackAction();
+	const top = insets.top + layout.topBarOffset;
+	return (
+		<View style={styles.sideways}>
+			<View style={styles.halves}>
+				{cards.map((card) => (
+					<ChoiceHalf
+						key={card.node}
+						kind={card.goal ? "goal" : "place"}
+						name={card.name}
+						note={
+							card.state === "locked"
+								? `${missing} more ${missing > 1 ? "places" : "place"} first`
+								: undefined
+						}
+						onPress={() => onPick(card.node)}
+						picture={card.picture}
+						selected={picked === card.node}
+						state={card.state}
+						testID={`choice-${card.node}`}
+					/>
+				))}
+			</View>
+			<View pointerEvents="none" style={[styles.titleRow, { top }]}>
+				<NamePill style={styles.pill} text={title} />
+			</View>
+			{onBack ? (
+				<View
+					style={[
+						styles.backRow,
+						{ left: insets.left + layout.sideMargin, top },
+					]}
+				>
+					<BackButton onPress={onBack} />
+				</View>
+			) : null}
+			{starTake ? <Star size={SIDEWAYS_STAR_SIZE} take={starTake} /> : null}
 		</View>
 	);
 }
@@ -114,20 +243,18 @@ export default function Choice() {
 	// Adventure, progress and name come from the shared cache, so the cards paint at once.
 	const { adventure, progress } = useAdventure(id);
 	const childName = useChildName();
-	const [picked, setPicked] = useState<NodeId | null>(null);
-	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const sideways = useLandscape();
+	const { pick, picked } = usePick(id);
 	// The last drawing count marked, so a screen is marked once per count (not on every render).
 	const marked = useRef<number | null>(null);
-
-	useEffect(() => () => clearTimeout(timer.current), []);
 
 	// Dev only: ?visited=p1,p2 pretends those places were watched, ?drawing=p1a marks one as not drawn yet.
 	const devVisited = dev(params.visited);
 	const devDrawing = dev(params.drawing);
-	const visited = devVisited
-		? (devVisited.split(",") as NodeId[])
-		: progress?.visited;
-	const engineOutroLock = devVisited ? undefined : progress?.outroLocked;
+	const { outroLocked: engineOutroLock, visited } = walked(
+		devVisited,
+		progress
+	);
 	const cards =
 		adventure && visited
 			? cardsOf(
@@ -157,19 +284,24 @@ export default function Choice() {
 
 	const walkTo = (node: NodeId) =>
 		router.replace(`/map?id=${id}&walkTo=${node}`);
-	const pick = (node: NodeId) => {
-		if (picked) {
-			return;
-		}
-		setPicked(node);
-		mark("choice", { place: node });
-		timer.current = setTimeout(() => walkTo(node), SELECT_MS);
-	};
 	const drawingCount = cards.filter((c) => c.state === "drawing").length;
 	markScreen(marked, "choice", drawingCount);
 	const peek = drawing ? other : undefined;
 	const starTake = starTakeFor({ drawing, goodnightOpen, waiting });
 	const missing = missingPlaces(visited);
+
+	if (sideways) {
+		return (
+			<Halves
+				cards={cards}
+				missing={missing}
+				onPick={pick}
+				picked={picked}
+				starTake={starTake}
+				title={sidewaysTitle({ goodnightOpen, peek, waiting })}
+			/>
+		);
+	}
 
 	return (
 		<Screen
@@ -252,10 +384,19 @@ export default function Choice() {
 }
 
 const styles = StyleSheet.create({
+	backRow: { position: "absolute" },
 	cards: { gap: layout.gap },
 	done: { marginBottom: layout.gap },
+	halves: {
+		backgroundColor: colors.deepNavy,
+		flex: 1,
+		flexDirection: "row",
+		gap: HALF_GAP,
+	},
 	message: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
+	pill: { alignSelf: "center" },
 	plate: { alignSelf: "center", marginTop: layout.gap },
+	sideways: { flex: 1 },
 	starRow: {
 		alignItems: "center",
 		bottom: STAR_BOTTOM,
@@ -263,4 +404,5 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: 0,
 	},
+	titleRow: { alignItems: "center", left: 0, position: "absolute", right: 0 },
 });

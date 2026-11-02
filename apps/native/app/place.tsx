@@ -71,6 +71,7 @@ import type {
 } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
+import { useLandscape } from "@/src/orientation";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
 const PLACE_MS = 8000;
@@ -102,6 +103,15 @@ const GOAL_RATIO = 365 / 500;
 // The read-along card shows one sentence (see readWindow) and stops here, so the place name and
 // the picture above it stay visible.
 const NARRATION_MAX_HEIGHT = 270;
+// Sideways, the words share the bottom row with the pause button and the bar is slimmer.
+const LANDSCAPE_NARRATION_MAX_HEIGHT = 150;
+const LANDSCAPE_NARRATION = {
+	borderRadius: 30,
+	paddingBottom: 14,
+	paddingTop: 12,
+} as const;
+// The goodnight picture sideways: this share of the frame height.
+const GOAL_HEIGHT_SIDEWAYS = "78%";
 
 function Scrim() {
 	return (
@@ -138,18 +148,27 @@ function PlayerChrome({
 	words: string[];
 }) {
 	const insets = useSafeAreaInsets();
+	const sideways = useLandscape();
 	const { end, start } = useMemo(
 		() => readWindow(words, current),
 		[words, current]
 	);
 	const shown = useMemo(() => words.slice(start, end), [words, start, end]);
+	const bottom = insets.bottom + layout.dockBottom;
 	return (
 		<View style={styles.root} testID="place-player">
 			{frame}
 			<Scrim />
 			<View
 				pointerEvents="box-none"
-				style={[styles.top, { top: insets.top + layout.topBarOffset }]}
+				style={[
+					styles.top,
+					{
+						left: insets.left + layout.sideMargin,
+						right: insets.right + layout.sideMargin,
+						top: insets.top + layout.topBarOffset,
+					},
+				]}
 			>
 				<IconButton
 					accessibilityLabel="Back to the map"
@@ -165,21 +184,41 @@ function PlayerChrome({
 			<NarrationBar
 				current={current - start}
 				progress={progress}
-				style={[
-					styles.narration,
-					{
-						bottom:
-							insets.bottom +
-							layout.dockBottom +
-							layout.primaryHeight +
-							layout.gap,
-					},
-				]}
+				style={
+					sideways
+						? [
+								styles.narration,
+								styles.narrationSideways,
+								LANDSCAPE_NARRATION,
+								{
+									bottom: bottom + (layout.primaryHeight - 76) / 2,
+									left: insets.left + layout.sideMargin,
+									right:
+										insets.right +
+										layout.sideMargin +
+										layout.primaryHeight +
+										layout.gap,
+								},
+							]
+						: [
+								styles.narration,
+								{ bottom: bottom + layout.primaryHeight + layout.gap },
+							]
+				}
 				words={shown}
 			/>
 			<View
 				pointerEvents="box-none"
-				style={[styles.control, { bottom: insets.bottom + layout.dockBottom }]}
+				style={[
+					styles.control,
+					sideways
+						? {
+								alignItems: "flex-end",
+								paddingRight: insets.right + layout.sideMargin,
+							}
+						: null,
+					{ bottom },
+				]}
 			>
 				<ClayPressable
 					accessibilityLabel={playing ? "Pause" : "Play"}
@@ -718,14 +757,19 @@ function PlaceFrame({
 /** There is no goodnight picture, so the open end goal stands on its backdrop. */
 function GoodnightFrame({ adventure }: { adventure: Adventure }) {
 	const insets = useSafeAreaInsets();
+	const sideways = useLandscape();
 	return (
 		<View
 			style={[
 				styles.goal,
 				{
 					backgroundColor: colors.goalBackdrop,
-					paddingTop:
-						insets.top + layout.topBarOffset + layout.topBarHeight + layout.gap,
+					paddingTop: sideways
+						? insets.top + layout.topBarOffset
+						: insets.top +
+							layout.topBarOffset +
+							layout.topBarHeight +
+							layout.gap,
 				},
 			]}
 		>
@@ -733,7 +777,11 @@ function GoodnightFrame({ adventure }: { adventure: Adventure }) {
 				contentFit="contain"
 				kind="goalOpen"
 				source={adventure.endGoal.open}
-				style={{ aspectRatio: GOAL_RATIO, width: GOAL_WIDTH }}
+				style={
+					sideways
+						? { aspectRatio: GOAL_RATIO, height: GOAL_HEIGHT_SIDEWAYS }
+						: { aspectRatio: GOAL_RATIO, width: GOAL_WIDTH }
+				}
 			/>
 		</View>
 	);
@@ -852,6 +900,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: layout.sideMargin,
 	},
+	narrationSideways: { maxHeight: LANDSCAPE_NARRATION_MAX_HEIGHT },
 	pause: {
 		alignItems: "center",
 		height: layout.primaryHeight,

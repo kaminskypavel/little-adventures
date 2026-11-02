@@ -6,16 +6,19 @@ import {
 	type MapPlaceNode,
 	StoryMap,
 } from "@little-adventures/native-ui/story-map";
+import { layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useRef } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
 import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useLandscape } from "@/src/orientation";
 
 const NODE_IDS: readonly string[] = [
 	"intro",
@@ -33,6 +36,7 @@ const isNode = (value?: string): value is NodeId =>
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
 	const router = useRouter();
+	const sideways = useLandscape();
 	const params = useLocalSearchParams<{
 		id?: string;
 		visited?: string;
@@ -123,7 +127,7 @@ export default function StoryMapScreen() {
 		);
 	}
 
-	return (
+	const screen = (
 		<>
 			<MapBackdrop />
 			<Screen
@@ -152,4 +156,25 @@ export default function StoryMapScreen() {
 			</Screen>
 		</>
 	);
+
+	// Sideways, the portrait map stands as a column on the sky and scrolls, until the wide map is designed.
+	return sideways ? (
+		<ScrollView
+			contentContainerStyle={styles.sidewaysContent}
+			showsVerticalScrollIndicator={false}
+		>
+			<View style={styles.column}>{screen}</View>
+		</ScrollView>
+	) : (
+		screen
+	);
 }
+
+const styles = StyleSheet.create({
+	column: {
+		height: layout.baseHeight,
+		overflow: "hidden",
+		width: layout.baseWidth,
+	},
+	sidewaysContent: { alignItems: "center" },
+});

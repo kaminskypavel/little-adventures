@@ -10,12 +10,13 @@ import {
 	EndMap,
 	type MapPlaceNode,
 } from "@little-adventures/native-ui/story-map";
-import { motion, spacing } from "@little-adventures/native-ui/tokens";
+import { layout, motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { useChildName } from "@/src/data/profile-queries";
 import { useAdventure } from "@/src/data/use-adventure";
+import { useLandscape } from "@/src/orientation";
 
 // Round 7 (px / 0.72): the map is 12 px above the panel, which reads 17 pt.
 const PANEL_GAP = 17;
@@ -29,8 +30,9 @@ export default function End() {
 	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const { adventure } = useAdventure(id);
 	const childName = useChildName() ?? "";
+	const sideways = useLandscape();
 
-	return (
+	const screen = (
 		<Screen
 			compactTitle
 			dock={
@@ -67,4 +69,21 @@ export default function End() {
 			) : null}
 		</Screen>
 	);
+
+	// Sideways, the portrait end stands as a column on the sky and scrolls, until the wide map is designed.
+	return sideways ? (
+		<ScrollView
+			contentContainerStyle={styles.sidewaysContent}
+			showsVerticalScrollIndicator={false}
+		>
+			<View style={styles.column}>{screen}</View>
+		</ScrollView>
+	) : (
+		screen
+	);
 }
+
+const styles = StyleSheet.create({
+	column: { height: layout.baseHeight, width: layout.baseWidth },
+	sidewaysContent: { alignItems: "center" },
+});
