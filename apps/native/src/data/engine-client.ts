@@ -15,8 +15,14 @@ interface EngineWord {
 	text: string;
 }
 type EngineNarration = EngineMedia & { words: EngineWord[] };
+/** One part of a node's video. `video` is set only when `status` is "playable". */
+export interface EnginePart {
+	id: string;
+	status: string;
+	video: EngineMedia | null;
+}
 export interface EngineNode {
-	/** Null until a clip is made, and when none could be made. */
+	/** The older single clip; null for nodes made in parts, and when none could be made. */
 	clip: EngineMedia | null;
 	fact: string | null;
 	id: string;
@@ -25,6 +31,8 @@ export interface EngineNode {
 	name: string | null;
 	narration: EngineNarration | null;
 	neighbours: string[];
+	/** The video in parts, played back to back. Null or absent: use `clip`. */
+	parts?: EnginePart[] | null;
 	picture: EngineMedia | null;
 	status: string;
 	visited: boolean;

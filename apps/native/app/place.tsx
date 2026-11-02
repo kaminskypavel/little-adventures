@@ -10,7 +10,12 @@ import { useEventListener } from "expo";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useVideoPlayer, VideoView } from "expo-video";
+import {
+	useVideoPlayer,
+	type VideoPlayer,
+	type VideoPlayerStatus,
+	VideoView,
+} from "expo-video";
 import {
 	type ReactNode,
 	useCallback,
@@ -20,7 +25,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, Platform, StyleSheet, View } from "react-native";
 import {
 	cancelAnimation,
 	Easing,
@@ -31,7 +36,22 @@ import {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { endSource, wordIndexAt } from "@/src/data/playback";
+import {
+	begin,
+	type EndCause,
+	GRACE_MS,
+	graceDue,
+	hasParts,
+	neighbourUrls,
+	type PlayEvent,
+	type PlayState,
+	reachedEnd,
+	type Slot,
+	slotParts,
+	step,
+	upcoming,
+} from "@/src/data/parts";
+import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
@@ -39,17 +59,21 @@ import type {
 	Adventure,
 	NarrationAudio,
 	NodeId,
+	Part,
 	Picture,
 } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
+import { keepWarm } from "@/src/data/warm-parts";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
 const PLACE_MS = 8000;
 const GOODNIGHT_MS = 6000;
 // How often the narration reports its time, in ms: often enough for the word chip to keep up.
 const NARRATION_TICK_MS = 100;
-// How often the clip reports its time, in seconds. It only shows that a frame is on screen.
-const CLIP_TICK_SEC = 0.25;
+// How often a part reports its time, in seconds: it shows that a frame is on screen and lets a
+// part that never sends its end event still hand over within a tick of its last 0.1 s.
+const PART_TICK_SEC = 0.1;
+const IS_WEB = Platform.OS === "web";
 
 // Round 7 video scrim: dark navy, stronger at the bottom. Not in tokens yet.
 const SCRIM_TOP = "rgba(10,22,44,0.6)";
@@ -262,65 +286,127 @@ const setPaused = (
 	paused: boolean
 ) => (paused ? player.pause() : player.play());
 
+/** A part player: muted, no loop, and it reports its time often enough to hand over on time. */
+const setupPlayer = (created: VideoPlayer) => {
+	created.loop = false;
+	created.muted = true;
+	created.timeUpdateEventInterval = PART_TICK_SEC;
+};
+
+/** What one part player reports. */
+interface SlotEvents {
+	onEnd: () => void;
+	onStatus: (status: VideoPlayerStatus) => void;
+	onTime: (currentTime: number) => void;
+}
+
+function useSlotEvents(player: VideoPlayer, events: SlotEvents) {
+	useEventListener(player, "statusChange", ({ status }) =>
+		events.onStatus(status)
+	);
+	useEventListener(player, "timeUpdate", ({ currentTime }) =>
+		events.onTime(currentTime)
+	);
+	useEventListener(player, "playToEnd", events.onEnd);
+}
+
 /**
- * The player for an engine node: its clip (muted) and its narration start together. The picture
- * stays up until the clip shows a frame. A node with a clip moves on when the clip ends; one
- * without shows its picture for the narration's length. The words follow the narration.
+ * On the web the part buffering for next plays, because a browser loads nothing before play();
+ * once it has a frame it waits at the start, ready to show.
+ */
+const parkAtFirstFrame = (player: VideoPlayer) => {
+	player.pause();
+	player.currentTime = 0;
+};
+
+/** One part's picture. The part buffering for next, on the web, stays mounted but unseen. */
+function PartVideo({
+	hidden,
+	onFirstFrame,
+	player,
+}: {
+	hidden: boolean;
+	onFirstFrame: () => void;
+	player: VideoPlayer;
+}) {
+	return (
+		<VideoView
+			allowsPictureInPicture={false}
+			contentFit="cover"
+			nativeControls={false}
+			onFirstFrameRender={onFirstFrame}
+			player={player}
+			playsInline
+			pointerEvents="none"
+			style={[StyleSheet.absoluteFill, hidden ? styles.unseen : null]}
+		/>
+	);
+}
+
+/**
+ * The player for an engine node: its video parts (muted) play back to back while its narration
+ * plays on. The picture stays up until the first part shows a frame. The place ends when the
+ * last part and the narration have both ended (see parts.ts); the last frame holds meanwhile.
+ * Two part players take turns: one shows the current part, the other loads the next. The words
+ * follow the narration.
  */
 function MediaPlayer({
 	audio,
-	clip,
 	cover,
 	name,
 	node,
 	onBack,
 	onEnd,
 	onMediaError,
-	timerMs,
+	parts,
 	words,
 }: {
 	audio: NarrationAudio | null;
-	clip: number | string | null;
-	/** The picture, shown when there is no clip and until the clip has a frame. */
+	/** The picture, shown when there is no video and until the first part has a frame. */
 	cover: ReactNode;
 	name: string;
 	node: NodeId;
 	onBack: () => void;
 	onEnd: () => void;
 	onMediaError: () => void;
-	/** How long the node stays when neither its clip nor its narration can end it. */
-	timerMs: number;
+	parts: Part[];
 	words: string[];
 }) {
 	const audioPlayer = useAudioPlayer(audio?.url ?? null, {
 		updateInterval: NARRATION_TICK_MS,
 	});
 	const heard = useAudioPlayerStatus(audioPlayer);
-	const videoPlayer = useVideoPlayer(clip, (created) => {
-		created.loop = false;
-		created.muted = true;
-		created.timeUpdateEventInterval = CLIP_TICK_SEC;
-	});
-	const [clipStatus, setClipStatus] = useState(videoPlayer.status);
+	// The machine in parts.ts is the truth (a ref, so events read it at once); `view` repaints.
+	const [view, setView] = useState<PlayState>(() =>
+		begin(parts, audio !== null)
+	);
+	const machine = useRef<PlayState>(view);
+	const held = slotParts(view);
+	const player0 = useVideoPlayer(held[0]?.url ?? null, setupPlayer);
+	const player1 = useVideoPlayer(held[1]?.url ?? null, setupPlayer);
+	const players = [player0, player1] as const;
+	const [status0, setStatus0] = useState(player0.status);
+	const [status1, setStatus1] = useState(player1.status);
+	const statuses = [status0, status1] as const;
 	const [framed, setFramed] = useState(false);
 	const [playing, setPlaying] = useState(true);
 	const started = useRef<boolean>(false);
+	const begun = useRef<number>(-1);
+	// Set once a tick shows the part part-way in, so a stale tick from the file a player held
+	// before cannot end the part it has just been given.
+	const inPart = useRef<boolean>(false);
 	const ended = useRef<boolean>(false);
+	const framedParts = useRef(new Set<number>());
 
-	const clipFailed = clipStatus === "error";
 	const narrationFailed = Boolean(heard.error);
-	const hasClip = clip !== null && !clipFailed;
 	const hasNarration = audio !== null && !narrationFailed;
-	const source = endSource({ hasClip, hasNarration });
-	// The narration may finish before a clip that then fails: remember it did.
-	const [narrationEnded, setNarrationEnded] = useState(false);
 
 	const endRef = useRef(onEnd);
 	useLayoutEffect(() => {
 		endRef.current = onEnd;
 	}, [onEnd]);
 	const fireEnd = useCallback(
-		(cause: "grace" | "last-part" | "narration") => {
+		(cause: EndCause) => {
 			if (!ended.current) {
 				ended.current = true;
 				mark("place-end", { detail: { cause }, place: node });
@@ -329,101 +415,193 @@ function MediaPlayer({
 		},
 		[node]
 	);
-	// The picture goes when the clip shows its first frame; the mark is the first time only.
-	const frameMarked = useRef<boolean>(false);
-	const showFrame = useCallback(() => {
-		if (!frameMarked.current) {
-			frameMarked.current = true;
-			mark("first-frame", { part: 1, place: node });
-		}
-		setFramed(true);
-	}, [node]);
-
-	useEventListener(videoPlayer, "statusChange", ({ status }) =>
-		setClipStatus(status)
+	const send = useCallback(
+		(event: PlayEvent) => {
+			const next = step(machine.current, event);
+			if (next.state === machine.current) {
+				return;
+			}
+			machine.current = next.state;
+			setView(next.state);
+			for (const { name: markName, part } of next.marks) {
+				mark(markName, { part, place: node });
+			}
+			if (next.end) {
+				fireEnd(next.end);
+			}
+		},
+		[fireEnd, node]
 	);
-	useEventListener(videoPlayer, "timeUpdate", ({ currentTime }) => {
-		if (currentTime > 0) {
-			showFrame();
+	// The picture goes when a part shows its first frame; each part's mark is the first time only.
+	const showFrame = useCallback(
+		(index: number) => {
+			if (!framedParts.current.has(index)) {
+				framedParts.current.add(index);
+				mark("first-frame", { part: index + 1, place: node });
+			}
+			setFramed(true);
+		},
+		[node]
+	);
+
+	// A tick of the part on screen: its first frame, or its end when no end event came.
+	const tickPart = (index: number, currentTime: number, duration: number) => {
+		if (reachedEnd(currentTime, duration)) {
+			if (inPart.current) {
+				send({ type: "ended" });
+			}
+		} else if (currentTime > 0) {
+			inPart.current = true;
+			showFrame(index);
 		}
+	};
+
+	const eventsOf = (slot: Slot): SlotEvents => ({
+		// Only the player showing the part counts: a late event from the one before is not its end.
+		onEnd: () => {
+			if (machine.current.slot === slot) {
+				send({ type: "ended" });
+			}
+		},
+		onStatus: (status) => {
+			(slot === 0 ? setStatus0 : setStatus1)(status);
+			const part = slotParts(machine.current)[slot];
+			if (status === "error" && part) {
+				send({ id: part.id, type: "bad" });
+				onMediaError();
+			}
+		},
+		onTime: (currentTime) => {
+			const now = machine.current;
+			if (now.slot !== slot) {
+				if (IS_WEB && currentTime > 0) {
+					parkAtFirstFrame(players[slot]);
+				}
+				return;
+			}
+			if (now.phase === "playing" && begun.current === now.at) {
+				tickPart(now.at, currentTime, players[slot].duration);
+			}
+		},
 	});
-	useEventListener(videoPlayer, "playToEnd", () => {
-		if (hasClip) {
-			mark("part-end", { part: 1, place: node });
-			fireEnd("last-part");
+	useSlotEvents(player0, eventsOf(0));
+	useSlotEvents(player1, eventsOf(1));
+	const firstFrameOf = (slot: Slot) => () => {
+		const now = machine.current;
+		if (now.slot === slot && now.phase === "playing") {
+			showFrame(now.at);
 		}
-	});
+	};
+
+	useEffect(() => {
+		send({ parts, type: "parts" });
+	}, [parts, send]);
 	useEffect(() => {
 		if (heard.didJustFinish) {
 			mark("narration-end", { place: node });
-			setNarrationEnded(true);
+			send({ type: "narration-ended" });
 		}
-	}, [heard.didJustFinish, node]);
+	}, [heard.didJustFinish, node, send]);
+	// A narration that fails stops holding the place up, after a moment for fresh urls to arrive.
 	useEffect(() => {
-		if (source === "narration" && narrationEnded) {
-			fireEnd("narration");
-		}
-	}, [fireEnd, narrationEnded, source]);
-	useEffect(() => {
-		if (source !== "timer" || !playing) {
+		if (!narrationFailed) {
 			return;
 		}
-		const timer = setTimeout(() => fireEnd("grace"), timerMs);
+		const timer = setTimeout(() => send({ type: "narration-ended" }), GRACE_MS);
 		return () => clearTimeout(timer);
-	}, [fireEnd, playing, source, timerMs]);
+	}, [narrationFailed, send]);
+	// The narration is done and the next part is still not here: wait a little, then move on.
+	const waitingOnPart = graceDue(view);
+	useEffect(() => {
+		if (!(waitingOnPart && playing)) {
+			return;
+		}
+		const timer = setTimeout(() => send({ type: "grace" }), GRACE_MS);
+		return () => clearTimeout(timer);
+	}, [playing, send, waitingOnPart]);
 	// A url that fails has most likely expired: ask for fresh ones (the first failure only).
 	useEffect(() => {
-		if (clipFailed || narrationFailed) {
+		if (narrationFailed) {
 			onMediaError();
 		}
-	}, [clipFailed, narrationFailed, onMediaError]);
+	}, [narrationFailed, onMediaError]);
 
-	const ready =
-		(!hasNarration || heard.isLoaded) &&
-		(!hasClip || clipStatus === "readyToPlay");
+	// The narration and the first part start together, once both can. Later parts start the
+	// moment they are on screen: the next one has been loading while the last one played.
+	const videoPending =
+		view.phase === "playing"
+			? statuses[view.slot] !== "readyToPlay"
+			: view.at < 0 && upcoming(view) !== null;
+	const ready = (!hasNarration || heard.isLoaded) && !videoPending;
 	useEffect(() => {
-		if (started.current || !ready || !playing) {
+		if (!playing) {
 			return;
 		}
-		started.current = true;
-		if (hasNarration) {
-			mark("narration-start", { place: node });
-			audioPlayer.play();
+		if (!started.current) {
+			if (!ready) {
+				return;
+			}
+			started.current = true;
+			if (hasNarration) {
+				mark("narration-start", { place: node });
+				audioPlayer.play();
+			}
 		}
-		if (hasClip) {
-			videoPlayer.play();
+		if (view.phase === "playing" && begun.current !== view.at) {
+			begun.current = view.at;
+			inPart.current = false;
+			(view.slot === 0 ? player0 : player1).play();
 		}
-	}, [audioPlayer, hasClip, hasNarration, node, playing, ready, videoPlayer]);
+	}, [
+		audioPlayer,
+		hasNarration,
+		node,
+		player0,
+		player1,
+		playing,
+		ready,
+		view.at,
+		view.phase,
+		view.slot,
+	]);
 
 	const toggle = () => {
 		if (started.current) {
 			if (hasNarration) {
 				setPaused(audioPlayer, playing);
 			}
-			if (hasClip) {
-				setPaused(videoPlayer, playing);
+			if (view.phase === "playing") {
+				setPaused(players[view.slot], playing);
 			}
 		}
 		setPlaying(!playing);
 	};
 
-	const showCover = !(hasClip && framed);
+	const showCover = !framed;
 	const spoken = hasNarration ? heard.currentTime : 0;
 	const length = hasNarration ? heard.duration : 0;
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
-			{hasClip ? (
-				<VideoView
-					allowsPictureInPicture={false}
-					contentFit="cover"
-					nativeControls={false}
-					onFirstFrameRender={showFrame}
-					player={videoPlayer}
-					playsInline
-					pointerEvents="none"
-					style={StyleSheet.absoluteFill}
+			{IS_WEB ? (
+				<>
+					<PartVideo
+						hidden={view.slot !== 0}
+						onFirstFrame={firstFrameOf(0)}
+						player={player0}
+					/>
+					<PartVideo
+						hidden={view.slot !== 1}
+						onFirstFrame={firstFrameOf(1)}
+						player={player1}
+					/>
+				</>
+			) : (
+				<PartVideo
+					hidden={false}
+					onFirstFrame={firstFrameOf(view.slot)}
+					player={players[view.slot]}
 				/>
-			) : null}
+			)}
 			{showCover ? cover : null}
 		</View>
 	);
@@ -519,6 +697,14 @@ export default function Place() {
 		return () => sub.remove();
 	}, [onBack]);
 
+	// Each neighbour's first part starts loading as this place starts; the others are let go.
+	const places = adventure?.places;
+	useEffect(() => {
+		if (places) {
+			keepWarm(neighbourUrls(places, node));
+		}
+	}, [node, places]);
+
 	if (!adventure || childName === undefined) {
 		return null;
 	}
@@ -535,7 +721,7 @@ export default function Place() {
 			<PlaceFrame onError={onMediaError} picture={place.picture} />
 		);
 
-	if (audio === null && place.video === null) {
+	if (audio === null && !hasParts(place.parts)) {
 		return (
 			<TimerPlayer
 				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
@@ -551,15 +737,16 @@ export default function Place() {
 	return (
 		<MediaPlayer
 			audio={audio}
-			clip={place.video}
 			cover={cover}
-			key={`${place.video}|${audio?.url}`}
+			// By place and narration, never by a part's url: a part keeps playing when a read brings
+			// other urls. A new narration url (fresh urls after a failed file) starts the place over.
+			key={`${node}|${audio?.url}`}
 			name={place.name}
 			node={node}
 			onBack={onBack}
 			onEnd={onEnd}
 			onMediaError={onMediaError}
-			timerMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
+			parts={place.parts}
 			words={words}
 		/>
 	);
@@ -606,4 +793,5 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: layout.sideMargin,
 	},
+	unseen: { opacity: 0 },
 });

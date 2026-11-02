@@ -1,20 +1,6 @@
 import type { WordTiming } from "./types";
 
 /**
- * What ends a node: its clip when a clip works, else its narration when narration works, else a
- * timer so the child is never stuck on a node whose media all failed.
- */
-export function endSource(media: {
-	hasClip: boolean;
-	hasNarration: boolean;
-}): "clip" | "narration" | "timer" {
-	if (media.hasClip) {
-		return "clip";
-	}
-	return media.hasNarration ? "narration" : "timer";
-}
-
-/**
  * Which word is being said `seconds` into a narration `duration` long. The word timings lead when
  * the engine sent them; without them the words are spread evenly over the narration.
  */

@@ -1,22 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { endSource, wordIndexAt } from "./playback";
-
-describe("endSource", () => {
-	const cases = [
-		{ clip: true, expected: "clip", narration: true },
-		{ clip: true, expected: "clip", narration: false },
-		{ clip: false, expected: "narration", narration: true },
-		{ clip: false, expected: "timer", narration: false },
-	] as const;
-
-	for (const { clip, expected, narration } of cases) {
-		test(`clip ${clip}, narration ${narration} ends on the ${expected}`, () => {
-			expect(endSource({ hasClip: clip, hasNarration: narration })).toBe(
-				expected
-			);
-		});
-	}
-});
+import { wordIndexAt } from "./playback";
 
 describe("wordIndexAt", () => {
 	const timed = [

@@ -3,6 +3,7 @@ import {
 	type EngineAdventure,
 	type EngineMedia,
 	type EngineNode,
+	type EnginePart,
 	type EngineSummary,
 	pollAdventure,
 } from "./engine-client";
@@ -12,6 +13,8 @@ import type {
 	AdventureSummary,
 	MakeStatus,
 	NodeId,
+	Part,
+	PartStatus,
 	Picture,
 	Place,
 	PlaceStatus,
@@ -24,14 +27,54 @@ const PLACES_TOTAL = PLACES.length;
 /** The first url seen for each file (by storage key), so a fresh read never swaps a playing file. */
 export type KnownUrls = Map<string, string>;
 
-const urlOf = (media: EngineMedia, urls: KnownUrls) => {
-	const known = urls.get(media.id);
+const pin = (key: string, url: string, urls: KnownUrls) => {
+	const known = urls.get(key);
 	if (known) {
 		return known;
 	}
-	urls.set(media.id, media.url);
-	return media.url;
+	urls.set(key, url);
+	return url;
 };
+
+const urlOf = (media: EngineMedia, urls: KnownUrls) =>
+	pin(media.id, media.url, urls);
+
+/** A status not known yet reads as still being made. */
+export const partStatus = (status: string): PartStatus =>
+	status === "playable" || status === "failed" ? status : "making";
+
+/** A part's url is pinned by the part's id, so a later read never swaps the file that is playing. */
+const partOf = (raw: EnginePart, urls: KnownUrls): Part => {
+	const status = partStatus(raw.status);
+	return {
+		id: raw.id,
+		status,
+		url:
+			status === "playable" && raw.video
+				? pin(`part:${raw.id}`, raw.video.url, urls)
+				: null,
+	};
+};
+
+/**
+ * The parts of a node. A node made the older way (no parts, a clip) is one playable part made
+ * from its clip; a node with neither has none.
+ */
+export function partsOf(node: EngineNode, urls: KnownUrls): Part[] {
+	if (node.parts?.length) {
+		return node.parts.map((part) => partOf(part, urls));
+	}
+	if (node.clip) {
+		return [
+			{
+				id: node.clip.id,
+				status: "playable",
+				url: pin(`part:${node.clip.id}`, node.clip.url, urls),
+			},
+		];
+	}
+	return [];
+}
 
 const pictureOf = (
 	media: EngineMedia | null,
@@ -59,9 +102,9 @@ function toPlace(
 			id,
 			name: "",
 			narration: [],
+			parts: [],
 			picture: null,
 			status: placeStatus("waiting", polling),
-			video: null,
 		};
 	}
 	const words = node.narration?.words ?? [];
@@ -71,9 +114,9 @@ function toPlace(
 		id,
 		name: node.name ?? "",
 		narration: words.map((word) => word.text),
+		parts: partsOf(node, urls),
 		picture: pictureOf(node.picture, urls),
 		status: placeStatus(node.status, polling),
-		video: node.clip ? urlOf(node.clip, urls) : null,
 	};
 }
 
