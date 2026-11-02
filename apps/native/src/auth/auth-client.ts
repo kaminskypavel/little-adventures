@@ -6,7 +6,7 @@ import { ENV } from "@/src/env";
 import { withRetryOn401 } from "./retry-on-401";
 import { clearToken, readToken, writeToken } from "./token-store";
 
-export interface User {
+interface User {
 	email: string | null;
 	id: string;
 	name: string | null;
@@ -201,7 +201,7 @@ export async function signOut() {
 }
 
 /** The current JWT, minting one from the session cookie when there is none yet. */
-export async function getToken() {
+async function getToken() {
 	await start();
 	return token ?? (await mint());
 }

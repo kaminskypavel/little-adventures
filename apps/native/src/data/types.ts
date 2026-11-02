@@ -30,7 +30,7 @@ export interface Place {
 	video: number | string | null;
 }
 /** e.g. "Goodnight moon", gate image, open image. The pictures are null until they are made. */
-export interface EndGoal {
+interface EndGoal {
 	closed: Picture | null;
 	name: string;
 	open: Picture | null;
@@ -76,7 +76,7 @@ export type MakeStatus =
 	| { goalName?: string; state: "ready" }
 	| { state: "failed" };
 
-export type Look = "clay";
+type Look = "clay";
 /** State of the child's drawn art: idle (none started), working, ready or failed. */
 export type ArtStatus = "idle" | "working" | "ready" | "failed";
 export interface Profile {

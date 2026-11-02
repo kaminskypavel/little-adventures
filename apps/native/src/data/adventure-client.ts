@@ -160,16 +160,6 @@ export const getHome = async (): Promise<{
 	};
 };
 
-/** The adventure made last, for Home's "Keep exploring" card. The engine lists newest first. */
-export const getLatestAdventure =
-	async (): Promise<AdventureSummary | null> => {
-		if (devFlags.isFirstHome) {
-			return null;
-		}
-		const list = engine ? await listEngine(engine) : await wait(keepGoing);
-		return list[0] ?? null;
-	};
-
 export const getIdeas = (): Promise<Idea[]> => wait(ideas);
 
 /**
@@ -320,16 +310,6 @@ async function loadChild(): Promise<{ id?: string; profile: Profile }> {
 /** The child set up on first run (name, boy or girl, age, look, who comes along). */
 export const getProfile = async (): Promise<Profile> =>
 	(await loadChild()).profile;
-
-/** True when the grown-up has a child. */
-export const isSetUp = async (): Promise<boolean> => {
-	try {
-		const { id } = await loadChild();
-		return id !== undefined;
-	} catch {
-		return false;
-	}
-};
 
 /** The app server refuses every signed-in call of a grown-up outside the private beta. */
 const isOutsideBeta = (error: unknown) =>
