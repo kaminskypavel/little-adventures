@@ -208,9 +208,10 @@ function StarSlot({ active, id, onEnd, onReady, take }: StarSlotProps) {
 			style={[
 				videoBox,
 				{ opacity: active ? 1 : HIDDEN_OPACITY },
-				// No shadow on iOS: it is worked out from the video's pixels on every frame (the
-				// biggest drawing cost left on Home) and barely shows on the dark sky.
-				active && Platform.OS !== "ios" ? characterShadow : null,
+				// Web only: on iOS the shadow is worked out from the video's pixels on every frame (the
+				// biggest drawing cost left on Home) and barely shows on the dark sky; on Android a
+				// filter on the video view blanks the star.
+				active && Platform.OS === "web" ? characterShadow : null,
 			]}
 			surfaceType="textureView"
 		/>
@@ -266,7 +267,8 @@ export function StarTake({
 		}
 	}, []);
 
-	if (calm) {
+	// Android's players drop the takes' transparency (VP9 alpha), so it shows the still star.
+	if (calm || Platform.OS === "android") {
 		return <Character kind="star" size={size} />;
 	}
 
