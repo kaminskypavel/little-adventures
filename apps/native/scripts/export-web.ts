@@ -5,6 +5,8 @@
 // Assets that Metro takes from node_modules land under assets/__node_modules/.bun/...; a
 // deploy skips folders named node_modules and dot folders, so those paths are moved to
 // assets/vendor/... and the bundles' references are rewritten to match.
+
+import { spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -16,7 +18,6 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { spawnSync } from "bun";
 
 const OUT = "dist-web";
 const BASE = "/web";
@@ -35,14 +36,11 @@ function filesUnder(dir: string): string[] {
 
 rmSync(OUT, { force: true, recursive: true });
 const run = spawnSync(
-	["bunx", "expo", "export", "-p", "web", "--output-dir", OUT, "--clear"],
-	{
-		env: { ...process.env, EXPO_WEB_BASE_URL: BASE },
-		stderr: "inherit",
-		stdout: "inherit",
-	}
+	"bunx",
+	["expo", "export", "-p", "web", "--output-dir", OUT, "--clear"],
+	{ env: { ...process.env, EXPO_WEB_BASE_URL: BASE }, stdio: "inherit" }
 );
-if (!run.success) {
+if (run.status !== 0) {
 	throw new Error("expo export failed");
 }
 
