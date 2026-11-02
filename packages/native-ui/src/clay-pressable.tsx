@@ -14,7 +14,6 @@ import Animated, {
 	Easing,
 	Extrapolation,
 	interpolate,
-	type SharedValue,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
@@ -39,8 +38,6 @@ interface ClayPressableProps {
 	accessibilityState?: AccessibilityState;
 	children?: ReactNode;
 	disabled?: boolean;
-	/** Drops the clay shadows (see `ClaySurface`). */
-	flatten?: SharedValue<number>;
 	/** Overrides the automatic slop that grows the target to 64 pt. */
 	hitSlop?: number | Insets;
 	onPress?: () => void;
@@ -65,7 +62,6 @@ export function ClayPressable({
 	accessibilityState,
 	children,
 	disabled = false,
-	flatten,
 	hitSlop,
 	onPress,
 	radius = radii.button,
@@ -174,7 +170,6 @@ export function ClayPressable({
 				testID={testID}
 			>
 				<ClaySurface
-					flatten={flatten}
 					pressed={pressed}
 					radius={radius}
 					selected={selected}

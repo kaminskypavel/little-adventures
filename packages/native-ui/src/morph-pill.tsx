@@ -4,9 +4,9 @@ import Animated, {
 	interpolate,
 	type SharedValue,
 	useAnimatedStyle,
-	useDerivedValue,
 } from "react-native-reanimated";
 import { ClayPressable } from "./clay-pressable";
+import { ClaySurface } from "./clay-surface";
 import { ClayText } from "./clay-text";
 import { Icon, type IconName } from "./icons";
 import { useCalm } from "./motion-provider";
@@ -14,12 +14,11 @@ import { buttonSizes, colors } from "./tokens";
 
 const PILL = buttonSizes.lg;
 const MIC_ICON = 72;
-// Of the morph, the label is gone by this much, and the mic shows from this much.
-const LABEL_GONE = 0.3;
-const MIC_FROM = 0.6;
-// The clay shadows are gone by this much: resizing them every frame is what made the morph stutter
-// on iOS. The halo takes over at the end, so the circle never shows them.
-const SHADOW_GONE = 0.12;
+// Of the morph: the label is gone by LABEL_GONE, the pill's clay hands over to the circle's over
+// SWAP, and the mic shows over MIC_IN, once the shape is nearly round. Words and icon never meet.
+const LABEL_GONE = 0.2;
+const SWAP: [number, number] = [0.15, 0.5];
+const MIC_IN: [number, number] = [0.55, 0.85];
 const clamp = Extrapolation.CLAMP;
 
 /** Where the pill sits: its center on the screen, and (for the pill) its width. */
@@ -30,10 +29,12 @@ export interface PillSpot {
 
 /**
  * The New adventure button that becomes the round mic. `progress` runs 0 (the 88 pt pill at
- * `rest`) to 1 (a `size` pt circle at `mic`): the label fades out first, the pill narrows and
- * grows into the circle and travels, and a mic fades in. Reduced motion: no travel, the pill
- * cross-fades out where it is. At 1 it is hidden, so the voice halo can take its place.
- * `off` is the mic-denied look: off clay, not pressable.
+ * `rest`) to 1 (a `size` pt circle at `mic`). The shape between them is drawn by two finished
+ * pieces of clay, the pill and the circle, both stretched to the in-between size and position
+ * and cross-faded: transforms and opacity only, so the GPU reuses their drawn shadows and nothing
+ * is laid out again on any frame. Reduced motion: no travel, the pill cross-fades out where it
+ * is. At 1 it is hidden, so the voice halo can take its place. `off` is the mic-denied look: off
+ * clay, not pressable.
  */
 export function MorphPill({
 	icon,
@@ -61,76 +62,126 @@ export function MorphPill({
 	size: number;
 }) {
 	const calm = useCalm();
-	const frame = useAnimatedStyle(() => {
+
+	// The in-between box at `p`: its size and its center.
+	const between = (p: number) => {
+		"worklet";
+		const mix = (a: number, b: number) => interpolate(p, [0, 1], [a, b], clamp);
+		return {
+			cx: mix(rest.cx, mic.cx),
+			cy: mix(rest.cy, mic.cy),
+			height: mix(PILL.primary, size),
+			width: mix(restWidth, size),
+		};
+	};
+
+	const pill = useAnimatedStyle(() => {
 		const p = progress.get();
 		if (calm) {
-			return {
-				height: PILL.primary,
-				left: rest.cx - restWidth / 2,
-				opacity: 1 - p,
-				top: rest.cy - PILL.primary / 2,
-				width: restWidth,
-			};
+			return { opacity: 1 - p };
 		}
-		const mix = (a: number, b: number) => interpolate(p, [0, 1], [a, b], clamp);
-		const width = mix(restWidth, size);
-		const height = mix(PILL.primary, size);
+		const box = between(p);
 		return {
-			height,
-			left: mix(rest.cx, mic.cx) - width / 2,
-			// At the end the halo takes over, so the pill is not drawn twice.
-			opacity: p >= 1 ? 0 : 1,
-			top: mix(rest.cy, mic.cy) - height / 2,
-			width,
+			opacity: interpolate(p, SWAP, [1, 0], clamp),
+			transform: [
+				{ translateX: box.cx - rest.cx },
+				{ translateY: box.cy - rest.cy },
+				{ scaleX: box.width / restWidth },
+				{ scaleY: box.height / PILL.primary },
+			],
 		};
 	});
+
+	const circle = useAnimatedStyle(() => {
+		const p = progress.get();
+		if (calm || p >= 1) {
+			// At the end the halo takes over, so the circle is not drawn twice.
+			return { opacity: 0 };
+		}
+		const box = between(p);
+		return {
+			opacity: interpolate(p, SWAP, [0, 1], clamp),
+			transform: [
+				{ translateX: box.cx - mic.cx },
+				{ translateY: box.cy - mic.cy },
+				{ scaleX: box.width / size },
+				{ scaleY: box.height / size },
+			],
+		};
+	});
+
 	const labelFade = useAnimatedStyle(() => ({
 		opacity: calm
 			? 1
 			: interpolate(progress.get(), [0, LABEL_GONE], [1, 0], clamp),
 	}));
 	const micFade = useAnimatedStyle(() => ({
-		opacity: calm
-			? 0
-			: interpolate(progress.get(), [MIC_FROM, 1], [0, 1], clamp),
+		opacity: interpolate(progress.get(), MIC_IN, [0, 1], clamp),
 	}));
-	const flatten = useDerivedValue(() =>
-		calm ? 0 : interpolate(progress.get(), [0, SHADOW_GONE], [0, 1], clamp)
-	);
+
 	const ink = off ? colors.offInk : colors.inkNavy;
 
 	return (
-		<Animated.View
-			aria-hidden={listening}
-			pointerEvents={off || listening ? "none" : "box-none"}
-			style={[styles.frame, frame]}
-		>
-			<ClayPressable
-				accessibilityLabel={label}
-				disabled={off || listening}
-				flatten={flatten}
-				onPress={onPress}
-				radius={size / 2}
-				style={styles.fill}
-				tone={off ? "off" : "sun"}
+		<>
+			<Animated.View
+				pointerEvents="none"
+				style={[
+					styles.abs,
+					{
+						height: size,
+						left: mic.cx - size / 2,
+						top: mic.cy - size / 2,
+						width: size,
+					},
+					circle,
+				]}
 			>
-				<Animated.View pointerEvents="none" style={[styles.row, labelFade]}>
-					{icon ? <Icon color={ink} name={icon} size={PILL.icon} /> : null}
-					<ClayText color={ink} numberOfLines={1} variant="title">
-						{label}
-					</ClayText>
-				</Animated.View>
-				<Animated.View pointerEvents="none" style={[styles.row, micFade]}>
+				<ClaySurface
+					radius={size / 2}
+					style={StyleSheet.absoluteFill}
+					tone="sun"
+				/>
+				<Animated.View style={[styles.row, micFade]}>
 					<Icon color={colors.inkNavy} name="mic" size={MIC_ICON} />
 				</Animated.View>
-			</ClayPressable>
-		</Animated.View>
+			</Animated.View>
+			<Animated.View
+				aria-hidden={listening}
+				pointerEvents={off || listening ? "none" : "box-none"}
+				style={[
+					styles.abs,
+					{
+						height: PILL.primary,
+						left: rest.cx - restWidth / 2,
+						top: rest.cy - PILL.primary / 2,
+						width: restWidth,
+					},
+					pill,
+				]}
+			>
+				<ClayPressable
+					accessibilityLabel={label}
+					disabled={off || listening}
+					onPress={onPress}
+					radius={PILL.primary / 2}
+					style={styles.fill}
+					tone={off ? "off" : "sun"}
+				>
+					<Animated.View pointerEvents="none" style={[styles.row, labelFade]}>
+						{icon ? <Icon color={ink} name={icon} size={PILL.icon} /> : null}
+						<ClayText color={ink} numberOfLines={1} variant="title">
+							{label}
+						</ClayText>
+					</Animated.View>
+				</ClayPressable>
+			</Animated.View>
+		</>
 	);
 }
 
 const styles = StyleSheet.create({
+	abs: { position: "absolute" },
 	fill: { height: "100%", width: "100%" },
-	frame: { position: "absolute" },
 	row: {
 		alignItems: "center",
 		bottom: 0,
