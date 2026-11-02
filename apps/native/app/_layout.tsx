@@ -15,6 +15,7 @@ import { TitleHoldProvider } from "@little-adventures/native-ui/title-hold";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, Stack, ThemeProvider, usePathname } from "expo-router";
+import { OrientationLock } from "expo-screen-orientation";
 import {
 	hideAsync,
 	preventAutoHideAsync,
@@ -22,7 +23,7 @@ import {
 } from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { PhoneFrame } from "@/components/phone-frame";
@@ -35,6 +36,7 @@ import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { queryClient } from "@/src/data/query-client";
 import { isAdventurePath } from "@/src/orientation";
+import { lockTo } from "@/src/orientation-lock";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
@@ -43,6 +45,27 @@ preventAutoHideAsync();
 setOptions({ fade: false });
 
 /** Hides the splash once the start page has chosen the first screen, so it never shows a blank. */
+/**
+ * Turns the phone: sideways on the adventure screens, upright everywhere else. This is the only
+ * place that sets the orientation. The per-screen `orientation` option of the stack was removed:
+ * iOS takes only what both ask for, and while the two disagreed mid-navigation the phone did not
+ * turn, or Home was left sideways after a quick back.
+ */
+function OrientationGate() {
+	const pathname = usePathname();
+	useEffect(() => {
+		if (Platform.OS === "web") {
+			return;
+		}
+		lockTo(
+			isAdventurePath(pathname)
+				? OrientationLock.LANDSCAPE
+				: OrientationLock.PORTRAIT_UP
+		);
+	}, [pathname]);
+	return null;
+}
+
 function SplashGate() {
 	const pathname = usePathname();
 	useEffect(() => {
@@ -65,6 +88,7 @@ function SplashGate() {
 const SIGNED_IN_SCREENS = [
 	"beta",
 	"child",
+	"child-edit",
 	"choice",
 	"coming",
 	"end",
@@ -88,6 +112,7 @@ const SIGNED_IN_SCREENS = [
 	"place",
 	"style",
 	"verify",
+	"who",
 ] as const;
 
 // The navigation theme paints its own background; make it clear so the Sky shows.
@@ -134,21 +159,11 @@ export default function Layout() {
 															animation: "none",
 															contentStyle: { backgroundColor: "transparent" },
 															headerShown: false,
-															// iOS: upright everywhere but the adventure screens, which turn the phone.
-															orientation: "portrait",
 														}}
 													>
 														<Stack.Protected guard={status === "signed-in"}>
 															{SIGNED_IN_SCREENS.map((name) => (
-																<Stack.Screen
-																	key={name}
-																	name={name}
-																	options={
-																		isAdventurePath(`/${name}`)
-																			? { orientation: "landscape" }
-																			: undefined
-																	}
-																/>
+																<Stack.Screen key={name} name={name} />
 															))}
 														</Stack.Protected>
 														{/* Signed out only: once signed in they leave the history, so back from
@@ -163,6 +178,7 @@ export default function Layout() {
 												<AdminHint />
 												<AdminPanel />
 												<SplashGate />
+												<OrientationGate />
 											</View>
 										</QueryClientProvider>
 									</BodyFadeProvider>
