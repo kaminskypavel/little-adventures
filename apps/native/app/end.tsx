@@ -12,10 +12,9 @@ import {
 } from "@little-adventures/native-ui/story-map";
 import { motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
-import { getProfile } from "@/src/data/adventure-client";
+import { useChildName } from "@/src/data/profile-queries";
 import { useAdventure } from "@/src/data/use-adventure";
 
 // Round 7 (px / 0.72): the map is 12 px above the panel, which reads 17 pt.
@@ -29,15 +28,7 @@ export default function End() {
 	const calm = useCalm();
 	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const { adventure } = useAdventure(id);
-	const [childName, setChildName] = useState("");
-
-	useEffect(() => {
-		let live = true;
-		getProfile().then((p) => live && setChildName(p.childName));
-		return () => {
-			live = false;
-		};
-	}, []);
+	const childName = useChildName() ?? "";
 
 	return (
 		<Screen

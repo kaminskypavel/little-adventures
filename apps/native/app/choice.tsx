@@ -15,12 +15,12 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { getProfile, getProgress } from "@/src/data/adventure-client";
 import {
 	choicesFrom,
 	isOutroLocked,
 	missingPlaces,
 } from "@/src/data/map-rules";
+import { useChildName } from "@/src/data/profile-queries";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -110,21 +110,13 @@ export default function Choice() {
 	}>();
 	const id = params.id ?? "box";
 	const from = (params.from ?? "intro") as NodeId;
-	const { adventure } = useAdventure(id);
-	const [progress, setProgress] = useState<Progress | null>(null);
-	const [childName, setChildName] = useState<string | null>(null);
+	// Adventure, progress and name come from the shared cache, so the cards paint at once.
+	const { adventure, progress } = useAdventure(id);
+	const childName = useChildName();
 	const [picked, setPicked] = useState<NodeId | null>(null);
 	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-	useEffect(() => {
-		let live = true;
-		getProgress(id).then((p) => live && setProgress(p));
-		getProfile().then((p) => live && setChildName(p.childName));
-		return () => {
-			live = false;
-			clearTimeout(timer.current);
-		};
-	}, [id]);
+	useEffect(() => () => clearTimeout(timer.current), []);
 
 	// Dev only: ?visited=p1,p2 pretends those places were watched, ?drawing=p1a marks one as not drawn yet.
 	const devVisited = dev(params.visited);

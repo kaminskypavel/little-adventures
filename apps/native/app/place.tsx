@@ -30,8 +30,8 @@ import {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { getProfile } from "@/src/data/adventure-client";
 import { endSource, wordIndexAt } from "@/src/data/playback";
+import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
 import type {
 	Adventure,
@@ -465,15 +465,8 @@ export default function Place() {
 	const id = params.id ?? "box";
 	const node = (params.node ?? "p1") as NodeId;
 	const { adventure, onMediaError, visit } = useAdventure(id);
-	const [childName, setChildName] = useState<string | null>(null);
-
-	useEffect(() => {
-		let live = true;
-		getProfile().then((profile) => live && setChildName(profile.childName));
-		return () => {
-			live = false;
-		};
-	}, []);
+	// From the shared cache, so the place paints on its first frame.
+	const childName = useChildName();
 
 	const goodnight = node === "outro";
 
@@ -550,6 +543,7 @@ const styles = StyleSheet.create({
 		right: 0,
 		top: 0,
 	},
+	name: { alignItems: "center", flex: 1 },
 	narration: {
 		left: layout.sideMargin,
 		maxHeight: NARRATION_MAX_HEIGHT,
@@ -563,6 +557,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		width: layout.primaryHeight,
 	},
+	pill: { alignSelf: "center" },
 	root: { flex: 1 },
 	top: {
 		alignItems: "center",

@@ -43,6 +43,9 @@ export const grownUpOptions = () =>
 /** The child as the screens know it. Undefined data while loading. */
 export const useChild = () => useQuery({ ...childOptions(), select: toChild });
 
+/** The child's name from the shared cache: null while it loads. */
+export const useChildName = () => useChild().data?.profile.childName ?? null;
+
 /** The grown-up's own photo: undefined while loading, null when none is saved. */
 export const useGrownUpPhoto = () =>
 	useQuery({ ...grownUpOptions(), select: toGrownUpPhoto });
