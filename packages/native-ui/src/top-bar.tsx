@@ -8,7 +8,7 @@ import type { IconName } from "./icons";
 import { Skeleton } from "./skeleton";
 import { StarTake, type StarTakeName } from "./star-take";
 import { TitleHold } from "./title-hold";
-import { colors, radii, type as typeScale } from "./tokens";
+import { colors, layout, radii, type as typeScale } from "./tokens";
 
 const AVATAR = 61;
 const AVATAR_STAR = 51;
@@ -43,6 +43,7 @@ function Title({
 		<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
 			<ClayText
 				accessibilityRole="header"
+				align="center"
 				color={colors.cream}
 				numberOfLines={1}
 				variant="title"
@@ -123,7 +124,10 @@ export function TopBar({
 					icon={action.icon}
 					onPress={action.onPress}
 				/>
-			) : null}
+			) : (
+				// Balances the back button, so the title stays centred on the screen.
+				<View style={styles.spacer} />
+			)}
 		</>
 	);
 }
@@ -151,6 +155,7 @@ const styles = StyleSheet.create({
 		width: COMPACT_AVATAR,
 	},
 	picture: StyleSheet.absoluteFill,
+	spacer: { width: layout.minTarget },
 	title: { flex: 1, justifyContent: "center" },
 	titleBar: {
 		borderRadius: radii.full,
@@ -158,6 +163,7 @@ const styles = StyleSheet.create({
 		width: TITLE_BAR_WIDTH,
 	},
 	titleSlot: {
+		alignItems: "center",
 		flex: 1,
 		height: typeScale.title.lineHeight,
 		justifyContent: "center",
