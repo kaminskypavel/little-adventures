@@ -8,7 +8,7 @@ import { TextField } from "./text-field";
 import { ToggleCard } from "./toggle-card";
 import { colors, layout, select } from "./tokens";
 
-const ages = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const ages = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 const looks = ["Clay", "Felt", "Wood"];
 const photoActions = ["Edit", "Redraw", "Delete photo"];
 
@@ -59,9 +59,9 @@ export function KitSelect() {
 				Selection and field
 			</ClayText>
 
-			<Item label="age chips 2 to 11, 5 selected">
+			<Item label="age chips 2 to 16, 5 selected">
 				<View style={{ gap: layout.gapTight }}>
-					{[ages.slice(0, 5), ages.slice(5)].map((row) => (
+					{[ages.slice(0, 5), ages.slice(5, 10), ages.slice(10)].map((row) => (
 						<Row key={row[0]}>
 							{row.map((n) => (
 								<Chip
