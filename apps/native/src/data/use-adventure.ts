@@ -9,6 +9,7 @@ import {
 import { makeExpiryGuard, pollAdventure, sleep } from "./engine-client";
 import { useMusic } from "./music-store";
 import { queryClient } from "./query-client";
+import { useReplay } from "./replay-store";
 import type { Adventure, NodeId, Progress } from "./types";
 
 // In the shared cache, which signing out clears.
@@ -78,6 +79,9 @@ export function useAdventure(id: string) {
 		() => queryClient.getQueryData<Progress>(progressKey(id)) ?? null
 	);
 
+	// A replay on this phone stands in for the stored progress on every screen that reads it.
+	const replay = useReplay((s) => s.byId[id]);
+
 	useEffect(() => {
 		let live = true;
 		pollAdventure({
@@ -121,10 +125,10 @@ export function useAdventure(id: string) {
 		async (node: NodeId) => {
 			const p = remember(id, await visitNode(id, node));
 			setProgress(p);
-			return p;
+			return useReplay.getState().step(id, node) ?? p;
 		},
 		[id]
 	);
 
-	return { adventure, onMediaError, progress, visit };
+	return { adventure, onMediaError, progress: replay ?? progress, visit };
 }
