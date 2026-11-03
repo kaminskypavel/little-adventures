@@ -2,7 +2,12 @@
 // use-cast.ts. The session lives in one small store, because the SDK has one player for the page.
 import { useCallback, useEffect } from "react";
 import { create } from "zustand";
-import type { TvMedia, TvRemote } from "./types";
+import {
+	SUBTITLE_STYLE,
+	SUBTITLE_TRACK,
+	type TvMedia,
+	type TvRemote,
+} from "./types";
 
 const SDK_URL =
 	"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
@@ -56,8 +61,12 @@ interface CastSdk {
 			media: {
 				DEFAULT_MEDIA_RECEIVER_APP_ID: string;
 				GenericMediaMetadata: new () => { images: unknown[]; title: string };
-				LoadRequest: new (info: unknown) => unknown;
+				LoadRequest: new (info: unknown) => { activeTrackIds: number[] | null };
 				MediaInfo: new (url: string, type: string) => Record<string, unknown>;
+				TextTrackStyle: new () => Record<string, unknown>;
+				TextTrackType: { SUBTITLES: string };
+				Track: new (id: number, type: string) => Record<string, unknown>;
+				TrackType: { TEXT: string };
 			};
 		};
 	};
@@ -195,9 +204,23 @@ export function useTvRemote(): TvRemote {
 		info.metadata = metadata;
 		info.duration = media.durationSec;
 		info.streamType = "BUFFERED";
+		const request = new chrome.cast.media.LoadRequest(info);
+		if (media.subtitlesUrl) {
+			const { Track, TrackType, TextTrackStyle, TextTrackType } =
+				chrome.cast.media;
+			const track = new Track(SUBTITLE_TRACK.id, TrackType.TEXT);
+			track.trackContentId = media.subtitlesUrl;
+			track.trackContentType = SUBTITLE_TRACK.contentType;
+			track.subtype = TextTrackType.SUBTITLES;
+			track.language = SUBTITLE_TRACK.language;
+			track.name = SUBTITLE_TRACK.name;
+			info.tracks = [track];
+			info.textTrackStyle = Object.assign(new TextTrackStyle(), SUBTITLE_STYLE);
+			request.activeTrackIds = [SUBTITLE_TRACK.id];
+		}
 		loaded = false;
 		useStore.setState({ ended: false });
-		await session.loadMedia(new chrome.cast.media.LoadRequest(info));
+		await session.loadMedia(request);
 		loaded = true;
 	}, []);
 	const toggle = useCallback(() => controller?.playOrPause(), []);

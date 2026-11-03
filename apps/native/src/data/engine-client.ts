@@ -78,9 +78,13 @@ export interface EngineMe {
 	name?: string;
 	steps: EngineSteps;
 }
-/** The place as one video for the TV: a presigned read url and how long it plays. */
+/**
+ * The place as one video for the TV: a presigned read url and how long it plays, plus the
+ * WebVTT read-along words (null when the place has none).
+ */
 export interface CastMedia {
 	durationSec: number;
+	subtitlesUrl: string | null;
 	url: string;
 }
 export interface VisitResult {

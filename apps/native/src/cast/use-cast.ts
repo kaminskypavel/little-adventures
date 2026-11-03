@@ -11,7 +11,12 @@ import {
 	useRemoteMediaClient,
 	useStreamPosition,
 } from "react-native-google-cast";
-import type { TvMedia, TvRemote } from "./types";
+import {
+	SUBTITLE_STYLE,
+	SUBTITLE_TRACK,
+	type TvMedia,
+	type TvRemote,
+} from "./types";
 
 // How often the TV's position is reported, in seconds: often enough for the words to follow.
 const POSITION_TICK_SEC = 0.25;
@@ -50,6 +55,19 @@ export function useTvRemote(): TvRemote {
 				mediaInfo: {
 					contentType: VIDEO_TYPE,
 					contentUrl: media.url,
+					mediaTracks: media.subtitlesUrl
+						? [
+								{
+									contentId: media.subtitlesUrl,
+									contentType: SUBTITLE_TRACK.contentType,
+									id: SUBTITLE_TRACK.id,
+									language: SUBTITLE_TRACK.language,
+									name: SUBTITLE_TRACK.name,
+									subtype: "subtitles",
+									type: "text",
+								},
+							]
+						: [],
 					metadata: {
 						images: media.posterUrl ? [{ url: media.posterUrl }] : [],
 						title: media.title,
@@ -57,8 +75,15 @@ export function useTvRemote(): TvRemote {
 					},
 					streamDuration: media.durationSec,
 					streamType: MediaStreamType.BUFFERED,
+					textTrackStyle: media.subtitlesUrl ? SUBTITLE_STYLE : null,
 				},
 			});
+			if (media.subtitlesUrl) {
+				// The library's load request has no activeTrackIds, so the track is switched on after.
+				await client
+					.setActiveTrackIds([SUBTITLE_TRACK.id])
+					.catch(() => undefined);
+			}
 			// Listening starts after the load, so a status left from the last place is never read.
 			watching.current = client.onMediaPlaybackEnded(() => setEnded(true));
 		},

@@ -797,6 +797,7 @@ function TvPlayer({
 				await latest.current.tv.load({
 					durationSec: media.durationSec,
 					posterUrl: latest.current.posterUrl,
+					subtitlesUrl: media.subtitlesUrl ?? null,
 					title: latest.current.name,
 					url: media.url,
 				});

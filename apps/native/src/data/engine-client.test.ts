@@ -28,9 +28,12 @@ function engine(...replies: Response[]) {
 
 describe("engine client", () => {
 	test("cast posts to the node and answers the video url", async () => {
-		const { client, requests } = engine(json({ durationSec: 42, url: "u" }));
+		const { client, requests } = engine(
+			json({ durationSec: 42, subtitlesUrl: "s.vtt", url: "u" })
+		);
 		expect(await client.cast("a 1", "p1")).toEqual({
 			durationSec: 42,
+			subtitlesUrl: "s.vtt",
 			url: "u",
 		});
 		expect(requests[0].path).toBe("/adventures/a%201/nodes/p1/cast");
