@@ -43,6 +43,8 @@ export const LEAD_ZOOM_TO = 1.06;
 export const LEAD_ZOOM_MS = 15_000;
 /** How long the picture takes to fade once the first part has its first frame. */
 export const LEAD_FADE_MS = 400;
+/** The still picture dissolves into the moving video over this long, so a place never snaps into motion. */
+export const COVER_FADE_MS = 700;
 /** The hand-over is a dip to night: the picture fades to navy over this many seconds, then back from it. */
 export const DIP_HALF_SEC = 0.4;
 /** Each half of the dip, in ms. */

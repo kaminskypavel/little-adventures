@@ -52,6 +52,7 @@ import { speakingAt } from "@/src/data/music-rules";
 import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
+	COVER_FADE_MS,
 	DIP_HALF_MS,
 	DIP_REDUCED_MS,
 	type EndCause,
@@ -655,6 +656,16 @@ function MediaPlayer({
 	const [status1, setStatus1] = useState(player1.status);
 	const statuses = [status0, status1] as const;
 	const [framed, setFramed] = useState(false);
+	// The picture stays mounted while it dissolves into the video, then goes.
+	const [coverGone, setCoverGone] = useState(false);
+	useEffect(() => {
+		if (!framed) {
+			setCoverGone(false);
+			return;
+		}
+		const timer = setTimeout(() => setCoverGone(true), COVER_FADE_MS);
+		return () => clearTimeout(timer);
+	}, [framed]);
 	// How far through the whole place (every part together) the video is, read on the UI thread.
 	const progress = useSharedValue(0);
 	const seenSec = useRef<number[]>([]);
@@ -996,9 +1007,9 @@ function MediaPlayer({
 	};
 
 	// The picture leads (it was on screen with the narration before the video): it fades away
-	// over the video's first frame. Otherwise it goes at once, as before.
+	// over the video's first frame. Otherwise it dissolves into the moving video (COVER_FADE_MS).
 	const led = view.lead !== null;
-	const showCover = led || !framed;
+	const showCover = led || !coverGone;
 	const zoom = leadZoom(view, useReducedMotion());
 	const { current, read } = useReadAlong({
 		audio,
@@ -1024,7 +1035,11 @@ function MediaPlayer({
 			)}
 			<Dip up={view.dip !== null} />
 			{showCover ? (
-				<Cover fadeMs={led ? LEAD_FADE_MS : 0} gone={framed} zoom={zoom}>
+				<Cover
+					fadeMs={led ? LEAD_FADE_MS : COVER_FADE_MS}
+					gone={framed}
+					zoom={zoom}
+				>
 					{cover}
 				</Cover>
 			) : null}
