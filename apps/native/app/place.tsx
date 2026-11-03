@@ -350,6 +350,9 @@ const setPaused = (
 	paused: boolean
 ) => (paused ? player.pause() : player.play());
 
+/** How close to its end a voice that stopped counts as finished (status ticks are coarse). */
+const VOICE_END_SLACK_SEC = 0.25;
+
 /** A part player: muted, no loop, and it reports its time often enough to hand over on time. */
 const setupPlayer = (created: VideoPlayer) => {
 	created.loop = false;
@@ -909,17 +912,29 @@ function MediaPlayer({
 			send({ type: "narration-ended" });
 		}
 	}, [heard.didJustFinish, node, own, send]);
-	// Own audio: the audio of the part whose turn it is has ended.
-	const finished0 = heardVoices[0].didJustFinish;
-	const finished1 = heardVoices[1].didJustFinish;
+	// Own audio: the audio of the part whose turn it is has ended. `didJustFinish` lasts one status
+	// tick and the phone can miss it (the place then sat out the grace wait, frozen on its last
+	// frame), so a voice that started for this half and now stands still at its end counts too.
+	// endVoice ignores a repeat.
+	const startedFor = useRef<[number, number]>([-1, -1]);
+	const [v0, v1] = heardVoices;
 	useEffect(() => {
 		const now = machine.current;
-		const done = voiceSlot(now.half) === 0 ? finished0 : finished1;
-		if (now.own && now.speaking && done) {
+		const slot = voiceSlot(now.half);
+		const heardNow = slot === 0 ? v0 : v1;
+		if (heardNow.playing) {
+			startedFor.current[slot] = now.half;
+		}
+		const ranOut =
+			startedFor.current[slot] === now.half &&
+			!heardNow.playing &&
+			heardNow.duration > 0 &&
+			heardNow.currentTime >= heardNow.duration - VOICE_END_SLACK_SEC;
+		if (now.own && now.speaking && (heardNow.didJustFinish || ranOut)) {
 			mark("narration-end", { part: now.half + 1, place: node });
 			send({ type: "voice-ended" });
 		}
-	}, [finished0, finished1, node, send]);
+	}, [v0, v1, node, send]);
 	// The narration's time tells the machine when a half of the words is over.
 	const heardSec = heard.currentTime;
 	const heardLength = heard.duration;
