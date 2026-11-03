@@ -86,6 +86,20 @@ export interface EngineMe {
 	name?: string;
 	steps: EngineSteps;
 }
+/**
+ * The place as one video for the TV: a presigned read url and how long it plays, plus the
+ * WebVTT read-along words (null when the place has none).
+ */
+export interface CastMedia {
+	durationSec: number;
+	subtitlesUrl: string | null;
+	url: string;
+}
+/** Where to put the map picture for the TV (presigned PUT) and where the TV reads it (GET). */
+export interface CastMapTarget {
+	putUrl: string;
+	url: string;
+}
 export interface VisitResult {
 	outroLocked: boolean;
 	placesDone: number;
@@ -128,6 +142,38 @@ export function createEngineClient(engineFetch: EngineFetch) {
 	}
 
 	return {
+		/**
+		 * The place as one video for the TV. May take up to 30 s the first time. Null on 409: the
+		 * place has no video or narration yet (or a part is still being made), so play it here.
+		 */
+		cast: async (id: string, node: string): Promise<CastMedia | null> => {
+			try {
+				return await call<CastMedia>(
+					`/adventures/${encodeURIComponent(id)}/nodes/${encodeURIComponent(node)}/cast`,
+					{ method: "POST" }
+				);
+			} catch (error) {
+				if (error instanceof EngineError && error.status === 409) {
+					return null;
+				}
+				throw error;
+			}
+		},
+		/**
+		 * A fresh place to upload the map picture for the TV. With the picture's size in bytes
+		 * (up to 5 MB) the upload url is signed for exactly that length.
+		 */
+		castMap: (id: string, contentLength?: number) =>
+			call<CastMapTarget>(
+				`/adventures/${encodeURIComponent(id)}/cast-map`,
+				contentLength === undefined
+					? { method: "POST" }
+					: {
+							body: JSON.stringify({ contentLength }),
+							headers: { "content-type": "application/json" },
+							method: "POST",
+						}
+			),
 		createAdventure: (childId: string, question: string, style: Style) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
 				body: JSON.stringify({ childId, question, style }),

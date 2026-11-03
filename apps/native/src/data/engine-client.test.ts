@@ -27,6 +27,48 @@ function engine(...replies: Response[]) {
 }
 
 describe("engine client", () => {
+	test("cast posts to the node and answers the video url", async () => {
+		const { client, requests } = engine(
+			json({ durationSec: 42, subtitlesUrl: "s.vtt", url: "u" })
+		);
+		expect(await client.cast("a 1", "p1")).toEqual({
+			durationSec: 42,
+			subtitlesUrl: "s.vtt",
+			url: "u",
+		});
+		expect(requests[0].path).toBe("/adventures/a%201/nodes/p1/cast");
+		expect(requests[0].init?.method).toBe("POST");
+	});
+
+	test("cast answers null on 409 and throws on other errors", async () => {
+		const { client } = engine(
+			json({ error: "not-ready" }, 409),
+			json({ code: "NOT_FOUND", message: "no" }, 404)
+		);
+		expect(await client.cast("a1", "p1")).toBe(null);
+		const failure = await client.cast("a1", "zz").catch((error) => error);
+		expect(failure instanceof EngineError).toBe(true);
+	});
+
+	test("castMap posts to the adventure and answers the put and read urls", async () => {
+		const { client, requests } = engine(json({ putUrl: "p", url: "g" }));
+		expect(await client.castMap("a 1")).toEqual({ putUrl: "p", url: "g" });
+		expect(requests[0].path).toBe("/adventures/a%201/cast-map");
+		expect(requests[0].init?.method).toBe("POST");
+		expect(requests[0].init?.body).toBe(undefined);
+	});
+
+	test("castMap sends the picture size when it is known", async () => {
+		const { client, requests } = engine(json({ putUrl: "p", url: "g" }));
+		await client.castMap("a1", 1234);
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			contentLength: 1234,
+		});
+		expect(requests[0].init?.headers).toEqual({
+			"content-type": "application/json",
+		});
+	});
+
 	test("createAdventure posts the child and the question", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", source: "recorded", status: "ready" })

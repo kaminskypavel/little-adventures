@@ -12,7 +12,9 @@ import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useRef } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { MapCastButton } from "@/src/cast/map-cast-button";
+import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
@@ -120,6 +122,18 @@ export default function StoryMapScreen() {
 	const progress: Progress | null = devVisited?.length
 		? { here: devVisited.at(-1) as NodeId, visited: devVisited }
 		: stored;
+
+	// A connected TV shows a picture of this map, taken again when a place is walked or drawn.
+	const mapOnTv = useMapOnTv({
+		adventureId: id,
+		ready: Boolean(adventure && progress) && walkTo === undefined,
+		title: adventure?.endGoal.name ?? "",
+		version: [
+			progress?.here,
+			progress?.visited.join(","),
+			PLACE_IDS.map((node) => adventure?.places[node].status).join(","),
+		].join("|"),
+	});
 
 	const openPlace = (node: NodeId) =>
 		router.replace(`/place?id=${id}&node=${node}`);
@@ -242,12 +256,19 @@ export default function StoryMapScreen() {
 	);
 
 	// Sideways, the fork road takes the whole screen.
-	if (sideways) {
-		return fork;
-	}
-	return screen;
+	const shown = sideways ? fork : screen;
+	// The Cast button floats over the map, outside the view that is photographed for the TV.
+	return (
+		<View style={styles.capture}>
+			<View collapsable={false} ref={mapOnTv} style={styles.capture}>
+				{shown}
+			</View>
+			<MapCastButton sideways={sideways} />
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
+	capture: { flex: 1 },
 	sidewaysButton: { height: 60, paddingHorizontal: 24 },
 });
