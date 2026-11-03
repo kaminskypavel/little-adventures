@@ -26,6 +26,7 @@ import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 import { useLandscape } from "@/src/orientation";
+import { useScreenFade } from "@/src/screen-fade";
 
 const NODE_IDS: readonly string[] = [
 	"intro",
@@ -108,6 +109,7 @@ function SidewaysMenu() {
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
 	const router = useRouter();
+	const { leave, veil } = useScreenFade();
 	const sideways = useLandscape();
 	const params = useLocalSearchParams<{
 		id?: string;
@@ -141,7 +143,7 @@ export default function StoryMapScreen() {
 	});
 
 	const openPlace = (node: NodeId) =>
-		router.replace(`/place?id=${id}&node=${node}`);
+		leave(() => router.replace(`/place?id=${id}&node=${node}`));
 
 	let content: ReactNode = null;
 	let fork: ReactNode = null;
@@ -270,6 +272,7 @@ export default function StoryMapScreen() {
 				{shown}
 			</View>
 			{sideways ? <SidewaysMenu /> : <MapCastButton />}
+			{veil}
 		</View>
 	);
 }

@@ -93,6 +93,7 @@ import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
+import { useLeaveVoices, useScreenFade } from "@/src/screen-fade";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
 const PLACE_MS = 8000;
@@ -636,6 +637,7 @@ function MediaPlayer({
 		voiceOf,
 		voices,
 	} = useNarrationAudio(view, audio?.url ?? null);
+	useLeaveVoices([audioPlayer, ...voices]);
 	const held = slotParts(view);
 	const player0 = useVideoPlayer(held[0]?.url ?? null, setupPlayer);
 	const player1 = useVideoPlayer(held[1]?.url ?? null, setupPlayer);
@@ -1195,8 +1197,22 @@ function GoodnightFrame({ adventure }: { adventure: Adventure }) {
 	);
 }
 
-/** 12 Place video and 15 Goodnight video. */
+/** 12 Place video and 15 Goodnight video. It opens from the night veil and closes to it. */
 export default function Place() {
+	const { leave, veil } = useScreenFade();
+	return (
+		<>
+			<PlaceScreen leave={leave} />
+			{veil}
+		</>
+	);
+}
+
+function PlaceScreen({
+	leave,
+}: {
+	leave: ReturnType<typeof useScreenFade>["leave"];
+}) {
 	const router = useRouter();
 	const params = useLocalSearchParams<{ id?: string; node?: string }>();
 	const id = params.id ?? "box";
@@ -1219,14 +1235,19 @@ export default function Place() {
 
 	const onEnd = useCallback(async () => {
 		await visit(node);
-		router.replace(
-			goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
+		// The goodnight hands the music to the end screen, which fades it itself.
+		leave(
+			() =>
+				router.replace(
+					goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
+				),
+			{ keepMusic: goodnight }
 		);
-	}, [goodnight, id, node, router, visit]);
+	}, [goodnight, id, leave, node, router, visit]);
 
 	const onBack = useCallback(
-		() => router.replace(`/map?id=${id}`),
-		[id, router]
+		() => leave(() => router.replace(`/map?id=${id}`)),
+		[id, leave, router]
 	);
 	// Android's back does what the map button does (the map was replaced by this place).
 	useEffect(() => {

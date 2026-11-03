@@ -35,6 +35,7 @@ import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 import { useLandscape } from "@/src/orientation";
+import { useScreenFade } from "@/src/screen-fade";
 
 const { choice } = listCards;
 
@@ -242,6 +243,8 @@ const hasEverything = (
 
 export default function Choice() {
 	const router = useRouter();
+	// Opens from the night veil when it follows a place; nothing leaves from here.
+	const { veil } = useScreenFade();
 	const params = useLocalSearchParams<{
 		drawing?: string;
 		from?: string;
@@ -310,100 +313,106 @@ export default function Choice() {
 
 	if (sideways) {
 		return (
-			<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
-				<Halves
-					cards={cards}
-					missing={missing}
-					onPick={pick}
-					picked={picked}
-					starTake={starTake}
-					title={sidewaysTitle({ goodnightOpen, peek, waiting })}
-				/>
-			</View>
+			<>
+				<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
+					<Halves
+						cards={cards}
+						missing={missing}
+						onPick={pick}
+						picked={picked}
+						starTake={starTake}
+						title={sidewaysTitle({ goodnightOpen, peek, waiting })}
+					/>
+				</View>
+				{veil}
+			</>
 		);
 	}
 
 	return (
-		<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
-			<Screen
-				bodyStyle={{
-					paddingTop: goodnightOpen ? spacing.sm : CARDS_BELOW_TITLE,
-				}}
-				dock={
-					peek ? (
-						<PrimaryButton
-							label={`Peek at ${peek.name}`}
-							onPress={() => walkTo(peek.node)}
+		<>
+			<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
+				<Screen
+					bodyStyle={{
+						paddingTop: goodnightOpen ? spacing.sm : CARDS_BELOW_TITLE,
+					}}
+					dock={
+						peek ? (
+							<PrimaryButton
+								label={`Peek at ${peek.name}`}
+								onPress={() => walkTo(peek.node)}
+							/>
+						) : undefined
+					}
+					title="Pick a way"
+				>
+					{goodnightOpen ? (
+						<ClayText
+							align="center"
+							color={colors.cream}
+							style={[LINE, styles.done]}
+							variant="label"
+						>
+							All 4 places done!
+						</ClayText>
+					) : null}
+					<View style={styles.cards}>
+						{cards.map((card, index) => (
+							<ChoiceCard
+								key={card.node}
+								kind={card.goal ? "goal" : "place"}
+								name={card.name}
+								onPress={
+									card.state === "drawing" ? undefined : () => pick(card.node)
+								}
+								picture={card.picture}
+								pulseDelay={
+									card.state === "drawing" ? null : index * motion.pulseOffset
+								}
+								selected={picked === card.node}
+								state={card.state}
+								style={
+									goodnightLocked || drawing
+										? { height: choice.heightTight }
+										: undefined
+								}
+								testID={`choice-${card.node}`}
+							/>
+						))}
+					</View>
+					{goodnightLocked ? (
+						<Plate
+							icon="lock"
+							label={`${missing} more ${missing > 1 ? "places" : "place"} first`}
+							style={styles.plate}
+							variant="big"
 						/>
-					) : undefined
-				}
-				title="Pick a way"
-			>
-				{goodnightOpen ? (
-					<ClayText
-						align="center"
-						color={colors.cream}
-						style={[LINE, styles.done]}
-						variant="label"
-					>
-						All 4 places done!
-					</ClayText>
-				) : null}
-				<View style={styles.cards}>
-					{cards.map((card, index) => (
-						<ChoiceCard
-							key={card.node}
-							kind={card.goal ? "goal" : "place"}
-							name={card.name}
-							onPress={
-								card.state === "drawing" ? undefined : () => pick(card.node)
-							}
-							picture={card.picture}
-							pulseDelay={
-								card.state === "drawing" ? null : index * motion.pulseOffset
-							}
-							selected={picked === card.node}
-							state={card.state}
-							style={
-								goodnightLocked || drawing
-									? { height: choice.heightTight }
-									: undefined
-							}
-							testID={`choice-${card.node}`}
-						/>
-					))}
-				</View>
-				{goodnightLocked ? (
-					<Plate
-						icon="lock"
-						label={`${missing} more ${missing > 1 ? "places" : "place"} first`}
-						style={styles.plate}
-						variant="big"
-					/>
-				) : null}
-				{peek ? (
-					<ClayText
-						align="center"
-						color={colors.cream}
-						style={[LINE, styles.message]}
-						variant="label"
-					>
-						{`That one is almost ready. Peek at ${peek.name} first?`}
-					</ClayText>
-				) : null}
-				{waiting ? (
-					<ClayText
-						align="center"
-						color={colors.cream}
-						style={[LINE, styles.message]}
-						variant="label"
-					>
-						{WAITING_LINE}
-					</ClayText>
-				) : null}
-				{starTake ? <Star take={starTake} /> : null}
-			</Screen>
-		</View>
+					) : null}
+					{peek ? (
+						<ClayText
+							align="center"
+							color={colors.cream}
+							style={[LINE, styles.message]}
+							variant="label"
+						>
+							{`That one is almost ready. Peek at ${peek.name} first?`}
+						</ClayText>
+					) : null}
+					{waiting ? (
+						<ClayText
+							align="center"
+							color={colors.cream}
+							style={[LINE, styles.message]}
+							variant="label"
+						>
+							{WAITING_LINE}
+						</ClayText>
+					) : null}
+					{starTake ? <Star take={starTake} /> : null}
+				</Screen>
+			</View>
+			{veil}
+		</>
 	);
 }
 
