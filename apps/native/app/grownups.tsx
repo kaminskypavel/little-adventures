@@ -1,6 +1,9 @@
 import { BODY_SCROLL_START } from "@little-adventures/native-ui/body-fade";
 import { SecondaryButton } from "@little-adventures/native-ui/button";
-import { PRESETS } from "@little-adventures/native-ui/called-chips";
+import {
+	type Called,
+	PRESETS,
+} from "@little-adventures/native-ui/called-chips";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { PlanCard } from "@little-adventures/native-ui/plan-card";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
@@ -13,6 +16,8 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import { useSession } from "@/src/auth/use-session";
+import { reprepareChild } from "@/src/data/adventure-client";
+import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { grownUpImage } from "@/src/data/profile-map";
 import {
 	useChild,
@@ -20,6 +25,8 @@ import {
 	useGrownUpPhoto,
 	useSetCalled,
 } from "@/src/data/profile-queries";
+import { LANGUAGES, type Language, useT } from "@/src/i18n";
+import { grownupsStrings } from "@/src/i18n/strings/grownups";
 import { askText, showMenu } from "@/src/menu/show-menu";
 import { photoMenu } from "@/src/photo/photo-menu";
 import type { Source } from "@/src/photo/photo-step";
@@ -33,7 +40,14 @@ const PILL_HEIGHT = 44;
 const PLAN_GAP = 36;
 const FOOT_GAP = 30;
 const MAX_WORD = 30;
-const PLAN_ITEMS = ["3 new adventures a day", "Every story saved"];
+const LANGUAGE_GAP = 28;
+// The presets are saved under their English names; the words on screen follow the language.
+const PRESET_KEYS = {
+	father: "papa",
+	grandfather: "grandpa",
+	grandmother: "grandma",
+	mother: "mama",
+} as const;
 
 export default function Grownups() {
 	const router = useRouter();
@@ -46,6 +60,30 @@ export default function Grownups() {
 	const { data: grownUpPhoto } = useGrownUpPhoto();
 	const deleteOwnPhoto = useDeleteGrownUpPhoto();
 	const setCalled = useSetCalled();
+	const t = useT(grownupsStrings);
+	const language = usePlayerPrefs((s) => s.language);
+
+	const calledName = (called: Called) =>
+		called.relation === "other" ? called.name : t(PRESET_KEYS[called.relation]);
+
+	// The language is kept first, so the next adventure is prepared in it.
+	const changeLanguage = (next: Language) => {
+		if (next === language) {
+			return;
+		}
+		usePlayerPrefs.getState().setLanguage(next);
+		reprepareChild(child?.id);
+	};
+	const languageMenu = () =>
+		showMenu(
+			t("language"),
+			LANGUAGES.map(({ code, name: label }) => ({
+				label,
+				onPress: () => changeLanguage(code),
+			}))
+		);
+	const languageName =
+		LANGUAGES.find((l) => l.code === language)?.name ?? language;
 
 	const signOut = async () => {
 		await endSession();
@@ -57,35 +95,35 @@ export default function Grownups() {
 		router.push(`/grownup-photo?replace=1&source=${source}`);
 
 	const askOther = () =>
-		askText?.(`What does ${name} call you?`, (text) => {
+		askText?.(t("askCalled", { name }), (text) => {
 			const word = text.trim().slice(0, MAX_WORD);
 			if (!word) {
 				return;
 			}
-			showMenu(`In the story, ${word} is`, [
+			showMenu(t("inStoryIs", { word }), [
 				{
-					label: "he",
+					label: t("he"),
 					onPress: () =>
 						setCalled({ name: word, pronoun: "he", relation: "other" }),
 				},
 				{
-					label: "she",
+					label: t("she"),
 					onPress: () =>
 						setCalled({ name: word, pronoun: "she", relation: "other" }),
 				},
 			]);
 		});
 	const calledMenu = () =>
-		showMenu(`What does ${name} call you?`, [
+		showMenu(t("askCalled", { name }), [
 			...PRESETS.map((called) => ({
-				label: called.name,
+				label: calledName(called),
 				onPress: () => setCalled(called),
 			})),
-			...(askText ? [{ label: "Other...", onPress: askOther }] : []),
+			...(askText ? [{ label: t("other"), onPress: askOther }] : []),
 		]);
 
 	return (
-		<Screen scrolls topBar={<TopBar title="Grown-ups" />}>
+		<Screen scrolls topBar={<TopBar title={t("title")} />}>
 			<ScrollView
 				contentContainerStyle={{
 					paddingBottom: insets.bottom + layout.dockBottom,
@@ -97,17 +135,17 @@ export default function Grownups() {
 					<>
 						<View style={styles.you}>
 							<Portrait
-								cameraLabel="Change your photo"
+								cameraLabel={t("changePhoto")}
 								onCamera={() =>
 									photoMenu(
-										"Your photo",
+										t("yourPhoto"),
 										setOwnPhoto,
 										grownUpPhoto ? deleteOwnPhoto : null
 									)
 								}
 							>
 								<PortraitArt
-									accessibilityLabel="Your photo"
+									accessibilityLabel={t("yourPhoto")}
 									image={grownUpPhoto ? grownUpImage(grownUpPhoto) : null}
 								/>
 							</Portrait>
@@ -118,7 +156,7 @@ export default function Grownups() {
 								style={styles.name}
 								variant="title"
 							>
-								You
+								{t("you")}
 							</ClayText>
 							<ClayText
 								align="center"
@@ -127,13 +165,17 @@ export default function Grownups() {
 								style={styles.sub}
 								variant="body"
 							>
-								{`${name} calls you`}
+								{t("callsYou", { name })}
 							</ClayText>
 							<View style={styles.pillSlot}>
 								{grownUpPhoto ? (
 									<SecondaryButton
-										accessibilityLabel={`What ${name} calls you`}
-										label={grownUpPhoto.called?.name ?? "Pick"}
+										accessibilityLabel={t("whatCalled", { name })}
+										label={
+											grownUpPhoto.called
+												? calledName(grownUpPhoto.called)
+												: t("pick")
+										}
 										onPress={calledMenu}
 										size="sm"
 										style={styles.pill}
@@ -142,12 +184,31 @@ export default function Grownups() {
 							</View>
 						</View>
 						<PlanCard
-							items={PLAN_ITEMS}
-							note="Paid plans are coming. The beta is free."
+							items={[t("planOne"), t("planTwo")]}
+							note={t("planNote")}
 							style={styles.plan}
-							tag="BETA"
-							title="Your plan"
+							tag={t("planTag")}
+							title={t("planTitle")}
 						/>
+						<View style={styles.language}>
+							<ClayText
+								color={colors.cream}
+								numberOfLines={1}
+								style={styles.languageLabel}
+								variant="body"
+							>
+								{t("language")}
+							</ClayText>
+							<SecondaryButton
+								accessibilityLabel={t("languageLabel", {
+									language: languageName,
+								})}
+								label={languageName}
+								onPress={languageMenu}
+								size="sm"
+								style={styles.pill}
+							/>
+						</View>
 						<View style={styles.foot}>
 							<ClayText
 								color={colors.cream}
@@ -155,10 +216,10 @@ export default function Grownups() {
 								style={styles.signed}
 								variant="body"
 							>
-								{who ? `Signed in as ${who}` : "Signed in"}
+								{who ? t("signedInAs", { who }) : t("signedIn")}
 							</ClayText>
 							<View style={styles.link}>
-								<QuietLink label="Sign out" onPress={signOut} />
+								<QuietLink label={t("signOut")} onPress={signOut} />
 							</View>
 						</View>
 					</>
@@ -170,6 +231,14 @@ export default function Grownups() {
 
 const styles = StyleSheet.create({
 	foot: { marginTop: FOOT_GAP, paddingHorizontal: 30 },
+	language: {
+		alignItems: "center",
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginTop: LANGUAGE_GAP,
+		paddingHorizontal: 30,
+	},
+	languageLabel: { fontSize: 17, lineHeight: 22 },
 	link: { alignItems: "flex-start", marginTop: -2 },
 	name: { fontSize: 26, lineHeight: 30, marginTop: NAME_GAP },
 	pill: { alignSelf: "center", paddingHorizontal: 20 },
