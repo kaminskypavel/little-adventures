@@ -29,6 +29,16 @@ const BUSY: (MediaPlayerState | null)[] = [
 	MediaPlayerState.LOADING,
 ];
 
+/** True when a TV is on the network (or already connected): the menu shows its TV row then. */
+export function useCastAvailable(): boolean {
+	const state = useCastState();
+	return (
+		state === CastState.NOT_CONNECTED ||
+		state === CastState.CONNECTING ||
+		state === CastState.CONNECTED
+	);
+}
+
 /** True while a cast session is connected. Cheap: safe to call wherever the screen needs it. */
 export function useCastConnected(): boolean {
 	return useCastState() === CastState.CONNECTED;

@@ -1,9 +1,11 @@
 // One music bed for a whole adventure, from the map to the goodnight and the end screen. It lives
 // here, outside any screen, so moving between map, place and choice never restarts it. The screens
 // tell the store who is speaking and whether the player is paused; the store fades the volume.
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type AudioPlayer, createAudioPlayer } from "expo-audio";
 import { useEffect } from "react";
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { bedVolume, FADE_MS, PLACE_EASE_MS, rampVolume } from "./music-rules";
 
 // How often a fade sets the volume, in ms.
@@ -13,7 +15,7 @@ interface Music {
 	adventureId: string | null;
 	/** A place has just opened: its first duck eases over PLACE_EASE_MS. */
 	easeNext: boolean;
-	/** The grown-up turned the music off from the player menu, for this session. */
+	/** The grown-up turned the music off in the adventure menu. Kept on the phone; default on. */
 	muted: boolean;
 	paused: boolean;
 	setEasing: (easing: boolean) => void;
@@ -58,83 +60,99 @@ function release(target: AudioPlayer) {
 	target.remove();
 }
 
-export const useMusic = create<Music>((set, get) => ({
-	adventureId: null,
-	easeNext: false,
-	muted: false,
-	paused: false,
-	setEasing: (easeNext) => set({ easeNext }),
-	setMuted: (muted) => {
-		set({ muted });
-		if (player && !get().paused) {
-			fade(player, bedVolume(get().speaking, muted));
+export const useMusic = create<Music>()(
+	persist(
+		(set, get) => ({
+			adventureId: null,
+			easeNext: false,
+			muted: false,
+			paused: false,
+			setEasing: (easeNext) => set({ easeNext }),
+			setMuted: (muted) => {
+				set({ muted });
+				if (player && !get().paused) {
+					fade(player, bedVolume(get().speaking, muted));
+				}
+			},
+			setPaused: (paused) => {
+				if (get().paused === paused) {
+					return;
+				}
+				set({ paused });
+				if (!player) {
+					return;
+				}
+				if (paused) {
+					player.pause();
+				} else {
+					player.play();
+				}
+			},
+			setSpeaking: (speaking) => {
+				if (get().speaking === speaking) {
+					return;
+				}
+				const ease = speaking && get().easeNext;
+				set({ easeNext: ease ? false : get().easeNext, speaking });
+				if (player && !get().paused) {
+					fade(
+						player,
+						bedVolume(speaking, get().muted),
+						undefined,
+						ease ? PLACE_EASE_MS : FADE_MS
+					);
+				}
+			},
+			speaking: false,
+			start: (adventureId, url) => {
+				const now = get();
+				if (url === null) {
+					now.stop();
+					return;
+				}
+				if (player && now.adventureId === adventureId && now.url === url) {
+					return;
+				}
+				if (player) {
+					release(player);
+				}
+				player = createAudioPlayer({ uri: url });
+				player.loop = true;
+				player.volume = 0;
+				set({ adventureId, paused: false, speaking: false, url });
+				player.play();
+				fade(player, bedVolume(false, now.muted));
+			},
+			stop: () => {
+				const old = player;
+				const wasPaused = get().paused;
+				player = null;
+				set({ adventureId: null, paused: false, speaking: false, url: null });
+				if (!old) {
+					return;
+				}
+				if (wasPaused) {
+					release(old);
+					return;
+				}
+				fade(old, 0, () => release(old));
+			},
+			url: null,
+		}),
+		{
+			name: "music-prefs",
+			// Only the grown-up's choice is kept; the bed itself starts fresh.
+			onRehydrateStorage: () => (state) => {
+				// The choice arrives a moment after launch: a bed already playing follows it.
+				if (state && player && !state.paused) {
+					fade(player, bedVolume(state.speaking, state.muted));
+				}
+			},
+			partialize: (s) => ({ muted: s.muted }),
+			storage: createJSONStorage(() => AsyncStorage),
 		}
-	},
-	setPaused: (paused) => {
-		if (get().paused === paused) {
-			return;
-		}
-		set({ paused });
-		if (!player) {
-			return;
-		}
-		if (paused) {
-			player.pause();
-		} else {
-			player.play();
-		}
-	},
-	setSpeaking: (speaking) => {
-		if (get().speaking === speaking) {
-			return;
-		}
-		const ease = speaking && get().easeNext;
-		set({ easeNext: ease ? false : get().easeNext, speaking });
-		if (player && !get().paused) {
-			fade(
-				player,
-				bedVolume(speaking, get().muted),
-				undefined,
-				ease ? PLACE_EASE_MS : FADE_MS
-			);
-		}
-	},
-	speaking: false,
-	start: (adventureId, url) => {
-		const now = get();
-		if (url === null) {
-			now.stop();
-			return;
-		}
-		if (player && now.adventureId === adventureId && now.url === url) {
-			return;
-		}
-		if (player) {
-			release(player);
-		}
-		player = createAudioPlayer({ uri: url });
-		player.loop = true;
-		player.volume = 0;
-		set({ adventureId, paused: false, speaking: false, url });
-		player.play();
-		fade(player, bedVolume(false, now.muted));
-	},
-	stop: () => {
-		const old = player;
-		const wasPaused = get().paused;
-		player = null;
-		set({ adventureId: null, paused: false, speaking: false, url: null });
-		if (!old) {
-			return;
-		}
-		if (wasPaused) {
-			release(old);
-			return;
-		}
-		fade(old, 0, () => release(old));
-	},
-	url: null,
-}));
+	)
+);
 
 export const stopMusic = () => useMusic.getState().stop();
 

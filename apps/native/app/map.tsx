@@ -1,5 +1,6 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ForkMap } from "@little-adventures/native-ui/fork-map";
+import { topRightCorner } from "@little-adventures/native-ui/fork-spots";
 import { Screen } from "@little-adventures/native-ui/screen";
 import {
 	MapBackdrop,
@@ -12,7 +13,8 @@ import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { AdventureMenu } from "@/src/adventure-menu";
 import { MapCastButton } from "@/src/cast/map-cast-button";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
@@ -59,7 +61,6 @@ function SidewaysMap({
 	title: string;
 	walkTo?: NodeId;
 }) {
-	const router = useRouter();
 	const { here, visited } = progress;
 	const ready: NodeId[] = PLACE_IDS.filter(
 		(node) => places[node].state === "ready"
@@ -70,11 +71,6 @@ function SidewaysMap({
 	const atGoodnight = here === "outro";
 	return (
 		<ForkMap
-			action={{
-				accessibilityLabel: "Grown-ups",
-				icon: "lock",
-				onPress: () => router.push("/gate"),
-			}}
 			button={
 				<PrimaryButton
 					disabled={walkTo !== undefined}
@@ -98,6 +94,13 @@ function SidewaysMap({
 			walkTo={walkTo}
 		/>
 	);
+}
+
+/** The adventure menu, in the corner of the sideways map where the Grown-ups lock used to be. */
+function SidewaysMenu() {
+	const { height, width } = useWindowDimensions();
+	const { right, top } = topRightCorner(width, height);
+	return <AdventureMenu right={right} top={top} />;
 }
 
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
@@ -257,13 +260,14 @@ export default function StoryMapScreen() {
 
 	// Sideways, the fork road takes the whole screen.
 	const shown = sideways ? fork : screen;
-	// The Cast button floats over the map, outside the view that is photographed for the TV.
+	// The menu (sideways) or the Cast button (upright) floats over the map, outside the view that
+	// is photographed for the TV.
 	return (
 		<View style={styles.capture}>
 			<View collapsable={false} ref={mapOnTv} style={styles.capture}>
 				{shown}
 			</View>
-			<MapCastButton sideways={sideways} />
+			{sideways ? <SidewaysMenu /> : <MapCastButton />}
 		</View>
 	);
 }
