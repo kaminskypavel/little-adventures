@@ -1,3 +1,4 @@
+import { BackButton } from "@little-adventures/native-ui/back-button";
 import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
 import { Icon } from "@little-adventures/native-ui/icons";
 import {
@@ -9,10 +10,12 @@ import {
 } from "@little-adventures/native-ui/tokens";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
-	FadeIn,
+	Easing,
 	FadeOut,
 	type SharedValue,
 	useAnimatedStyle,
+	useDerivedValue,
+	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMusic } from "@/src/data/music-store";
@@ -20,7 +23,7 @@ import { usePlayerPrefs } from "@/src/data/player-prefs";
 
 // The sideways player keeps the video clear: a small menu, a small name, one slim caption band
 // and a thin line of progress along the bottom edge.
-const MENU_BUTTON = 48;
+const MENU_BUTTON = layout.minTarget;
 const PAUSE_SIZE = 62;
 const PAUSE_ICON_SIZE = 29;
 const BAND_BG = "rgba(10,22,44,0.55)";
@@ -35,6 +38,14 @@ const TRACK_TINT = "rgba(244,236,216,0.2)";
 const BAR_WIDTH = 20;
 const BAR_HEIGHT = 3;
 const BAR_GAP = 4;
+// The menu closes itself after this long without a touch.
+const IDLE_CLOSE_MS = 4000;
+const SWITCH_WIDTH = 52;
+const SWITCH_HEIGHT = 30;
+const THUMB = 24;
+const THUMB_INSET = 3;
+const MENU_GAP = 8;
+const MENU_FROM_SCALE = 0.92;
 
 function MenuGlyph() {
 	return (
@@ -54,93 +65,131 @@ function MenuGlyph() {
 	);
 }
 
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+function closeMenu() {
+	clearTimeout(idleTimer);
+	usePlayerPrefs.getState().setMenuOpen(false);
+}
+
+/** Starts (or restarts) the countdown that closes the menu when nobody touches it. */
+function armIdleClose() {
+	clearTimeout(idleTimer);
+	idleTimer = setTimeout(closeMenu, IDLE_CLOSE_MS);
+}
+
+function toggleMenu() {
+	const { menuOpen, setMenuOpen } = usePlayerPrefs.getState();
+	if (menuOpen) {
+		closeMenu();
+		return;
+	}
+	setMenuOpen(true);
+	armIdleClose();
+}
+
+const menuEntering = () => {
+	"worklet";
+	const timing = {
+		duration: motion.select,
+		easing: Easing.bezier(...motion.easeOut),
+	};
+	return {
+		animations: {
+			opacity: withTiming(1, timing),
+			transform: [{ scale: withTiming(1, timing) }],
+		},
+		initialValues: {
+			opacity: 0,
+			transform: [{ scale: MENU_FROM_SCALE }],
+		},
+	};
+};
+
+/** A small clay switch: sun when on, a dim track when off, the thumb slides across. */
+function Switch({ on }: { on: boolean }) {
+	const slide = useDerivedValue(() =>
+		withTiming(on ? 1 : 0, { duration: motion.select })
+	);
+	const thumb = useAnimatedStyle(() => ({
+		transform: [
+			{
+				translateX: slide.get() * (SWITCH_WIDTH - THUMB - THUMB_INSET * 2),
+			},
+		],
+	}));
+	return (
+		<View
+			pointerEvents="none"
+			style={[
+				styles.switchTrack,
+				{ backgroundColor: on ? colors.sun : TRACK_TINT },
+			]}
+		>
+			<Animated.View
+				style={[
+					styles.thumb,
+					{ backgroundColor: on ? colors.inkNavy : colors.cream },
+					thumb,
+				]}
+			/>
+		</View>
+	);
+}
+
 function Row({
-	checked,
 	label,
+	on,
 	onPress,
-	state,
 }: {
-	checked?: boolean;
 	label: string;
+	on: boolean;
 	onPress: () => void;
-	state?: string;
 }) {
 	return (
 		<Pressable
-			accessibilityLabel={state ? `${label} ${state}` : label}
-			accessibilityRole="menuitem"
-			accessibilityState={checked === undefined ? undefined : { checked }}
-			onPress={onPress}
+			accessibilityLabel={label}
+			accessibilityRole="switch"
+			accessibilityState={{ checked: on }}
+			onPress={() => {
+				armIdleClose();
+				onPress();
+			}}
 			style={styles.row}
 		>
 			<Text allowFontScaling={false} style={styles.rowText}>
 				{label}
 			</Text>
-			{state ? (
-				<View
-					style={[
-						styles.state,
-						{ backgroundColor: checked ? colors.sun : TRACK_TINT },
-					]}
-				>
-					<Text
-						allowFontScaling={false}
-						style={[
-							styles.stateText,
-							{ color: checked ? colors.nowWordInk : colors.cream },
-						]}
-					>
-						{state}
-					</Text>
-				</View>
-			) : null}
+			<Switch on={on} />
 		</Pressable>
 	);
 }
 
-function Menu({
-	left,
-	onBack,
-	top,
-}: {
-	left: number;
-	onBack: () => void;
-	top: number;
-}) {
+function Menu({ right, top }: { right: number; top: number }) {
 	const captions = usePlayerPrefs((s) => s.captions);
 	const muted = useMusic((s) => s.muted);
-	const close = () => usePlayerPrefs.getState().setMenuOpen(false);
 	return (
 		<>
 			<Pressable
 				accessibilityLabel="Close the menu"
-				onPress={close}
+				onPress={closeMenu}
 				style={StyleSheet.absoluteFill}
 			/>
 			<Animated.View
 				accessibilityRole="menu"
-				entering={FadeIn.duration(motion.select)}
+				entering={menuEntering}
 				exiting={FadeOut.duration(motion.exit)}
-				style={[styles.menu, { left, top }]}
+				style={[styles.menu, { right, top }]}
 			>
 				<Row
-					label="Back to the map"
-					onPress={() => {
-						close();
-						onBack();
-					}}
-				/>
-				<Row
-					checked={!muted}
 					label="Music"
+					on={!muted}
 					onPress={() => useMusic.getState().setMuted(!muted)}
-					state={muted ? "Off" : "On"}
 				/>
 				<Row
-					checked={captions}
 					label="Captions"
+					on={captions}
 					onPress={() => usePlayerPrefs.getState().toggleCaptions()}
-					state={captions ? "On" : "Off"}
 				/>
 			</Animated.View>
 		</>
@@ -190,20 +239,12 @@ export function LandscapeChrome({
 	const menuOpen = usePlayerPrefs((s) => s.menuOpen);
 	const captions = usePlayerPrefs((s) => s.captions);
 	const left = insets.left + layout.sideMargin;
+	const right = insets.right + layout.sideMargin;
 	const top = insets.top + layout.topBarOffset;
 	return (
 		<>
 			<View pointerEvents="box-none" style={[styles.top, { left, top }]}>
-				<ClayPressable
-					accessibilityLabel="Menu"
-					accessibilityState={{ expanded: menuOpen }}
-					onPress={() => usePlayerPrefs.getState().setMenuOpen(!menuOpen)}
-					radius={radii.full}
-					selected={menuOpen}
-					style={styles.menuButton}
-				>
-					<MenuGlyph />
-				</ClayPressable>
+				<BackButton onPress={onBack} />
 				<View style={styles.pill}>
 					<Text
 						allowFontScaling={false}
@@ -213,6 +254,18 @@ export function LandscapeChrome({
 						{name}
 					</Text>
 				</View>
+			</View>
+			<View pointerEvents="box-none" style={[styles.menuDock, { right, top }]}>
+				<ClayPressable
+					accessibilityLabel="Menu"
+					accessibilityState={{ expanded: menuOpen }}
+					onPress={toggleMenu}
+					radius={radii.full}
+					selected={menuOpen}
+					style={styles.menuButton}
+				>
+					<MenuGlyph />
+				</ClayPressable>
 			</View>
 			{captions && words.length > 0 ? (
 				<View
@@ -277,7 +330,7 @@ export function LandscapeChrome({
 			</View>
 			<ProgressLine progress={progress} />
 			{menuOpen ? (
-				<Menu left={left} onBack={onBack} top={top + MENU_BUTTON + 8} />
+				<Menu right={right} top={top + MENU_BUTTON + MENU_GAP} />
 			) : null}
 		</>
 	);
@@ -319,6 +372,7 @@ const styles = StyleSheet.create({
 		borderRadius: 22,
 		paddingVertical: 6,
 		position: "absolute",
+		transformOrigin: "top right",
 		width: MENU_WIDTH,
 	},
 	menuButton: {
@@ -327,6 +381,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		width: MENU_BUTTON,
 	},
+	menuDock: { position: "absolute" },
 	nowWord: {
 		backgroundColor: colors.sun,
 		borderRadius: 7,
@@ -363,12 +418,18 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.label,
 		fontSize: ROW_TEXT,
 	},
-	state: {
-		borderRadius: 12,
-		paddingHorizontal: 10,
-		paddingVertical: 3,
+	switchTrack: {
+		borderRadius: SWITCH_HEIGHT / 2,
+		height: SWITCH_HEIGHT,
+		justifyContent: "center",
+		paddingHorizontal: THUMB_INSET,
+		width: SWITCH_WIDTH,
 	},
-	stateText: { fontFamily: fonts.heavy, fontSize: 14 },
+	thumb: {
+		borderRadius: THUMB / 2,
+		height: THUMB,
+		width: THUMB,
+	},
 	top: {
 		alignItems: "center",
 		flexDirection: "row",
