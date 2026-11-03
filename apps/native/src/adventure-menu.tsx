@@ -23,6 +23,8 @@ import { useCastAvailable, useCastConnected } from "@/src/cast/use-cast";
 import { useMusic } from "@/src/data/music-store";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { useReplay } from "@/src/data/replay-store";
+import { useT } from "@/src/i18n";
+import { adventureMenuStrings } from "@/src/i18n/strings/adventure-menu";
 import { leaveActive } from "@/src/screen-fade";
 
 // The one menu of the sideways adventure, a burger at the top right of the map and of the place
@@ -159,21 +161,22 @@ function Row({
 // On a phone the row is one element for screen readers, so the row's words are read, not the
 // system control's own name ("Cast not connected"); a double tap still lands on the control under
 // it. On the web the tap area is itself the labelled button, and a button cannot hold another.
-const tvRowA11y = (connected: boolean) =>
+const tvRowA11y = (connected: boolean, label: string) =>
 	Platform.OS === "web"
 		? {}
 		: ({
-				accessibilityLabel: "Play on the TV",
+				accessibilityLabel: label,
 				accessibilityRole: "button",
 				accessibilityState: { selected: connected },
 				accessible: true,
 			} as const);
 
 function TvRow({ connected }: { connected: boolean }) {
+	const t = useT(adventureMenuStrings);
 	return (
-		<View {...tvRowA11y(connected)} style={styles.row}>
+		<View {...tvRowA11y(connected, t("tv"))} style={styles.row}>
 			<Text allowFontScaling={false} style={styles.rowText}>
-				Play on the TV
+				{t("tv")}
 			</Text>
 			<View
 				pointerEvents="none"
@@ -206,6 +209,7 @@ function Dropdown({
 	tv: boolean;
 }) {
 	const router = useRouter();
+	const t = useT(adventureMenuStrings);
 	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const captions = usePlayerPrefs((s) => s.captions);
 	const muted = useMusic((s) => s.muted);
@@ -218,7 +222,7 @@ function Dropdown({
 		>
 			<Row
 				checked={!muted}
-				label="Music"
+				label={t("music")}
 				onPress={() => useMusic.getState().setMuted(!muted)}
 				role="switch"
 			>
@@ -226,7 +230,7 @@ function Dropdown({
 			</Row>
 			<Row
 				checked={captions}
-				label="Captions"
+				label={t("captions")}
 				onPress={() => usePlayerPrefs.getState().toggleCaptions()}
 				role="switch"
 			>
@@ -234,7 +238,7 @@ function Dropdown({
 			</Row>
 			{tv ? <TvRow connected={connected} /> : null}
 			<Row
-				label="Start again"
+				label={t("startAgain")}
 				onPress={() => {
 					closeMenu();
 					onLeave?.();
@@ -251,7 +255,7 @@ function Dropdown({
 				</View>
 			</Row>
 			<Row
-				label="Grown-ups"
+				label={t("grownups")}
 				onPress={() => {
 					closeMenu();
 					onLeave?.();
@@ -281,6 +285,7 @@ export function AdventureMenu({
 	right: number;
 	top: number;
 }) {
+	const t = useT(adventureMenuStrings);
 	const menuOpen = usePlayerPrefs((s) => s.menuOpen);
 	// Read here, not in the TV row, so the TVs are already looked for when the menu opens.
 	const tv = useCastAvailable();
@@ -289,14 +294,14 @@ export function AdventureMenu({
 		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
 			{menuOpen ? (
 				<Pressable
-					accessibilityLabel="Close the menu"
+					accessibilityLabel={t("closeMenu")}
 					onPress={closeMenu}
 					style={StyleSheet.absoluteFill}
 				/>
 			) : null}
 			<View pointerEvents="box-none" style={[styles.dock, { right, top }]}>
 				<ClayPressable
-					accessibilityLabel="Menu"
+					accessibilityLabel={t("menu")}
 					accessibilityState={{ expanded: menuOpen }}
 					onPress={toggleMenu}
 					radius={radii.full}

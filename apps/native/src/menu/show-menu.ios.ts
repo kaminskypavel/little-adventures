@@ -1,4 +1,6 @@
 import { ActionSheetIOS, Alert } from "react-native";
+import { tNow } from "@/src/i18n";
+import { showMenuStrings } from "@/src/i18n/strings/show-menu";
 
 export interface Option {
 	destructive?: boolean;
@@ -13,7 +15,10 @@ export function showMenu(title: string, options: Option[]) {
 		{
 			cancelButtonIndex: options.length,
 			destructiveButtonIndex: destructive < 0 ? undefined : destructive,
-			options: [...options.map((o) => o.label), "Cancel"],
+			options: [
+				...options.map((o) => o.label),
+				tNow(showMenuStrings, "cancel"),
+			],
 			title,
 		},
 		(index) => options[index]?.onPress()

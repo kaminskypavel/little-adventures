@@ -1,4 +1,6 @@
 import { Alert } from "react-native";
+import { tNow } from "@/src/i18n";
+import { showMenuStrings } from "@/src/i18n/strings/show-menu";
 
 export interface Option {
 	destructive?: boolean;
@@ -14,7 +16,7 @@ export function showMenu(title: string, options: Option[]) {
 			style: o.destructive ? ("destructive" as const) : ("default" as const),
 			text: o.label,
 		})),
-		{ style: "cancel", text: "Cancel" },
+		{ style: "cancel", text: tNow(showMenuStrings, "cancel") },
 	]);
 }
 

@@ -4,6 +4,8 @@ import { Screen } from "@little-adventures/native-ui/screen";
 import { colors } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { StyleSheet } from "react-native";
+import { useT } from "@/src/i18n";
+import { gateStrings } from "@/src/i18n/strings/gate";
 
 // 17 Grown-ups gate. Round 7 (pt = px / 0.72): line 22 pt under the headline,
 // ring 91 pt under the line.
@@ -12,18 +14,20 @@ const GATE_TOP = 91;
 
 export default function Gate() {
 	const router = useRouter();
+	const t = useT(gateStrings);
 
 	return (
-		<Screen title="Grown-ups">
+		<Screen title={t("title")}>
 			<ClayText
 				align="center"
 				color={colors.cream}
 				style={styles.line}
 				variant="body"
 			>
-				Hold the button for 3 seconds
+				{t("line")}
 			</ClayText>
 			<HoldGate
+				accessibilityLabel={t("hold")}
 				onOpen={() => router.replace("/grownups")}
 				style={styles.gate}
 			/>
