@@ -82,7 +82,7 @@ import {
 import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
-import { useGatePhase } from "@/src/data/question-gate";
+import { useGate, useGatePhase } from "@/src/data/question-gate";
 import { learnedRows } from "@/src/data/question-rules";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
@@ -97,7 +97,7 @@ import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
-import { QuestionCard, RecapCard } from "@/src/place-cards";
+import { ChromeFade, QuestionCard, RecapCard } from "@/src/place-cards";
 import { rampVoiceIn, useLeaveVoices, useScreenFade } from "@/src/screen-fade";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
@@ -182,69 +182,73 @@ function PlayerChrome({
 		return (
 			<View style={styles.root} testID="place-player">
 				{frame}
-				<Scrim />
-				<LandscapeChrome
-					current={current - start}
-					name={name}
-					onBack={onBack}
-					onToggle={onToggle}
-					playing={playing}
-					progress={progress}
-					words={shown}
-				/>
+				<ChromeFade>
+					<Scrim />
+					<LandscapeChrome
+						current={current - start}
+						name={name}
+						onBack={onBack}
+						onToggle={onToggle}
+						playing={playing}
+						progress={progress}
+						words={shown}
+					/>
+				</ChromeFade>
 			</View>
 		);
 	}
 	return (
 		<View style={styles.root} testID="place-player">
 			{frame}
-			<Scrim />
-			<View
-				pointerEvents="box-none"
-				style={[
-					styles.top,
-					{
-						left: insets.left + layout.sideMargin,
-						right: insets.right + layout.sideMargin,
-						top: insets.top + layout.topBarOffset,
-					},
-				]}
-			>
-				<IconButton
-					accessibilityLabel="Back to the map"
-					icon="map"
-					onPress={onBack}
-				/>
-				<View style={styles.name}>
-					<NamePill style={styles.pill} text={name} />
-				</View>
-				{/* Balances the map button, so the name sits in the middle like every title. */}
-				<View style={styles.balance}>{cast}</View>
-			</View>
-			<NarrationBar
-				current={current - start}
-				progress={progress}
-				style={[
-					styles.narration,
-					{ bottom: bottom + layout.primaryHeight + layout.gap },
-				]}
-				words={shown}
-			/>
-			<View pointerEvents="box-none" style={[styles.control, { bottom }]}>
-				<ClayPressable
-					accessibilityLabel={playing ? "Pause" : "Play"}
-					onPress={onToggle}
-					radius={radii.full}
-					style={styles.pause}
-					tone="sun"
+			<ChromeFade>
+				<Scrim />
+				<View
+					pointerEvents="box-none"
+					style={[
+						styles.top,
+						{
+							left: insets.left + layout.sideMargin,
+							right: insets.right + layout.sideMargin,
+							top: insets.top + layout.topBarOffset,
+						},
+					]}
 				>
-					<Icon
-						color={colors.inkNavy}
-						name={playing ? "pause" : "play"}
-						size={PAUSE_ICON}
+					<IconButton
+						accessibilityLabel="Back to the map"
+						icon="map"
+						onPress={onBack}
 					/>
-				</ClayPressable>
-			</View>
+					<View style={styles.name}>
+						<NamePill style={styles.pill} text={name} />
+					</View>
+					{/* Balances the map button, so the name sits in the middle like every title. */}
+					<View style={styles.balance}>{cast}</View>
+				</View>
+				<NarrationBar
+					current={current - start}
+					progress={progress}
+					style={[
+						styles.narration,
+						{ bottom: bottom + layout.primaryHeight + layout.gap },
+					]}
+					words={shown}
+				/>
+				<View pointerEvents="box-none" style={[styles.control, { bottom }]}>
+					<ClayPressable
+						accessibilityLabel={playing ? "Pause" : "Play"}
+						onPress={onToggle}
+						radius={radii.full}
+						style={styles.pause}
+						tone="sun"
+					>
+						<Icon
+							color={colors.inkNavy}
+							name={playing ? "pause" : "play"}
+							size={PAUSE_ICON}
+						/>
+					</ClayPressable>
+				</View>
+			</ChromeFade>
 		</View>
 	);
 }
@@ -1258,34 +1262,65 @@ export default function Place() {
 }
 
 /**
+ * The chrome stays hidden from the moment a question is due until its card lets go. Raised during
+ * render (idempotent) so the chrome mounts already hidden; lowered in an effect.
+ */
+function useHideChrome(asking: boolean) {
+	if (asking && !useGate.getState().asking) {
+		useGate.setState({ asking: true });
+	}
+	useEffect(() => {
+		if (!asking) {
+			useGate.setState({ asking: false });
+		}
+	}, [asking]);
+}
+
+/** The intro opens silently on the child's big question; the other places ask their own. */
+function openingQuestion(adventure: Adventure | null, node: NodeId) {
+	if (node === "outro") {
+		return null;
+	}
+	return node === "intro"
+		? adventure?.question
+		: adventure?.places[node].question;
+}
+
+/**
  * The card that may hold a place until it lets go: the child's question at an opening, the recap
  * before goodnight. It shows once the sky is clear; `holding` keeps the player waiting meanwhile.
  */
 function useOpeningCard({
 	adventure,
+	childName,
 	held,
 	id,
 	node,
 }: {
 	adventure: Adventure | null;
+	childName: string | null | undefined;
 	held: boolean;
 	id: string;
 	node: NodeId;
 }): { card: ReactNode; holding: boolean } {
 	const gateKey = `${id}:${node}`;
 	const gate = useGatePhase(gateKey);
-	if (!adventure) {
+	const place = adventure?.places[node];
+	const intro = node === "intro";
+	const question = openingQuestion(adventure, node);
+	const asking = Boolean(question) && gate === "card";
+	useHideChrome(asking);
+	if (!(adventure && place)) {
 		return { card: null, holding: held };
 	}
-	const place = adventure.places[node];
 	const recap = node === "outro" ? learnedRows(adventure) : [];
-	const question = node === "outro" || node === "intro" ? null : place.question;
 	const carded = Boolean(question) || recap.length > 0;
 	let card: ReactNode = null;
 	if (carded && !held && gate !== "done") {
 		card = question ? (
 			<QuestionCard
-				audio={place.questionAudio ?? null}
+				audio={intro ? null : (place.questionAudio ?? null)}
+				by={intro && childName ? `${childName} asked` : undefined}
 				gateKey={gateKey}
 				question={question}
 			/>
@@ -1313,7 +1348,13 @@ function PlaceScreen({
 	const childName = useChildName();
 
 	const goodnight = node === "outro";
-	const { card, holding } = useOpeningCard({ adventure, held, id, node });
+	const { card, holding } = useOpeningCard({
+		adventure,
+		childName,
+		held,
+		id,
+		node,
+	});
 
 	// A connected TV plays the place; if it cannot (see TvPlayer) the place plays here.
 	const castConnected = useCastConnected();

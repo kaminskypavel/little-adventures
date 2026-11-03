@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { choiceLabel, mapLabel } from "./question-rules";
+import { balanceLines, choiceLabel, mapLabel } from "./question-rules";
 
 const lesson = {
 	fact: "The sun shines light on the moon.",
@@ -33,5 +33,18 @@ describe("choiceLabel", () => {
 	test("question, else name", () => {
 		expect(choiceLabel(lesson)).toBe(lesson.question);
 		expect(choiceLabel({ ...lesson, question: null })).toBe("Sun Light");
+	});
+});
+
+describe("balanceLines", () => {
+	test("a short question stays on one line", () => {
+		expect(balanceLines("Where does the dark part go?".split(" "))).toEqual([
+			0,
+		]);
+	});
+	test("a long one breaks near the middle", () => {
+		expect(balanceLines("Why does the moon change shape?".split(" "))).toEqual([
+			0, 4,
+		]);
 	});
 });

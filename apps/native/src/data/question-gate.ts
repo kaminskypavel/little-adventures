@@ -7,6 +7,8 @@ import { create } from "zustand";
 type Phase = "card" | "done" | "fading";
 
 interface Gate {
+	/** A question card is up: the player chrome stays hidden meanwhile. */
+	asking: boolean;
 	finish: (key: string, fadeMs: number) => void;
 	key: string | null;
 	phase: Phase;
@@ -16,6 +18,7 @@ interface Gate {
 let fadeTimer: ReturnType<typeof setTimeout> | undefined;
 
 export const useGate = create<Gate>()((set, get) => ({
+	asking: false,
 	finish: (key, fadeMs) => {
 		if (get().key === key && get().phase === "fading") {
 			return;
@@ -28,7 +31,7 @@ export const useGate = create<Gate>()((set, get) => ({
 	phase: "card",
 	reset: () => {
 		clearTimeout(fadeTimer);
-		set({ key: null, phase: "card" });
+		set({ asking: false, key: null, phase: "card" });
 	},
 }));
 
