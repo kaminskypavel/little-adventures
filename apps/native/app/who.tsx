@@ -22,6 +22,8 @@ import {
 } from "react-native-safe-area-context";
 import { setCurrentChildId } from "@/src/data/current-child";
 import { useChild, useChildren } from "@/src/data/profile-queries";
+import { useT } from "@/src/i18n";
+import { whoStrings } from "@/src/i18n/strings/who";
 
 const FACE = 140;
 const FACE_GAP = 34;
@@ -61,6 +63,7 @@ function useSwooshLeave() {
  */
 export default function Who() {
 	const router = useRouter();
+	const t = useT(whoStrings);
 	const { leaving, onLeft } = useSwooshLeave();
 	const [editing, setEditing] = useState(false);
 	const insets = useSafeAreaInsets();
@@ -102,13 +105,13 @@ export default function Who() {
 			>
 				{editing ? (
 					<IconButton
-						accessibilityLabel="Done editing"
+						accessibilityLabel={t("doneEditing")}
 						icon="check"
 						onPress={() => setEditing(false)}
 					/>
 				) : (
 					<IconButton
-						accessibilityLabel="Close"
+						accessibilityLabel={t("close")}
 						icon="x"
 						onPress={() => router.back()}
 					/>
@@ -122,13 +125,15 @@ export default function Who() {
 					style={styles.title}
 					variant="headline"
 				>
-					{editing ? "Your children" : "Who's listening?"}
+					{editing ? t("yourChildren") : t("listening")}
 				</ClayText>
 			</Swoosh>
 			<Swoosh index={1} leaving={leaving} style={styles.faces}>
 				{children?.map((child) => (
 					<Pressable
-						accessibilityLabel={editing ? `Edit ${child.name}` : child.name}
+						accessibilityLabel={
+							editing ? t("edit", { name: child.name }) : child.name
+						}
 						accessibilityRole="button"
 						accessibilityState={{
 							selected: !editing && child.id === currentId,
@@ -182,14 +187,14 @@ export default function Who() {
 				{editing ? (
 					<SecondaryButton
 						icon="plus"
-						label="Add a child"
+						label={t("addChild")}
 						onPress={() => router.push("/child?new=1")}
 						size="sm"
 						style={styles.add}
 					/>
 				) : (
 					<HoldGate
-						accessibilityLabel="Hold to edit your children"
+						accessibilityLabel={t("holdToEdit")}
 						onOpen={() => setEditing(true)}
 						variant="lock"
 					/>

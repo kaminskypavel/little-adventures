@@ -12,6 +12,8 @@ import Animated, { cubicBezier } from "react-native-reanimated";
 import { signOut } from "@/src/auth/auth-client";
 import { readHelloSeen, writeHelloSeen } from "@/src/auth/token-store";
 import { useSession } from "@/src/auth/use-session";
+import { useT } from "@/src/i18n";
+import { helloStrings } from "@/src/i18n/strings/hello";
 
 // Screen 02b: the star 220 pt wide in the upper third, then title, line and caption.
 const STAR = 220;
@@ -62,6 +64,7 @@ function FadeUp({
 export default function Hello() {
 	const router = useRouter();
 	const { user } = useSession();
+	const t = useT(helloStrings);
 	const [back, setBack] = useState<boolean | null>(null);
 
 	useEffect(() => {
@@ -82,9 +85,9 @@ export default function Hello() {
 		return null;
 	}
 	const first = user?.name?.trim().split(WHITESPACE)[0];
-	let title = "Welcome!";
+	let title = t("welcome");
 	if (first) {
-		title = back ? `Welcome back, ${first}!` : `Welcome, ${first}!`;
+		title = t(back ? "welcomeBack" : "welcomeName", { name: first });
 	}
 
 	const leave = async () => {
@@ -97,7 +100,7 @@ export default function Hello() {
 			bodyStyle={styles.body}
 			dock={
 				<PrimaryButton
-					label="Add your child"
+					label={t("addChild")}
 					onPress={() => router.push("/child")}
 				/>
 			}
@@ -117,7 +120,7 @@ export default function Hello() {
 				</ClayText>
 			</FadeUp>
 			<FadeUp step={2}>
-				<QuietLink label="Sign out" onPress={leave} />
+				<QuietLink label={t("signOut")} onPress={leave} />
 			</FadeUp>
 			<FadeUp step={2} style={styles.line}>
 				<ClayText
@@ -126,7 +129,7 @@ export default function Hello() {
 					style={LINE}
 					variant="body"
 				>
-					Let's make your child the hero of tonight's story.
+					{t("line")}
 				</ClayText>
 			</FadeUp>
 			<FadeUp step={2} style={styles.caption}>
@@ -136,7 +139,7 @@ export default function Hello() {
 					style={CAPTION}
 					variant="label"
 				>
-					{"About a minute:\na name and a photo."}
+					{t("caption")}
 				</ClayText>
 			</FadeUp>
 		</Screen>

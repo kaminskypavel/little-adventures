@@ -6,9 +6,12 @@ import { ChildFields, useChildForm } from "@/src/child/child-form";
 import { emptyProfile } from "@/src/data/profile-map";
 import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { childStrings } from "@/src/i18n/strings/child";
 
 function ChildForm({ isNew, profile }: { isNew: boolean; profile: Profile }) {
 	const router = useRouter();
+	const t = useT(childStrings);
 	const saveProfile = useSaveProfile();
 	const { control, handleSubmit } = useChildForm(profile);
 
@@ -26,8 +29,8 @@ function ChildForm({ isNew, profile }: { isNew: boolean; profile: Profile }) {
 
 	return (
 		<Screen
-			dock={<PrimaryButton label="Next" onPress={next} />}
-			title="Your hero"
+			dock={<PrimaryButton label={t("next")} onPress={next} />}
+			title={t("title")}
 		>
 			{/* With the keyboard up the body shrinks above Next, and the rest of the form scrolls. */}
 			<ScrollView

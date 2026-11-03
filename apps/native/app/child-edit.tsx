@@ -12,10 +12,13 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { ChildFields, useChildForm } from "@/src/child/child-form";
 import type { Child } from "@/src/data/profile-map";
 import { useChildById, useSaveProfile } from "@/src/data/profile-queries";
+import { useT } from "@/src/i18n";
+import { childEditStrings } from "@/src/i18n/strings/child-edit";
 import { useChildPhotoMenu } from "@/src/photo/photo-menu";
 
 function EditChild({ child, id }: { child: Child; id: string }) {
 	const router = useRouter();
+	const t = useT(childEditStrings);
 	const saveProfile = useSaveProfile();
 	const openPhoto = useChildPhotoMenu(id);
 	const { control, handleSubmit } = useChildForm(child.profile);
@@ -30,7 +33,7 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 
 	return (
 		<Screen
-			dock={<PrimaryButton label="Done" onPress={done} />}
+			dock={<PrimaryButton label={t("done")} onPress={done} />}
 			scrolls
 			topBar={<TopBar title={child.profile.childName} />}
 		>
@@ -44,7 +47,7 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 			>
 				<View style={styles.portrait}>
 					<Portrait
-						cameraLabel={`Change ${child.profile.childName}'s photo`}
+						cameraLabel={t("changePhoto", { name: child.profile.childName })}
 						onCamera={openPhoto}
 						size={portrait.child}
 					>

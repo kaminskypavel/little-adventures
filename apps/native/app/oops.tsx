@@ -5,6 +5,8 @@ import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, spacing } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
+import { useT } from "@/src/i18n";
+import { oopsStrings } from "@/src/i18n/strings/oops";
 
 // Round 7 (0.72 scale to points): star 236 wide, 153 from the top, tilted 9 degrees to the left,
 // the headline 55 under it and the line 25 under the headline.
@@ -18,12 +20,13 @@ const LINE = { fontSize: 24, lineHeight: 30 } as const;
 /** E3 Something broke: calm copy, one action. */
 export default function Oops() {
 	const router = useRouter();
+	const t = useT(oopsStrings);
 
 	return (
 		<Screen
 			dock={
 				<PrimaryButton
-					label="Try again"
+					label={t("tryAgain")}
 					onPress={() =>
 						router.canGoBack() ? router.back() : router.replace("/home")
 					}
@@ -40,7 +43,7 @@ export default function Oops() {
 				style={styles.title}
 				variant="headline"
 			>
-				{"Oops, the map\ngot smudged"}
+				{t("title")}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -48,7 +51,7 @@ export default function Oops() {
 				style={[LINE, styles.line]}
 				variant="body"
 			>
-				Nothing was lost.
+				{t("line")}
 			</ClayText>
 		</Screen>
 	);
