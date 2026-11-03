@@ -1,15 +1,18 @@
 import type { ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import { EaseView } from "react-native-ease";
 import { ClayPressable } from "./clay-pressable";
 import { FallbackImage } from "./fallback-image";
 import { Icon } from "./icons";
+import { useCalm } from "./motion-provider";
 import { Placeholder } from "./placeholder";
 import {
 	type ClayTone,
 	clayFaces,
 	colors,
 	mapMedallion,
+	motion,
 	radii,
 	shadows,
 } from "./tokens";
@@ -23,6 +26,42 @@ const tones: Record<MedallionState, ClayTone> = {
 	here: "sunReady",
 	ready: "sunReady",
 };
+
+/** How far the ready ring swells (a scale) before it has faded out. */
+const READY_RING_SCALE = 1.4;
+const READY_RING_WIDTH = 4;
+const READY_RING_ALPHA = 0.75;
+
+/**
+ * The ring of a place that waits to be touched: it swells from the rim and fades out, again and
+ * again (`motion.pulse`, ease-out). Scale and opacity only, no shadow, on the platform's own
+ * animator (react-native-ease), so an endless loop costs no per-frame work in the app.
+ */
+function ReadyRing() {
+	return (
+		<EaseView
+			animate={{ opacity: 0, scale: READY_RING_SCALE }}
+			initialAnimate={{ opacity: READY_RING_ALPHA, scale: 1 }}
+			pointerEvents="none"
+			style={{
+				borderColor: colors.sun,
+				borderRadius: radii.full,
+				borderWidth: READY_RING_WIDTH,
+				bottom: 0,
+				left: 0,
+				position: "absolute",
+				right: 0,
+				top: 0,
+			}}
+			transition={{
+				duration: motion.pulse,
+				easing: "easeOut",
+				loop: "repeat",
+				type: "timing",
+			}}
+		/>
+	);
+}
 
 function CheckBadge() {
 	return (
@@ -115,6 +154,10 @@ export function Medallion({
 	state?: MedallionState;
 	style?: StyleProp<ViewStyle>;
 }) {
+	const calm = useCalm();
+	// A place that waits to be touched breathes a ring, unless calm is asked for or it cannot be
+	// tapped right now (the star is walking).
+	const waiting = state === "ready" && onPress !== undefined && !calm;
 	const box =
 		size ?? (state === "here" ? mapMedallion.sizeHere : mapMedallion.size);
 	const ring =
@@ -131,6 +174,7 @@ export function Medallion({
 		<>
 			<Disc picture={picture} size={box} state={state} />
 			{state === "done" ? <CheckBadge /> : null}
+			{waiting ? <ReadyRing /> : null}
 		</>
 	);
 
