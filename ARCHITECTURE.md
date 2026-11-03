@@ -1,8 +1,24 @@
 # Architecture
 
-A short map for hackathon judges and their agents: what is in this repo, which Meta model runs where, how a question becomes an adventure, how the public `llm` and `decision` packages work, what is private and why, and what you can run without the private part.
+A short map for hackathon judges and their agents: what is in this repo, which Meta model runs where, how a question becomes an adventure, how the tuned checker and the public `llm` and `decision` packages work, what is private and why, and what you can run without the Kodio engine.
 
-> **The private engine runs on our startup's proprietary technology, built before the hackathon. That technology uses Meta's models: every Meta model call it makes goes through the public packages in this repo. How it uses them is the part we cannot disclose during the hackathon.**
+> **The Kodio engine is our startup's private story technology (Kodio Ltd), at `engine.littleadventures.app`. It reaches every Meta model through the public packages in this repo, so each kind of call it makes is in code you can read here. Its prompts and question sets stay private.**
+
+<p align="center"><img src=".github/readme/adventure-flow.svg" alt="Flow diagram: the child asks out loud; the app server turns speech into text with Muse Voice Transcribe and the photo into looks with Muse Image and SAM 3.1; inside the Kodio engine Muse Spark 1.3 writes the map, the tuned Muse Glimmer checks it and sends it back with reasons, Muse Image and SAM 3.1 draw the cast, and the map plays in the app." width="100%"></p>
+
+## Where each Meta model runs
+
+| Model | Job | Where it runs | Through (package) | Host |
+| --- | --- | --- | --- | --- |
+| Muse Voice Transcribe 1.0 | Turns the child's spoken question into text. | App server | `packages/transcribe` | Meta Model API |
+| Muse Image 1.0 and SAM 3.1 | Turn the child's photo into the hero's looks. | App server | `packages/image-editing` | Meta Model API |
+| Muse Spark 1.3 | Screens the question, shortens it for the screen, writes the waiting facts and writes the map. | Kodio engine | `packages/llm`, `packages/decision` | Meta Model API |
+| Muse Glimmer 30B with our LoRA | The story checker: yes or no per story check. | Kodio engine | `packages/decision`, through its `baseUrl` and `model` options | Modal |
+| Muse Spark Open | The checker's fallback while the tuned model's GPU wakes. | Kodio engine | `packages/decision` | Baseten |
+| Muse Image 1.0 and SAM 3.1 | Draw the story's cast and the end-goal picture. | Kodio engine | `packages/image-editing` | Meta Model API |
+| Muse Spark 1.3 | Looks at frames of each clip and sends back any clip with a visible fault. | Kodio engine | `packages/decision` | Meta Model API |
+
+The short clips and the narration are made by Kodio's proprietary technology and the models it runs, not by Meta models.
 
 ## The split
 
@@ -11,8 +27,8 @@ flowchart LR
   App["apps/native<br/>child + parent app"]
   Server["apps/web on Vercel<br/>tRPC API: voice.transcribe, child photo looks"]
   Pkgs["Public packages<br/>llm, decision, image-editing, transcribe"]
-  Meta["Meta models<br/>Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe"]
-  Engine["private engine, runs on our startup's technology<br/>(engine.littleadventures.app)<br/>makes each adventure"]
+  Meta["Meta models<br/>Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe,<br/>Muse Glimmer (Modal), Muse Spark Open (Baseten)"]
+  Engine["Kodio engine (private, Kodio Ltd)<br/>engine.littleadventures.app<br/>makes each adventure"]
 
   App -->|"child's spoken question, child's photo"| Server
   Server --> Pkgs
@@ -21,7 +37,7 @@ flowchart LR
   Engine -.->|"calls the same public packages"| Pkgs
 ```
 
-The app talks to the app server and, when an engine URL is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`). Every Meta model call goes through a public package in this repo. On the app server, SAM 3.1 and Muse Image turn the child's photo into the look avatars (`packages/api/src/art.ts`).
+The app talks to the app server and, when an engine URL is set, to the Kodio engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`). Every Meta model call goes through a public package in this repo. On the app server, SAM 3.1 and Muse Image turn the child's photo into the look avatars (`packages/api/src/art.ts`).
 
 ## How a question becomes an adventure
 
@@ -30,7 +46,7 @@ sequenceDiagram
   autonumber
   participant App as App (apps/native)
   participant Server as App server (apps/web)
-  participant Engine as Private engine
+  participant Engine as Kodio engine
   participant Meta as Meta Model API
 
   App->>Server: voice.transcribe, the spoken question as WAV
@@ -46,11 +62,20 @@ sequenceDiagram
   App->>Engine: POST /api/v1/adventures/{id}/nodes/{node}/visit
 ```
 
-- Each ready place carries its picture, clip and narration.
+- Each ready place carries its clip and narration.
 - The goodnight scene stays locked until all 4 places are visited.
 - The app waits at most 6 minutes, and gives up after 4 failed reads in a row. Then it shows a calm error screen.
 - With an engine URL set, accounts on the live allowlist get a live adventure. Every other account gets a recorded adventure.
 - The player API client is `apps/native/src/data/engine-client.ts`, and the mapping to screens is `engine-map.ts` beside it.
+
+## The tuned checker
+
+The checker answers yes or no to each story check. `decision` reads the answer from the probability of the first answer token.
+
+- It is our LoRA on Muse Glimmer 30B, served on a Modal GPU that sleeps when idle.
+- A check that finds the GPU asleep wakes it and goes to Muse Spark Open on Baseten in the meantime. A daily cap bounds wake-ups.
+- Results and the offline replay are in [benchmarks/checker](benchmarks/checker): `bun run eval:checker` needs no key.
+- Model card on Hugging Face (access on request): [kaminskypavel/glimmer-decision-little-adventures](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures).
 
 ## The `llm` and `decision` packages
 
@@ -142,15 +167,15 @@ The apps (`apps/native`, `apps/web`) and the other packages (`api`, `auth`, `db`
 
 ## What is private, and why
 
-`llm` and `decision` hold no production prompts and no question sets: they refuse to run without instructions from the caller and point to the "Prompts" section of the [README](README.md). The only prompts in this repo are the avatar look prompts in `packages/image-editing/src/looks.ts`, which the app server sends to Muse Image. The production prompts and question sets, plus the video and voice production, live in a private engine at engine.littleadventures.app, which runs on our startup's proprietary technology. It calls Meta's models through the public packages above.
+`llm` and `decision` hold no production prompts and no question sets: they refuse to run without instructions from the caller and point to the "Prompts" section of the [README](README.md). The only prompts in this repo are the avatar look prompts in `packages/image-editing/src/looks.ts`, which the app server sends to Muse Image. The production prompts and question sets live in the Kodio engine at engine.littleadventures.app. The engine calls Meta's models through the public packages above.
 
 Why private:
 
-- The engine runs on our startup's proprietary technology, which existed before this hackathon. That technology uses Meta's models through the public packages in this repo; how it uses them is the team's trade secret, which we cannot disclose during the hackathon.
+- The Kodio engine is Kodio Ltd's private story technology. It existed before this hackathon; this week we rebuilt its story steps on Meta's models.
 - The production prompts and question sets were written this week, and are kept private so the shape of the product's output cannot be copied. The code that calls Meta's models with them is the public packages above.
 - The organizers allowed keeping a pre-existing platform private as a hosted service, with a note in the README (Kai, Cerebral Valley, 2026-10-26: [message in the hackathon Discord](https://discord.com/channels/1557169028080869426/1564256986848043148/1564310060702896240)).
 
-This repo does not describe how the engine works inside. It documents only what crosses the boundary: the player API the app calls, and the interface of the public packages.
+This repo documents what crosses the boundary: the player API the app calls, and the interface of the public packages. Which Meta model the engine uses at each step is in the table above and in the [README](README.md#how-metas-models-run-inside-the-kodio-engine).
 
 ## What you see without the engine
 
@@ -162,10 +187,10 @@ An adventure is a fixed map: an intro, 4 places that each teach one fact, and a 
 
 ## Built this week, and what existed before
 
-| Built this week, public (this repo) | Built this week, private | Our startup's proprietary technology (before the hackathon, private) |
+| Built this week, public (this repo) | Built this week, private | Kodio's proprietary technology (before the hackathon, private) |
 | --- | --- | --- |
-| The app, the app server and every public package above | The production prompts and question sets | The video and voice production the engine runs on |
-| Every call to a Meta model | | |
+| The app, the app server and every public package above | The production prompts and question sets | The short clips and the narration |
+| Every call to a Meta model | The engine's story steps on Meta's models | |
 | The player API client in the app | | |
 
 The commit history of this repo, started Oct 30, 2026, is the record of the public work.
