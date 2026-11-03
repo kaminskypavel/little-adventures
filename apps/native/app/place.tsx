@@ -6,12 +6,7 @@ import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { NarrationBar } from "@little-adventures/native-ui/narration-bar";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
-import {
-	colors,
-	layout,
-	radii,
-	skyPalettes,
-} from "@little-adventures/native-ui/tokens";
+import { colors, layout, radii } from "@little-adventures/native-ui/tokens";
 import { useEventListener } from "expo";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
@@ -40,7 +35,6 @@ import Animated, {
 	useAnimatedStyle,
 	useReducedMotion,
 	useSharedValue,
-	withDelay,
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,8 +47,8 @@ import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
 	COVER_FADE_MS,
-	DIP_HALF_MS,
-	DIP_REDUCED_MS,
+	DISSOLVE_MS,
+	DISSOLVE_REDUCED_MS,
 	type EndCause,
 	GRACE_MS,
 	graceDue,
@@ -369,7 +363,7 @@ const setupPlayer = (created: VideoPlayer) => {
 const moved = (a: PlayState, b: PlayState) =>
 	a.at !== b.at ||
 	a.half !== b.half ||
-	a.dip !== b.dip ||
+	a.fading !== b.fading ||
 	a.phase !== b.phase ||
 	a.speaking !== b.speaking ||
 	a.stall !== b.stall ||
@@ -448,35 +442,6 @@ function Cover({
 	);
 }
 
-/** The night navy the picture dips to between a place's parts. */
-const [NIGHT] = skyPalettes.night.colors;
-
-/**
- * The dip to night between two parts: a navy layer above the pictures. `up` raises it over the
- * last `DIP_HALF_MS` of the part that is ending (it is fully up as that part ends), and clears it
- * over `DIP_HALF_MS` once the next part shows a frame. A person who wants calm gets one quick dip
- * (`DIP_REDUCED_MS`) centred on the switch.
- */
-function Dip({ up }: { up: boolean }) {
-	const opacity = useSharedValue(0);
-	const halfMs = useReducedMotion() ? DIP_REDUCED_MS / 2 : DIP_HALF_MS;
-	useEffect(() => {
-		const timing = { duration: halfMs, easing: Easing.inOut(Easing.ease) };
-		opacity.set(
-			up
-				? withDelay(DIP_HALF_MS - halfMs, withTiming(1, timing))
-				: withTiming(0, timing)
-		);
-	}, [halfMs, opacity, up]);
-	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
-	return (
-		<Animated.View
-			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, { backgroundColor: NIGHT }, style]}
-		/>
-	);
-}
-
 // A video element keeps its own size when only its edges are set (on the web it was 832x480 on an
 // 844x390 screen), so the width and height are set too.
 const VIDEO_FILL = StyleSheet.create({
@@ -491,20 +456,39 @@ const VIDEO_FILL = StyleSheet.create({
 	},
 }).fill;
 
-/** One part's picture, in a layer of its own: shown when it is `on`, unseen but mounted when not. */
+/**
+ * One part's picture, in a layer of its own: shown when it is `on`, unseen but mounted when not.
+ * While `dissolve` is set (a part is taking over from another) the layer that turns on fades in
+ * over `ms` above the one before, which keeps its last frame until the dissolve is over.
+ */
 function PartLayer({
+	dissolve,
+	ms,
 	on,
 	onFirstFrame,
 	player,
 }: {
+	dissolve: boolean;
+	ms: number;
 	on: boolean;
 	onFirstFrame: () => void;
 	player: VideoPlayer;
 }) {
+	const opacity = useSharedValue(on ? 1 : 0);
+	useEffect(() => {
+		if (!dissolve) {
+			opacity.set(on ? 1 : 0);
+		} else if (on) {
+			opacity.set(
+				withTiming(1, { duration: ms, easing: Easing.inOut(Easing.ease) })
+			);
+		}
+	}, [dissolve, ms, on, opacity]);
+	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 	return (
-		<View
+		<Animated.View
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, { opacity: on ? 1 : 0 }]}
+			style={[StyleSheet.absoluteFill, { zIndex: on ? 1 : 0 }, style]}
 		>
 			<VideoView
 				allowsPictureInPicture={false}
@@ -516,7 +500,7 @@ function PartLayer({
 				pointerEvents="none"
 				style={VIDEO_FILL}
 			/>
-		</View>
+		</Animated.View>
 	);
 }
 
@@ -837,7 +821,7 @@ function MediaPlayer({
 	};
 
 	// The last seconds of a part play slower when its words would outlast it, so the video ends with
-	// them and the next part follows at once instead of the picture dipping to night and waiting.
+	// them and the next part follows at once instead of the last frame waiting for the words.
 	// The rate eases toward the wanted one a tick at a time; it is on the part player (UI-side).
 	const slowTail = (index: number, videoLeft: number) => {
 		const now = machine.current;
@@ -884,7 +868,8 @@ function MediaPlayer({
 		onTime: (currentTime) => {
 			const now = machine.current;
 			if (now.slot !== slot) {
-				if (IS_WEB && currentTime > 0) {
+				// Not while a dissolve shows this player's last frame: parking would rewind it.
+				if (IS_WEB && currentTime > 0 && now.fading === null) {
 					parkAtFirstFrame(players[slot]);
 				}
 				return;
@@ -1047,7 +1032,18 @@ function MediaPlayer({
 	// over the video's first frame. Otherwise it dissolves into the moving video (COVER_FADE_MS).
 	const led = view.lead !== null;
 	const showCover = led || !coverGone;
-	const zoom = leadZoom(view, useReducedMotion());
+	const calmMotion = useReducedMotion();
+	const zoom = leadZoom(view, calmMotion);
+	// The dissolve into the next part, and when it is over the part before it is let go.
+	const dissolveMs = calmMotion ? DISSOLVE_REDUCED_MS : DISSOLVE_MS;
+	const dissolving = view.fading !== null;
+	useEffect(() => {
+		if (!dissolving) {
+			return;
+		}
+		const timer = setTimeout(() => send({ type: "dissolved" }), dissolveMs);
+		return () => clearTimeout(timer);
+	}, [dissolveMs, dissolving, send]);
 	const { current, read } = useReadAlong({
 		audio,
 		hasNarration,
@@ -1060,17 +1056,21 @@ function MediaPlayer({
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
 			{/* Both parts stay mounted, the next one unseen: its first frame is drawn while the
-			    current part plays, so the dip between them clears at once instead of waiting for
-			    a new video view to come up (about 2 s on an iPhone). */}
-			{([0, 1] as const).map((slot) => (
-				<PartLayer
-					key={slot}
-					on={view.slot === slot}
-					onFirstFrame={firstFrameOf(slot)}
-					player={players[slot]}
-				/>
-			))}
-			<Dip up={view.dip !== null} />
+			    current part plays, so the dissolve into it starts at once instead of waiting for
+			    a new video view to come up (about 2 s on an iPhone). The layers sit in a box of
+			    their own so the one taking over stacks above the one before, under the cover. */}
+			<View style={StyleSheet.absoluteFill}>
+				{([0, 1] as const).map((slot) => (
+					<PartLayer
+						dissolve={view.fading !== null}
+						key={slot}
+						ms={dissolveMs}
+						on={view.slot === slot}
+						onFirstFrame={firstFrameOf(slot)}
+						player={players[slot]}
+					/>
+				))}
+			</View>
 			{showCover ? (
 				<Cover
 					fadeMs={led ? LEAD_FADE_MS : COVER_FADE_MS}
