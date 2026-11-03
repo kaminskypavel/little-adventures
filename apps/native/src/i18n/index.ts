@@ -6,10 +6,14 @@ import { usePlayerPrefs } from "@/src/data/player-prefs";
 
 export type Language = "en" | "he";
 
-/** The choices on the Language row, each named in its own language. */
-export const LANGUAGES: readonly { code: Language; name: string }[] = [
-	{ code: "en", name: "English" },
-	{ code: "he", name: "עברית" },
+/** The choices on the Language row, each named in its own language, with its flag (an emoji). */
+export const LANGUAGES: readonly {
+	code: Language;
+	flag: string;
+	name: string;
+}[] = [
+	{ code: "en", flag: "🇺🇸", name: "English" },
+	{ code: "he", flag: "🇮🇱", name: "עברית" },
 ];
 
 type Strings = Record<string, string>;
