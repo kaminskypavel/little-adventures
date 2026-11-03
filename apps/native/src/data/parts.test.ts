@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	begin,
+	DIP_HALF_SEC,
 	END_MARGIN_SEC,
 	type EndCause,
 	GRACE_MS,
@@ -231,6 +232,63 @@ describe("each half of the words is centred inside its part", () => {
 		const swapped = drive(start.state, ...firstHalf, ended);
 		expect(swapped.state.slot).toBe(1);
 		expect(slotParts(swapped.state)).toEqual([null, two[1]]);
+	});
+});
+
+describe("a part dips to night into the next", () => {
+	const ready = drive(
+		begin(two, true),
+		parts(...two),
+		...firstHalf,
+		tick(14),
+		at(8)
+	).state;
+	const lead = 15 - DIP_HALF_SEC;
+
+	test("the dip starts in the last 0.4 s and the part keeps playing", () => {
+		const a = drive(ready, tick(lead - 0.1));
+		expect(a.state.dip).toBe(null);
+		const b = drive(a.state, tick(lead));
+		expect(b.state.dip).toBe(0);
+		expect(b.state.at).toBe(0);
+		expect(b.marks).toEqual([]);
+	});
+
+	test("part 2 starts at the dip's midpoint, when part 1 ends, with the navy up", () => {
+		const dipped = drive(ready, tick(lead)).state;
+		const b = drive(dipped, ended);
+		expect(b.state.at).toBe(1);
+		expect(b.state.dip).toBe(0);
+		expect(b.state.slot).toBe(1);
+		expect(b.marks).toEqual(["part-end 1"]);
+	});
+
+	test("the navy clears once part 2 shows a frame, and not before", () => {
+		const b = drive(ready, tick(lead), ended);
+		expect(b.state.dip).toBe(0);
+		expect(drive(b.state, tick(0.1)).state.dip).toBe(null);
+	});
+
+	test("the last part has nothing to dip into", () => {
+		const last = drive(ready, ended).state;
+		expect(drive(last, tick(14.9)).state.dip).toBe(null);
+		expect(drive(last, ended).state.dip).toBe(null);
+	});
+
+	test("an end with no dip yet still goes through the navy", () => {
+		const a = drive(ready, ended);
+		expect(a.state.at).toBe(1);
+		expect(a.state.dip).toBe(0);
+		expect(a.marks).toEqual(["part-end 1"]);
+	});
+
+	test("the next part's words are timed from its own start", () => {
+		const b = drive(ready, tick(lead), ended);
+		expect(b.state.speaking).toBe(false);
+		expect(drive(b.state, tick(0.1)).state.speaking).toBe(false);
+		expect(drive(b.state, tick(0.1), tick(3.5)).marks).toEqual([
+			"voice-resume 2",
+		]);
 	});
 });
 

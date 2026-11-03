@@ -5,7 +5,12 @@ import { Icon } from "@little-adventures/native-ui/icons";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { NarrationBar } from "@little-adventures/native-ui/narration-bar";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
-import { colors, layout, radii } from "@little-adventures/native-ui/tokens";
+import {
+	colors,
+	layout,
+	radii,
+	skyPalettes,
+} from "@little-adventures/native-ui/tokens";
 import { useEventListener } from "expo";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
@@ -34,6 +39,7 @@ import Animated, {
 	useAnimatedStyle,
 	useReducedMotion,
 	useSharedValue,
+	withDelay,
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,6 +51,8 @@ import { speakingAt } from "@/src/data/music-rules";
 import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
+	DIP_HALF_MS,
+	DIP_REDUCED_MS,
 	type EndCause,
 	GRACE_MS,
 	graceDue,
@@ -358,6 +366,7 @@ const setupPlayer = (created: VideoPlayer) => {
 const moved = (a: PlayState, b: PlayState) =>
 	a.at !== b.at ||
 	a.half !== b.half ||
+	a.dip !== b.dip ||
 	a.phase !== b.phase ||
 	a.speaking !== b.speaking ||
 	a.stall !== b.stall ||
@@ -436,27 +445,61 @@ function Cover({
 	);
 }
 
-/** One part's picture. The part buffering for next, on the web, stays mounted but unseen. */
-function PartVideo({
-	hidden,
+/** The night navy the picture dips to between a place's parts. */
+const [NIGHT] = skyPalettes.night.colors;
+
+/**
+ * The dip to night between two parts: a navy layer above the pictures. `up` raises it over the
+ * last `DIP_HALF_MS` of the part that is ending (it is fully up as that part ends), and clears it
+ * over `DIP_HALF_MS` once the next part shows a frame. A person who wants calm gets one quick dip
+ * (`DIP_REDUCED_MS`) centred on the switch.
+ */
+function Dip({ up }: { up: boolean }) {
+	const opacity = useSharedValue(0);
+	const halfMs = useReducedMotion() ? DIP_REDUCED_MS / 2 : DIP_HALF_MS;
+	useEffect(() => {
+		const timing = { duration: halfMs, easing: Easing.inOut(Easing.ease) };
+		opacity.set(
+			up
+				? withDelay(DIP_HALF_MS - halfMs, withTiming(1, timing))
+				: withTiming(0, timing)
+		);
+	}, [halfMs, opacity, up]);
+	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+	return (
+		<Animated.View
+			pointerEvents="none"
+			style={[StyleSheet.absoluteFill, { backgroundColor: NIGHT }, style]}
+		/>
+	);
+}
+
+/** One part's picture, in a layer of its own: shown when it is `on`, unseen but mounted when not. */
+function PartLayer({
+	on,
 	onFirstFrame,
 	player,
 }: {
-	hidden: boolean;
+	on: boolean;
 	onFirstFrame: () => void;
 	player: VideoPlayer;
 }) {
 	return (
-		<VideoView
-			allowsPictureInPicture={false}
-			contentFit="cover"
-			nativeControls={false}
-			onFirstFrameRender={onFirstFrame}
-			player={player}
-			playsInline
+		<View
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, hidden ? styles.unseen : null]}
-		/>
+			style={[StyleSheet.absoluteFill, { opacity: on ? 1 : 0 }]}
+		>
+			<VideoView
+				allowsPictureInPicture={false}
+				contentFit="cover"
+				nativeControls={false}
+				onFirstFrameRender={onFirstFrame}
+				player={player}
+				playsInline
+				pointerEvents="none"
+				style={StyleSheet.absoluteFill}
+			/>
+		</View>
 	);
 }
 
@@ -734,7 +777,8 @@ function MediaPlayer({
 	const eventsOf = (slot: Slot): SlotEvents => ({
 		// Only the player showing the part counts: a late event from the one before is not its end.
 		onEnd: () => {
-			if (machine.current.slot === slot) {
+			const now = machine.current;
+			if (now.slot === slot) {
 				send({ type: "ended" });
 			}
 		},
@@ -919,26 +963,18 @@ function MediaPlayer({
 	});
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
-			{IS_WEB ? (
-				<>
-					<PartVideo
-						hidden={view.slot !== 0}
-						onFirstFrame={firstFrameOf(0)}
-						player={player0}
+			{([0, 1] as const).map((slot) =>
+				// The web keeps both players mounted; elsewhere only the one on screen is.
+				IS_WEB || view.slot === slot ? (
+					<PartLayer
+						key={slot}
+						on={view.slot === slot}
+						onFirstFrame={firstFrameOf(slot)}
+						player={players[slot]}
 					/>
-					<PartVideo
-						hidden={view.slot !== 1}
-						onFirstFrame={firstFrameOf(1)}
-						player={player1}
-					/>
-				</>
-			) : (
-				<PartVideo
-					hidden={false}
-					onFirstFrame={firstFrameOf(view.slot)}
-					player={players[view.slot]}
-				/>
+				) : null
 			)}
+			<Dip up={view.dip !== null} />
 			{showCover ? (
 				<Cover fadeMs={led ? LEAD_FADE_MS : 0} gone={framed} zoom={zoom}>
 					{cover}
@@ -1309,5 +1345,4 @@ const styles = StyleSheet.create({
 		right: 0,
 		top: "42%",
 	},
-	unseen: { opacity: 0 },
 });

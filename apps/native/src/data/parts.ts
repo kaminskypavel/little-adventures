@@ -43,6 +43,12 @@ export const LEAD_ZOOM_TO = 1.06;
 export const LEAD_ZOOM_MS = 15_000;
 /** How long the picture takes to fade once the first part has its first frame. */
 export const LEAD_FADE_MS = 400;
+/** The hand-over is a dip to night: the picture fades to navy over this many seconds, then back from it. */
+export const DIP_HALF_SEC = 0.4;
+/** Each half of the dip, in ms. */
+export const DIP_HALF_MS = DIP_HALF_SEC * 1000;
+/** The whole dip for a person who wants calm: quick, and still centred on the switch. */
+export const DIP_REDUCED_MS = 150;
 
 /**
  * The picture and narration lead while the first part is still being made. `since` is the
@@ -62,6 +68,8 @@ export interface PlayState {
 	at: number;
 	/** Parts whose file would not load, by id, with the url that failed. A fresh url may try again. */
 	bad: Record<string, string>;
+	/** Index of the part dipping out to night; the navy stays up until the next part shows a frame. */
+	dip: number | null;
 	/** The place has ended. */
 	done: boolean;
 	/** Index of the half of the words playing, or the next one to play (own: the part's audio). */
@@ -170,6 +178,7 @@ export const begin = (
 	skipSilent({
 		at: -1,
 		bad: {},
+		dip: null,
 		done: false,
 		half: 0,
 		hasPicture,
@@ -398,6 +407,31 @@ function play(s: PlayState, index: number, now: number): Step {
 }
 
 /**
+ * The part on screen is within `DIP_HALF_SEC` of its end and another part follows: the picture
+ * dips to night. The navy stays up through the switch and clears once the next part shows a frame.
+ */
+function onPartTime(
+	s: PlayState,
+	event: Extract<PlayEvent, { type: "part-time" }>
+): Step {
+	if (s.phase !== "playing") {
+		return unchanged(s);
+	}
+	if (s.dip !== null && s.dip !== s.at) {
+		return { marks: [], state: { ...s, dip: null } };
+	}
+	if (
+		s.dip === null &&
+		event.duration > 0 &&
+		event.sec >= event.duration - DIP_HALF_SEC &&
+		nextIndex(s) !== -1
+	) {
+		return { marks: [], state: { ...s, dip: s.at } };
+	}
+	return unchanged(s);
+}
+
+/**
  * Moves on as far as it can while no part is running: plays the next part once the half of the
  * words before it has ended, holds the last frame until then (and, marking a stall, while the
  * part is not playable), and ends the place once no part is left and the narration is done.
@@ -419,7 +453,7 @@ function settle(
 			return unchanged(s);
 		}
 		const marks = stallEnd(s);
-		const state: PlayState = { ...s, phase: "spent", stall: null };
+		const state: PlayState = { ...s, dip: null, phase: "spent", stall: null };
 		return s.narrationEnded
 			? { end: cause, marks, state: { ...state, done: true } }
 			: { marks, state };
@@ -515,7 +549,12 @@ function ended(s: PlayState, now: number): Step {
 	if (s.phase !== "playing") {
 		return unchanged(s);
 	}
-	const next = settle({ ...s, phase: "waiting" }, "last-part", now);
+	// An end with no dip yet (a coarse tick) still goes through the navy.
+	const next = settle(
+		{ ...s, dip: s.dip ?? s.at, phase: "waiting" },
+		"last-part",
+		now
+	);
 	return {
 		...next,
 		marks: [{ name: "part-end", part: s.at + 1 }, ...next.marks],
@@ -711,7 +750,7 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 				now
 			);
 		case "part-time":
-			return unchanged(s);
+			return onPartTime(s, event);
 		case "started":
 			return s.started ? unchanged(s) : startLead({ ...s, started: true }, now);
 		case "voice-ended":
