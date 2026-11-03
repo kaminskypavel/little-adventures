@@ -43,6 +43,9 @@ function ink(tone: ClayTone) {
 	if (tone === "white") {
 		return colors.black;
 	}
+	if (tone === "danger") {
+		return colors.cream;
+	}
 	return tone === "off" ? colors.offInk : colors.inkNavy;
 }
 

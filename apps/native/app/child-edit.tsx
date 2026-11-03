@@ -2,9 +2,11 @@ import {
 	BODY_SCROLL_END,
 	BODY_SCROLL_START,
 } from "@little-adventures/native-ui/body-fade";
-import { PrimaryButton } from "@little-adventures/native-ui/button";
+import {
+	PrimaryButton,
+	SecondaryButton,
+} from "@little-adventures/native-ui/button";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
-import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { portrait, spacing } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
@@ -68,16 +70,15 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 	return (
 		<Screen
 			dock={
-				// The delete sits in the dock, always in sight above Done: below the fields it ended up
-				// hidden behind the dock on an iPhone 12. It is still behind the grown-up hold and a confirm.
+				// The delete is a red button in the dock under Done, always in sight (below the fields it hid
+				// behind the dock on an iPhone 12). It is behind the grown-up hold and a confirm.
 				<View style={styles.dock}>
-					<View style={styles.deleteRow}>
-						<QuietLink
-							label={t("delete", { name: child.profile.childName })}
-							onPress={confirmDelete}
-						/>
-					</View>
 					<PrimaryButton label={t("done")} onPress={done} />
+					<SecondaryButton
+						label={t("delete", { name: child.profile.childName })}
+						onPress={confirmDelete}
+						tone="danger"
+					/>
 				</View>
 			}
 			scrolls
@@ -118,7 +119,6 @@ export default function ChildEdit() {
 }
 
 const styles = StyleSheet.create({
-	deleteRow: { alignItems: "center" },
 	dock: { gap: spacing.sm },
 	portrait: { alignItems: "center", marginBottom: spacing.lg },
 });
