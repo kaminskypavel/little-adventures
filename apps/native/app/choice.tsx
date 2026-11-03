@@ -53,6 +53,11 @@ const WAITING_LINE = "Still being drawn. One moment.";
 const SIDEWAYS_STAR_SIZE = 96;
 // The gap between the halves shows the night through.
 const HALF_GAP = 3;
+// Three ways (a lane end now also reaches the other lane): the star would sit on the middle
+// half's name, so it stands this far up, over the picture.
+const STAR_LIFT_BOTTOM = 96;
+// Upright, three cards share the body: each is this high so they and the goodnight plate fit.
+const THREE_CARDS_HEIGHT = 168;
 
 interface Card {
 	goal: boolean;
@@ -108,17 +113,31 @@ function starTakeFor({
 
 /** The small star. No still under it: the take's arm would leave a ghost; the screen fade covers the load. */
 function Star({
+	lifted = false,
 	size = STAR_SIZE,
 	take,
 }: {
+	/** Stands higher, clear of the names at the foot of the halves. */
+	lifted?: boolean;
 	size?: number;
 	take: "jump" | "point" | "think";
 }) {
 	return (
-		<View pointerEvents="none" style={styles.starRow}>
+		<View
+			pointerEvents="none"
+			style={[styles.starRow, lifted && { bottom: STAR_LIFT_BOTTOM }]}
+		>
 			<StarTake size={size} take={take} />
 		</View>
 	);
+}
+
+/** Upright card height: the full one, tighter when the goodnight or a drawing place shares the body, less again for three. */
+function cardStyle(count: number, tight: boolean) {
+	if (count > 2) {
+		return { height: THREE_CARDS_HEIGHT };
+	}
+	return tight ? { height: choice.heightTight } : undefined;
 }
 
 /** What has been walked: the dev override (which never locks the goodnight), else the real progress. */
@@ -227,7 +246,13 @@ function Halves({
 					<BackButton onPress={onBack} />
 				</View>
 			) : null}
-			{starTake ? <Star size={SIDEWAYS_STAR_SIZE} take={starTake} /> : null}
+			{starTake ? (
+				<Star
+					lifted={cards.length > 2}
+					size={SIDEWAYS_STAR_SIZE}
+					take={starTake}
+				/>
+			) : null}
 			<AdventureMenu right={insets.right + layout.sideMargin} top={top} />
 		</View>
 	);
@@ -371,11 +396,7 @@ export default function Choice() {
 								}
 								selected={picked === card.node}
 								state={card.state}
-								style={
-									goodnightLocked || drawing
-										? { height: choice.heightTight }
-										: undefined
-								}
+								style={cardStyle(cards.length, goodnightLocked || drawing)}
 								testID={`choice-${card.node}`}
 							/>
 						))}
