@@ -7,6 +7,7 @@ import {
 	visit as visitNode,
 } from "./adventure-client";
 import { makeExpiryGuard, pollAdventure, sleep } from "./engine-client";
+import { useMusic } from "./music-store";
 import { queryClient } from "./query-client";
 import type { Adventure, NodeId, Progress } from "./types";
 
@@ -95,6 +96,16 @@ export function useAdventure(id: string) {
 			live = false;
 		};
 	}, [id]);
+
+	// The music bed follows the adventure on every screen that reads it; the same adventure and url
+	// again change nothing, so moving between map, place and choice never restarts it.
+	const adventureId = adventure?.id;
+	const musicUrl = adventure?.music?.url ?? null;
+	useEffect(() => {
+		if (adventureId) {
+			useMusic.getState().start(adventureId, musicUrl);
+		}
+	}, [adventureId, musicUrl]);
 
 	const onMediaError = useMemo(
 		() =>

@@ -17,7 +17,13 @@ interface EngineWord {
 type EngineNarration = EngineMedia & { words: EngineWord[] };
 /** One part of a node's video. `video` is set only when `status` is "playable". */
 export interface EnginePart {
+	/** How long the part plays, in seconds; null on older adventures. */
+	durationSec?: number | null;
 	id: string;
+	/** The part's own audio, words timed from 0 within it; null on older adventures. */
+	narration?: { durationSec: number; url: string; words: EngineWord[] } | null;
+	/** Where the part's words start in the node's narration, in seconds; null on older adventures. */
+	narrationFromSec?: number | null;
 	status: string;
 	video: EngineMedia | null;
 }
@@ -44,6 +50,8 @@ export interface EngineAdventure {
 		open: EngineMedia | null;
 	};
 	id: string;
+	/** A mood loop for the whole adventure; null when there is none. */
+	music?: { url: string } | null;
 	/** In order: intro, p1, p2, p1a, p2a, outro. */
 	nodes: EngineNode[];
 	/** Seconds until the next read while any node is not ready or failed; null once all are. */

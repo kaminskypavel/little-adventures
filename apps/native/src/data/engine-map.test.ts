@@ -134,9 +134,102 @@ describe("toAdventure", () => {
 		});
 		const a = toAdventure(raw, new Map());
 		expect(a.places.p1.parts).toEqual([
-			{ id: "p1-a", status: "playable", url: "https://files.test/a" },
-			{ id: "p1-b", status: "making", url: null },
+			{
+				durationSec: null,
+				id: "p1-a",
+				narration: null,
+				narrationFromSec: null,
+				status: "playable",
+				url: "https://files.test/a",
+			},
+			{
+				durationSec: null,
+				id: "p1-b",
+				narration: null,
+				narrationFromSec: null,
+				status: "making",
+				url: null,
+			},
 		]);
+	});
+
+	test("a part carries where its words start and how long it plays; the adventure carries its music", () => {
+		const raw = adventure({
+			music: { url: "https://files.test/loop?sig=1" },
+			nodes: IDS.map((id) =>
+				node(
+					id,
+					id === "p1"
+						? {
+								parts: [
+									{
+										durationSec: 8.5,
+										id: "p1-a",
+										narrationFromSec: 0,
+										status: "making",
+										video: null,
+									},
+									{
+										durationSec: 7,
+										id: "p1-b",
+										narrationFromSec: 8.5,
+										status: "making",
+										video: null,
+									},
+								],
+							}
+						: {}
+				)
+			),
+		});
+		const urls = new Map<string, string>();
+		const a = toAdventure(raw, urls);
+		expect(a.places.p1.parts.map((p) => p.narrationFromSec)).toEqual([0, 8.5]);
+		expect(a.places.p1.parts.map((p) => p.durationSec)).toEqual([8.5, 7]);
+		expect(a.music).toEqual({ url: "https://files.test/loop?sig=1" });
+		// A later read signs the loop again: the first url stays, so the loop never restarts.
+		const again = toAdventure(
+			{ ...raw, music: { url: "https://files.test/loop?sig=2" } },
+			urls
+		);
+		expect(again.music?.url).toBe("https://files.test/loop?sig=1");
+		expect(toAdventure(adventure(), new Map()).music).toBe(null);
+	});
+
+	test("a part carries its own audio, its url kept across reads", () => {
+		const voice = (sig: number) => ({
+			durationSec: 6.5,
+			url: `https://files.test/a.mp3?sig=${sig}`,
+			words: [{ endSec: 0.4, startSec: 0, text: "Hi" }],
+		});
+		const readWith = (sig: number, known: Map<string, string>) =>
+			toAdventure(
+				adventure({
+					nodes: IDS.map((id) =>
+						node(
+							id,
+							id === "p1"
+								? {
+										parts: [
+											{
+												id: "p1-a",
+												narration: voice(sig),
+												status: "making",
+												video: null,
+											},
+										],
+									}
+								: {}
+						)
+					),
+				}),
+				known
+			);
+		const urls = new Map<string, string>();
+		expect(readWith(1, urls).places.p1.parts[0]?.narration).toEqual(voice(1));
+		expect(readWith(2, urls).places.p1.parts[0]?.narration?.url).toBe(
+			"https://files.test/a.mp3?sig=1"
+		);
 	});
 
 	test("an unknown part status reads as making and carries no url", () => {
@@ -149,7 +242,14 @@ describe("toAdventure", () => {
 			nodes: IDS.map((id) => node(id, id === "p1" ? { parts: [part] } : {})),
 		});
 		expect(toAdventure(raw, new Map()).places.p1.parts).toEqual([
-			{ id: "p1-a", status: "making", url: null },
+			{
+				durationSec: null,
+				id: "p1-a",
+				narration: null,
+				narrationFromSec: null,
+				status: "making",
+				url: null,
+			},
 		]);
 	});
 
@@ -195,7 +295,10 @@ describe("toAdventure", () => {
 		expect(first.places.p1.parts[0]?.url).toBe("https://files.test/a?sig=1");
 		expect(later.places.p1.parts[0]?.url).toBe("https://files.test/a?sig=1");
 		expect(later.places.p1.parts[1]).toEqual({
+			durationSec: null,
 			id: "p1-b",
+			narration: null,
+			narrationFromSec: null,
 			status: "playable",
 			url: "https://files.test/b?sig=2",
 		});
