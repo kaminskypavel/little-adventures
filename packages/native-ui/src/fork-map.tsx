@@ -1,10 +1,19 @@
 import { Image } from "expo-image";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { BackButton, useBackAction } from "./back-button";
-import { IconButton } from "./icon-button";
-import type { IconName } from "./icons";
+import {
+	BAR_TOP,
+	idOf,
+	ROAD_PATHS,
+	SAFE_X,
+	SPOTS,
+	STAGE,
+	STAR,
+	TOP_LANE,
+	walkPoints,
+} from "./fork-spots";
 import { Medallion } from "./medallion";
 import { NamePill } from "./name-pill";
 import { Plate } from "./plate";
@@ -17,7 +26,7 @@ import {
 	type MapPlaceNode,
 } from "./story-map";
 import { colors, flat } from "./tokens";
-import { Walker, type WalkerPoint } from "./walker";
+import { Walker } from "./walker";
 
 // ---------------------------------------------------------------------------------------------
 // The sideways map: the road forks after the intro into two lanes of places and merges at the
@@ -25,12 +34,10 @@ import { Walker, type WalkerPoint } from "./walker";
 // to fit the screen, so every number below is a point of that drawing.
 // ---------------------------------------------------------------------------------------------
 
-const STAGE = { height: 393, width: 852 };
 const MEDALLION = 64;
 const MEDALLION_HERE = 72;
 const GOAL_SIZE = 96;
 const GOAL_FOOT = 245;
-const STAR = 46;
 /** The gap between a medallion and its name plate. */
 const PLATE_GAP = 9;
 const PLATE_BOX = 220;
@@ -39,35 +46,8 @@ const MEADOW = require("../assets/map/meadow.jpg");
 const MEADOW_TOP = -137;
 const MEADOW_RATIO = 1688 / 780;
 const SCRIM = "rgba(10,22,44,0.36)";
-/** The tall lanes: the top lane carries its names above, the bottom lane below. */
-const TOP_LANE = 150;
-const BOTTOM_LANE = 246;
-const MID_LANE = 198;
-const SAFE_X = 59;
 const SAFE_BOTTOM = 21;
-const BAR_TOP = 14;
 const TITLE_TOP = 24;
-
-const SPOTS: Record<MapNode, { x: number; y: number }> = {
-	intro: { x: 119, y: MID_LANE },
-	outro: { x: 716, y: MID_LANE },
-	p1: { x: 318, y: TOP_LANE },
-	p1a: { x: 517, y: TOP_LANE },
-	p2: { x: 318, y: BOTTOM_LANE },
-	p2a: { x: 517, y: BOTTOM_LANE },
-};
-
-/** Road geometry by road id (`from-to`). The app owns which roads exist and which are lit. */
-const ROAD_PATHS: Record<string, string> = {
-	"intro-p1": "M155,198 C215,198 222,150 282,150",
-	"intro-p2": "M155,198 C215,198 222,246 282,246",
-	"p1-p1a": "M354,150 L481,150",
-	"p1-p2": "M318,186 L318,210",
-	"p1a-outro": "M553,150 C610,150 604,198 664,198",
-	"p1a-p2a": "M517,186 L517,210",
-	"p2-p2a": "M354,246 L481,246",
-	"p2a-outro": "M553,246 C610,246 604,198 664,198",
-};
 
 const ROAD = {
 	dots: "#E8A81C",
@@ -76,20 +56,6 @@ const ROAD = {
 	under: "rgba(10,22,44,0.4)",
 	unlit: "rgba(244,236,216,0.4)",
 } as const;
-
-const idOf = (a: MapNode, b: MapNode) => {
-	const forward = `${a}-${b}`;
-	return forward in ROAD_PATHS ? forward : `${b}-${a}`;
-};
-
-/** The star stands above the intro and the goodnight, and beside a place on a lane. */
-function standAt(node: MapNode): WalkerPoint {
-	const { x, y } = SPOTS[node];
-	if (node === "intro" || node === "outro") {
-		return { x: x - STAR / 2, y: y - 91 };
-	}
-	return { x: x - 93, y: y - 20 };
-}
 
 function Roads({
 	dots,
@@ -210,13 +176,13 @@ function Backdrop({ height, width }: { height: number; width: number }) {
 
 /**
  * The whole sideways map screen: meadow, roads, the five places, the goodnight, the star, the
- * back button, a title pill, an optional button at the top right and the main button at the
- * bottom right. `lit` are the roads walked, `dots` the roads the child can take next (road ids
- * are `from-to`). A `route` of two stops or more is walked once by the star, then `onWalked` runs;
- * with `walkTo` set and no route to walk, `onWalked` runs at once.
+ * back button, a title pill and the main button at the bottom right. (The app lays its menu over
+ * the top right corner; see `topRightCorner`.) `lit` are the roads walked, `dots` the roads the
+ * child can take next (road ids are `from-to`). A `route` of two stops or more is walked once by
+ * the star along the roads, then `onWalked` runs; with `walkTo` set and no route to walk,
+ * `onWalked` runs at once.
  */
 export function ForkMap({
-	action,
 	button,
 	dots,
 	goodnight,
@@ -228,7 +194,6 @@ export function ForkMap({
 	title,
 	walkTo,
 }: {
-	action?: { accessibilityLabel: string; icon: IconName; onPress: () => void };
 	/** The main button. It is placed at the bottom right. */
 	button: ReactNode;
 	dots: ReadonlySet<string>;
@@ -247,6 +212,9 @@ export function ForkMap({
 	const [box, setBox] = useState({ height: 0, width: 0 });
 	const [landed, setLanded] = useState(0);
 	const walking = route.length > 1;
+	// The walk is worked out once per route: a new array each render would restart the star.
+	const key = route.join(",");
+	const walk = useMemo(() => walkPoints(key.split(",") as MapNode[]), [key]);
 	const walked = useRef(onWalked);
 	useEffect(() => {
 		walked.current = onWalked;
@@ -265,7 +233,6 @@ export function ForkMap({
 	}
 
 	const scale = Math.min(box.width / STAGE.width, box.height / STAGE.height);
-	const stops = route.map(standAt);
 	const starts = route.at(-1) === "outro" || here === "outro";
 	const goodnightPlate = (() => {
 		if (goodnight.locked) {
@@ -363,22 +330,19 @@ export function ForkMap({
 					/>
 					<Walker
 						onDone={onWalked}
-						onLand={(index) => setLanded((n) => Math.max(n, index))}
-						route={walking ? stops : [standAt(here)]}
+						onLand={(index) => {
+							// Walker counts hops; the roads light up per place of the route.
+							const place = walk.stops.indexOf(index);
+							if (place > 0) {
+								setLanded((n) => Math.max(n, place));
+							}
+						}}
+						route={walk.points}
 						size={STAR}
 					/>
 					{onBack ? (
 						<View style={[styles.corner, { left: SAFE_X - 4, top: BAR_TOP }]}>
 							<BackButton onPress={onBack} />
-						</View>
-					) : null}
-					{action ? (
-						<View style={[styles.corner, { right: SAFE_X - 4, top: BAR_TOP }]}>
-							<IconButton
-								accessibilityLabel={action.accessibilityLabel}
-								icon={action.icon}
-								onPress={action.onPress}
-							/>
 						</View>
 					) : null}
 					<View

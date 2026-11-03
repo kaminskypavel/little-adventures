@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./tokens": "./src/tokens.ts",
+    "./fork-spots": "./src/fork-spots.ts",
     "./sky": {
       "browser": "./src/sky.web.tsx",
       "default": "./src/sky.tsx"
