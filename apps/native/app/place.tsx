@@ -1315,8 +1315,9 @@ function useHideChrome(asking: boolean) {
 }
 
 /**
- * The card that may hold a place until it lets go: the child's question at an opening, the recap
- * before goodnight. It shows once the sky is clear; `holding` keeps the player waiting meanwhile.
+ * The card that may hold a place until it lets go: the child's question at an opening. It shows
+ * once the sky is clear; `holding` keeps the player waiting meanwhile. (The goodnight's recap comes
+ * after its scene, see PlaceScreen.)
  */
 function useOpeningCard({
 	adventure,
@@ -1341,19 +1342,16 @@ function useOpeningCard({
 	if (!(adventure && place)) {
 		return { card: null, holding: held };
 	}
-	const recap = node === "outro" ? learnedRows(adventure) : [];
-	const carded = Boolean(question) || recap.length > 0;
+	const carded = Boolean(question);
 	let card: ReactNode = null;
-	if (carded && !held && gate !== "done") {
-		card = question ? (
+	if (question && !held && gate !== "done") {
+		card = (
 			<QuestionCard
 				audio={audio}
 				by={intro && childName ? `${childName} asked` : undefined}
 				gateKey={gateKey}
 				question={question}
 			/>
-		) : (
-			<RecapCard gateKey={gateKey} rows={recap} />
 		);
 	}
 	return { card, holding: held || (carded && gate === "card") };
@@ -1394,14 +1392,26 @@ function PlaceScreen({
 	}, [castConnected]);
 	const onTvUnavailable = useCallback(() => setTvOff(true), []);
 
+	// The goodnight scene plays first; when it ends, "What we learned" sums up the places and its
+	// Goodnight button leaves for the end. Any other place goes straight on to pick-a-way.
+	const [learned, setLearned] = useState(false);
+	const leaveFor = useCallback(
+		() =>
+			leave(() =>
+				router.replace(
+					goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
+				)
+			),
+		[goodnight, id, leave, node, router]
+	);
 	const onEnd = useCallback(async () => {
 		await visit(node);
-		leave(() =>
-			router.replace(
-				goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
-			)
-		);
-	}, [goodnight, id, leave, node, router, visit]);
+		if (goodnight && adventure && learnedRows(adventure).length > 0) {
+			setLearned(true);
+			return;
+		}
+		leaveFor();
+	}, [adventure, goodnight, leaveFor, node, visit]);
 
 	const onBack = useCallback(
 		() => leave(() => router.replace(`/map?id=${id}`)),
@@ -1444,6 +1454,9 @@ function PlaceScreen({
 		<>
 			{player}
 			{card}
+			{learned && adventure ? (
+				<RecapCard onDone={leaveFor} rows={learnedRows(adventure)} />
+			) : null}
 		</>
 	);
 	if (audio === null && !hasParts(place.parts)) {

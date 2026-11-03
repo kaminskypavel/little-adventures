@@ -268,17 +268,15 @@ export function ChromeFade({ children }: { children: ReactNode }) {
 	);
 }
 
-/** Before goodnight: every place's question with its answer, and the button that starts it. */
+/** After the goodnight scene: every place's question with its answer, and the button to say goodnight. */
 export function RecapCard({
-	gateKey,
+	onDone,
 	rows,
 }: {
-	gateKey: string;
+	onDone: () => void;
 	rows: Learned[];
 }) {
-	const calm = useCalm();
-	const fading = useGate((s) => s.key === gateKey && s.phase === "fading");
-	const style = useFade(fading);
+	const style = useFade(false);
 	return (
 		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
 			<Scrim strength={SCRIM_RECAP} />
@@ -298,10 +296,9 @@ export function RecapCard({
 				))}
 			</View>
 			<PrimaryButton
-				disabled={fading}
 				label="Goodnight"
 				labelSize={21}
-				onPress={() => useGate.getState().finish(gateKey, calm ? 0 : FADE_MS)}
+				onPress={onDone}
 				size="md"
 				style={styles.go}
 				testID="goodnight-button"
