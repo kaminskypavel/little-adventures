@@ -5,6 +5,7 @@ import {
 	MAX_FAILED_READS,
 	makeStatusOf,
 	nextWait,
+	partsOf,
 	placeStatus,
 	progressOf,
 	toAdventure,
@@ -627,5 +628,42 @@ describe("watchIntro", () => {
 		timers[0]();
 		expect(seen.map((s) => s.state)).toEqual(["making"]);
 		expect(cancelled()).toBe(1);
+	});
+});
+
+describe("partsOf", () => {
+	const node = (voice: string, sig: string) =>
+		({
+			parts: [
+				{
+					durationSec: 7,
+					id: "part-1",
+					narration: {
+						durationSec: 5,
+						url: `https://files.test/${voice}?sig=${sig}`,
+						words: [],
+					},
+					status: "playable",
+					video: media("part-1.mp4"),
+				},
+			],
+		}) as unknown as EngineNode;
+
+	test("a part keeps its narration url while the same file is signed again", () => {
+		const urls = new Map<string, string>();
+		partsOf(node("narration-1-he.mp3", "a"), urls);
+		const again = partsOf(node("narration-1-he.mp3", "b"), urls);
+		expect(again[0].narration?.url).toBe(
+			"https://files.test/narration-1-he.mp3?sig=a"
+		);
+	});
+
+	test("another language's narration file replaces it", () => {
+		const urls = new Map<string, string>();
+		partsOf(node("narration-1-he.mp3", "a"), urls);
+		const spanish = partsOf(node("narration-1-es.mp3", "b"), urls);
+		expect(spanish[0].narration?.url).toBe(
+			"https://files.test/narration-1-es.mp3?sig=b"
+		);
 	});
 });

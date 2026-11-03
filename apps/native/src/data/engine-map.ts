@@ -40,6 +40,9 @@ const pin = (key: string, url: string, urls: KnownUrls) => {
 const urlOf = (media: EngineMedia, urls: KnownUrls) =>
 	pin(media.id, media.url, urls);
 
+/** A signed url's file, without the signature that changes on every read. */
+const fileOf = (url: string) => url.split("?")[0];
+
 /** A status not known yet reads as still being made. */
 export const partStatus = (status: string): PartStatus =>
 	status === "playable" || status === "failed" ? status : "making";
@@ -53,7 +56,12 @@ const partOf = (raw: EnginePart, urls: KnownUrls): Part => {
 		narration: raw.narration
 			? {
 					durationSec: raw.narration.durationSec,
-					url: pin(`part-voice:${raw.id}`, raw.narration.url, urls),
+					// Pinned by the file, not only the part: each language has its own narration file.
+					url: pin(
+						`part-voice:${raw.id}:${fileOf(raw.narration.url)}`,
+						raw.narration.url,
+						urls
+					),
 					words: raw.narration.words,
 				}
 			: null,
