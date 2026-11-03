@@ -35,7 +35,7 @@ const READY_RING_ALPHA = 0.75;
 /**
  * The ring of a place that waits to be touched: it swells from the rim and fades out, again and
  * again (`motion.pulse`, ease-out). Scale and opacity only, no shadow, on the platform's own
- * animator (react-native-ease), so an endless loop costs no per-frame work in the app.
+ * animator (react-native-ease), so a loop that never stops costs no per-frame work in the app.
  */
 function ReadyRing() {
 	return (
