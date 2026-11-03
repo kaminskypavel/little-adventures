@@ -17,7 +17,7 @@ This repo holds the app, the app server and the public packages that call the Me
 
 ## Users
 
-- **Children aged 2 to 11**, with a parent beside them guiding. They listen on the parent's phone in the evening.
+- **Children aged 2 to 16**, with a parent beside them guiding. They listen on the parent's phone in the evening.
 - **Parents**: they sign in, set up the child's character (name, age, photo), sit with the child during the story, and check past stories in the dashboard.
 
 ## Product Purpose
