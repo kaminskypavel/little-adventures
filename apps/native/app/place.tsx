@@ -1029,17 +1029,17 @@ function MediaPlayer({
 	});
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
-			{([0, 1] as const).map((slot) =>
-				// The web keeps both players mounted; elsewhere only the one on screen is.
-				IS_WEB || view.slot === slot ? (
-					<PartLayer
-						key={slot}
-						on={view.slot === slot}
-						onFirstFrame={firstFrameOf(slot)}
-						player={players[slot]}
-					/>
-				) : null
-			)}
+			{/* Both parts stay mounted, the next one unseen: its first frame is drawn while the
+			    current part plays, so the dip between them clears at once instead of waiting for
+			    a new video view to come up (about 2 s on an iPhone). */}
+			{([0, 1] as const).map((slot) => (
+				<PartLayer
+					key={slot}
+					on={view.slot === slot}
+					onFirstFrame={firstFrameOf(slot)}
+					player={players[slot]}
+				/>
+			))}
 			<Dip up={view.dip !== null} />
 			{showCover ? (
 				<Cover
