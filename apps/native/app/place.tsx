@@ -74,6 +74,9 @@ import {
 	type Slot,
 	slotParts,
 	step,
+	stepRate,
+	tailRate,
+	tailWordsLeft,
 	upcoming,
 	voiceSlot,
 	voiceUrls,
@@ -357,6 +360,7 @@ const setPaused = (
 const setupPlayer = (created: VideoPlayer) => {
 	created.loop = false;
 	created.muted = true;
+	created.playbackRate = 1;
 	created.timeUpdateEventInterval = PART_TICK_SEC;
 };
 
@@ -822,11 +826,29 @@ function MediaPlayer({
 		} else if (currentTime > 0) {
 			inPart.current = true;
 			showFrame(index);
+			slowTail(index, duration - currentTime);
 			send({
 				duration: duration || 0,
 				sec: currentTime,
 				type: "part-time",
 			});
+		}
+	};
+
+	// The last seconds of a part play slower when its words would outlast it, so the video ends with
+	// them and the next part follows at once instead of the picture dipping to night and waiting.
+	// The rate eases toward the wanted one a tick at a time; it is on the part player (UI-side).
+	const slowTail = (index: number, videoLeft: number) => {
+		const now = machine.current;
+		if (now.at !== index) {
+			return;
+		}
+		const voiceSec = now.own ? voiceOf(now).currentTime : 0;
+		const wanted = tailRate(videoLeft, tailWordsLeft(now, voiceSec));
+		const player = players[now.slot];
+		const next = stepRate(player.playbackRate, wanted);
+		if (next !== player.playbackRate) {
+			player.playbackRate = next;
 		}
 	};
 
@@ -972,7 +994,10 @@ function MediaPlayer({
 		if (view.phase === "playing" && begun.current !== view.at) {
 			begun.current = view.at;
 			inPart.current = false;
-			(view.slot === 0 ? player0 : player1).play();
+			const starting = view.slot === 0 ? player0 : player1;
+			// Every part starts at normal speed, whatever the tail of the one before did.
+			starting.playbackRate = 1;
+			starting.play();
 		}
 	}, [
 		hasNarration,
