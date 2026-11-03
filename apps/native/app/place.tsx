@@ -38,6 +38,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
+import { CastButton } from "@/src/cast/cast-button";
+import { useCastConnected, useTvRemote } from "@/src/cast/use-cast";
+import { castPlace } from "@/src/data/adventure-client";
 import {
 	begin,
 	type EndCause,
@@ -129,6 +132,7 @@ function Scrim() {
  * button with the place name, the words being read, and one big pause button.
  */
 function PlayerChrome({
+	cast,
 	current,
 	frame,
 	name,
@@ -138,6 +142,8 @@ function PlayerChrome({
 	progress,
 	words,
 }: {
+	/** The Cast button, in the corner opposite the map button. */
+	cast?: ReactNode;
 	current: number;
 	frame: ReactNode;
 	name: string;
@@ -179,7 +185,7 @@ function PlayerChrome({
 					<NamePill style={styles.pill} text={name} />
 				</View>
 				{/* Balances the map button, so the name sits in the middle like every title. */}
-				<View style={styles.balance} />
+				<View style={styles.balance}>{cast}</View>
 			</View>
 			<NarrationBar
 				current={current - start}
@@ -721,6 +727,7 @@ function MediaPlayer({
 
 	return (
 		<PlayerChrome
+			cast={<CastButton />}
 			current={
 				hasNarration && audio ? wordIndexAt(audio.words, spoken, length) : 0
 			}
@@ -730,6 +737,124 @@ function MediaPlayer({
 			onToggle={toggle}
 			playing={playing}
 			progress={length > 0 ? spoken / length : 0}
+			words={words}
+		/>
+	);
+}
+
+/**
+ * The player while a TV is connected: the place as one video plays on the TV and this screen
+ * keeps the picture, the words and the pause button. The words follow the TV's position. When
+ * the TV cannot be given the video (not ready, or any failure) `onUnavailable` hands the place
+ * back to the local player.
+ */
+function TvPlayer({
+	audio,
+	cover,
+	id,
+	name,
+	node,
+	onBack,
+	onEnd,
+	onUnavailable,
+	posterUrl,
+	words,
+}: {
+	audio: NarrationAudio | null;
+	cover: ReactNode;
+	id: string;
+	name: string;
+	node: NodeId;
+	onBack: () => void;
+	onEnd: () => void;
+	onUnavailable: () => void;
+	posterUrl: string | null;
+	words: string[];
+}) {
+	const tv = useTvRemote();
+	const [length, setLength] = useState(0);
+	const loaded = useRef<boolean>(false);
+	const ended = useRef<boolean>(false);
+
+	// The latest of everything the one-time request below calls.
+	const latest = useRef({ name, onUnavailable, posterUrl, tv });
+	useLayoutEffect(() => {
+		latest.current = { name, onUnavailable, posterUrl, tv };
+	});
+
+	useEffect(() => {
+		let live = true;
+		const run = async () => {
+			try {
+				const media = await castPlace(id, node);
+				if (!live) {
+					return;
+				}
+				if (!media) {
+					latest.current.onUnavailable();
+					return;
+				}
+				await latest.current.tv.load({
+					durationSec: media.durationSec,
+					posterUrl: latest.current.posterUrl,
+					title: latest.current.name,
+					url: media.url,
+				});
+				loaded.current = true;
+				if (live) {
+					setLength(media.durationSec);
+				}
+			} catch {
+				if (live) {
+					latest.current.onUnavailable();
+				}
+			}
+		};
+		run();
+		return () => {
+			live = false;
+			if (loaded.current) {
+				latest.current.tv.stop();
+			}
+		};
+	}, [id, node]);
+
+	const endRef = useRef(onEnd);
+	useLayoutEffect(() => {
+		endRef.current = onEnd;
+	}, [onEnd]);
+	useEffect(() => {
+		if (tv.ended && !ended.current) {
+			ended.current = true;
+			mark("place-end", { detail: { cause: "tv" }, place: node });
+			endRef.current();
+		}
+	}, [node, tv.ended]);
+
+	const ready = length > 0;
+	const label = ready
+		? `Playing on ${tv.deviceName ?? "the TV"}`
+		: "Getting ready for the TV";
+	const frame = (
+		<View style={StyleSheet.absoluteFill}>
+			{cover}
+			<View pointerEvents="none" style={styles.tvLabel}>
+				<NamePill text={label} />
+			</View>
+		</View>
+	);
+	return (
+		<PlayerChrome
+			cast={<CastButton />}
+			current={
+				ready && audio ? wordIndexAt(audio.words, tv.position, length) : 0
+			}
+			frame={frame}
+			name={name}
+			onBack={onBack}
+			onToggle={ready ? tv.toggle : () => undefined}
+			playing={!ready || tv.playing}
+			progress={ready ? tv.position / length : 0}
 			words={words}
 		/>
 	);
@@ -799,6 +924,16 @@ export default function Place() {
 
 	const goodnight = node === "outro";
 
+	// A connected TV plays the place; if it cannot (see TvPlayer) the place plays here.
+	const castConnected = useCastConnected();
+	const [tvOff, setTvOff] = useState(false);
+	useEffect(() => {
+		if (!castConnected) {
+			setTvOff(false);
+		}
+	}, [castConnected]);
+	const onTvUnavailable = useCallback(() => setTvOff(true), []);
+
 	const onEnd = useCallback(async () => {
 		await visit(node);
 		router.replace(
@@ -852,6 +987,27 @@ export default function Place() {
 				node={node}
 				onBack={onBack}
 				onEnd={onEnd}
+				words={words}
+			/>
+		);
+	}
+	if (castConnected && !tvOff) {
+		return (
+			<TvPlayer
+				audio={audio}
+				cover={cover}
+				id={id}
+				key={node}
+				name={place.name}
+				node={node}
+				onBack={onBack}
+				onEnd={onEnd}
+				onUnavailable={onTvUnavailable}
+				posterUrl={
+					typeof place.picture === "object"
+						? (place.picture?.uri ?? null)
+						: null
+				}
 				words={words}
 			/>
 		);
@@ -916,6 +1072,13 @@ const styles = StyleSheet.create({
 		left: layout.sideMargin,
 		position: "absolute",
 		right: layout.sideMargin,
+	},
+	tvLabel: {
+		alignItems: "center",
+		left: 0,
+		position: "absolute",
+		right: 0,
+		top: "42%",
 	},
 	unseen: { opacity: 0 },
 });
