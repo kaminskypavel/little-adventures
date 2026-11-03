@@ -1,5 +1,9 @@
 import type { StarTakeName } from "@little-adventures/native-ui/star-take";
 import type { VoiceHaloState } from "@little-adventures/native-ui/voice-halo";
+import type { askStrings } from "@/src/i18n/strings/ask";
+
+/** The ask screen's `t` from `useT(askStrings)`. */
+export type AskT = (key: keyof typeof askStrings.en) => string;
 
 export type Hint = "ask" | "missed" | "notQuestion" | "short";
 
@@ -24,35 +28,29 @@ export function takeFor(pressing: boolean, thinking: boolean): StarTakeName {
 	return pressing ? "listen" : "idle";
 }
 
-export function titleFor(state: VoiceHaloState, hint: Hint): string {
+export function titleFor(t: AskT, state: VoiceHaloState, hint: Hint): string {
 	switch (state) {
 		case "recording":
-			return "I'm listening...";
+			return t("listening");
 		case "thinking":
-			return "Let me think...";
+			return t("thinking");
 		case "missed":
-			return hint === "notQuestion"
-				? "That wasn't a question"
-				: "I missed that";
+			return hint === "notQuestion" ? t("notQuestion") : t("missed");
 		default:
-			return "Ask me anything";
+			return t("ready");
 	}
 }
 
 /** Thinking has no hint line: the star and the bubbles say it. */
-export function lineFor(state: VoiceHaloState, hint: Hint): string {
+export function lineFor(t: AskT, state: VoiceHaloState, hint: Hint): string {
 	switch (state) {
 		case "recording":
-			return "Let go when you're done";
+			return t("letGo");
 		case "thinking":
 			return "";
 		case "missed":
-			return hint === "notQuestion"
-				? "Hold the button and ask a question"
-				: "Hold the button and ask again";
+			return hint === "notQuestion" ? t("holdAskQuestion") : t("holdAskAgain");
 		default:
-			return hint === "short"
-				? "Hold a little longer"
-				: "Hold the button and ask";
+			return hint === "short" ? t("holdLonger") : t("holdAsk");
 	}
 }

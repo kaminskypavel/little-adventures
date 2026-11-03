@@ -10,6 +10,8 @@ import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
 import { PresetQuestions } from "@/src/admin/preset-questions";
+import { useT } from "@/src/i18n";
+import { askStrings } from "@/src/i18n/strings/ask";
 import { lineFor, takeFor, titleFor } from "@/src/voice/ask-copy";
 import { useAsk } from "@/src/voice/use-ask";
 import { useMissedTilt } from "@/src/voice/use-tilt";
@@ -27,6 +29,7 @@ const PRESET_TOOLS = <PresetQuestions />;
 
 export default function Listening() {
 	useScreenAdminTools("Listening", PRESET_TOOLS);
+	const t = useT(askStrings);
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const ask = useAsk(
@@ -72,7 +75,7 @@ export default function Listening() {
 				color={colors.cream}
 				variant="headline"
 			>
-				{titleFor(ask.state, ask.hint)}
+				{titleFor(t, ask.state, ask.hint)}
 			</ClayText>
 			<View style={styles.line}>
 				<ClayText
@@ -81,7 +84,7 @@ export default function Listening() {
 					style={LINE}
 					variant="body"
 				>
-					{lineFor(ask.state, ask.hint)}
+					{lineFor(t, ask.state, ask.hint)}
 				</ClayText>
 			</View>
 		</Screen>
