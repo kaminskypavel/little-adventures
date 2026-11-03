@@ -46,7 +46,7 @@ export const LEAD_FADE_MS = 400;
 /** The still picture dissolves into the moving video over this long, so a place never snaps into motion. */
 export const COVER_FADE_MS = 700;
 /** The hand-over is a dip to night: the picture fades to navy over this many seconds, then back from it. */
-export const DIP_HALF_SEC = 0.4;
+export const DIP_HALF_SEC = 0.2;
 /** Each half of the dip, in ms. */
 export const DIP_HALF_MS = DIP_HALF_SEC * 1000;
 /** The whole dip for a person who wants calm: quick, and still centred on the switch. */
