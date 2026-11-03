@@ -1,6 +1,6 @@
 // The soft hand-over between the screens of an adventure: the night sky closes over the old
 // screen (1 s), holds for a breath on the full sky (450 ms), and opens on the new one
-// (1 s). The music bed fades with it (music-store `setFaded`: down with the closing, silent in
+// (1 s); a quick dip (0.3 s out, straight back in over 0.35 s) when a place hands over to Pick a way. The music bed fades with it (music-store `setFaded`: down with the closing, silent in
 // the hold, back up with the opening) and the narration is let down too. Navigation never waits
 // on the animation: timers, not its callbacks, decide when to go and when the hold ends.
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -33,19 +33,25 @@ export const PAGE_HOLD_MS = 450;
 export const PAGE_IN_MS = 1000;
 const PAGE_IN_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
-/**
- * The place plays only once the sky is clear again: this long after the sky starts to open (the
- * whole fade-in), the picture stands still on the cover until then. One line to tune.
- */
-export const PLAY_AFTER_OPEN_MS = PAGE_IN_MS;
 /** The narration comes up from silence over this long when it first speaks (ease-out). */
 export const NARRATION_RAMP_MS = 500;
+
+interface Pace {
+	hold: number;
+	in: number;
+	out: number;
+}
+const SLOW: Pace = { hold: PAGE_HOLD_MS, in: PAGE_IN_MS, out: PAGE_OUT_MS };
+/** A place handing over to Pick a way after its lesson: a quick dip (the user found 2.5 s too long). */
+const QUICK: Pace = { hold: 0, in: 350, out: 300 };
 
 /** How long after a screen began to leave a new one still counts as its neighbour. */
 const HANDOVER_MS = 3000;
 // Until when the screen that comes next opens from the sky: set when a screen begins to leave
 // through `leave`. A screen reached any other way (a reload, a link) simply appears.
 let handoverUntil = 0;
+// The pace of the hand-over under way: the next screen opens at the pace the last one left at.
+let handoverPace = SLOW;
 
 interface Volume {
 	volume: number;
@@ -100,12 +106,14 @@ function fadeVoices(ms: number) {
 	}
 }
 
-type LeaveFn = (go: () => void) => void;
+/** `quick`: a short dip instead of the slow sky, both closing this screen and opening the next. */
+type LeaveFn = (go: () => void, quick?: boolean) => void;
 // The leave of the screen in front, so the shared back button can close its screen too.
 let active: LeaveFn | null = null;
 
 /** Goes through the screen in front's sky when it has one, else straight away. */
-export const leaveActive: LeaveFn = (go) => (active ? active(go) : go());
+export const leaveActive: LeaveFn = (go, quick) =>
+	active ? active(go, quick) : go();
 
 /**
  * The sky of a screen. `veil` goes last in the screen (it covers everything); `leave(go)` closes
@@ -116,11 +124,14 @@ export const leaveActive: LeaveFn = (go) => (active ? active(go) : go());
  */
 export function useScreenFade(): {
 	held: boolean;
+	/** How long the sky holds before this screen opens (0 when it simply appeared). */
+	holdMs: number;
 	leave: LeaveFn;
 	veil: ReactNode;
 } {
 	const calm = useCalm();
 	const [opening] = useState(() => !calm && Date.now() < handoverUntil);
+	const [pace] = useState(() => handoverPace);
 	const [held, setHeld] = useState(opening);
 	const opacity = useSharedValue(opening ? 1 : 0);
 	const leaving = useRef<boolean>(false);
@@ -129,7 +140,7 @@ export function useScreenFade(): {
 	const playTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	const leave = useCallback<LeaveFn>(
-		(go) => {
+		(go, quick = false) => {
 			if (leaving.current) {
 				return;
 			}
@@ -138,17 +149,19 @@ export function useScreenFade(): {
 				go();
 				return;
 			}
-			handoverUntil = Date.now() + PAGE_OUT_MS + HANDOVER_MS;
+			const out = quick ? QUICK : SLOW;
+			handoverPace = out;
+			handoverUntil = Date.now() + out.out + HANDOVER_MS;
 			try {
 				opacity.set(
-					withTiming(1, { duration: PAGE_OUT_MS, easing: PAGE_OUT_EASING })
+					withTiming(1, { duration: out.out, easing: PAGE_OUT_EASING })
 				);
-				fadeVoices(PAGE_OUT_MS);
-				useMusic.getState().setFaded(true, PAGE_OUT_MS);
+				fadeVoices(out.out);
+				useMusic.getState().setFaded(true, out.out);
 			} catch {
 				// A failed animation must not hold the screen: it goes anyway.
 			}
-			goTimer.current = setTimeout(go, PAGE_OUT_MS);
+			goTimer.current = setTimeout(go, out.out);
 		},
 		[calm, opacity]
 	);
@@ -163,21 +176,21 @@ export function useScreenFade(): {
 			if (calm || Date.now() >= handoverUntil) {
 				opacity.set(0);
 				setHeld(false);
-				music.setFaded(false, calm ? 0 : PAGE_IN_MS);
+				music.setFaded(false, calm ? 0 : pace.in);
 			} else {
 				opacity.set(1);
 				setHeld(true);
 				// The place is let go (held false) when the sky is clear, not when it begins to open.
 				playTimer.current = setTimeout(
 					() => setHeld(false),
-					PAGE_HOLD_MS + PLAY_AFTER_OPEN_MS
+					pace.hold + pace.in
 				);
 				holdTimer.current = setTimeout(() => {
-					music.setFaded(false, PAGE_IN_MS);
+					music.setFaded(false, pace.in);
 					opacity.set(
-						withTiming(0, { duration: PAGE_IN_MS, easing: PAGE_IN_EASING })
+						withTiming(0, { duration: pace.in, easing: PAGE_IN_EASING })
 					);
-				}, PAGE_HOLD_MS);
+				}, pace.hold);
 			}
 			return () => {
 				clearTimeout(holdTimer.current);
@@ -187,7 +200,7 @@ export function useScreenFade(): {
 					active = null;
 				}
 			};
-		}, [calm, leave, opacity])
+		}, [calm, leave, opacity, pace])
 	);
 
 	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
@@ -203,5 +216,5 @@ export function useScreenFade(): {
 			/>
 		</Animated.View>
 	);
-	return { held, leave, veil };
+	return { held, holdMs: opening ? pace.hold : 0, leave, veil };
 }

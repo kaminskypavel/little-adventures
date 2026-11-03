@@ -40,7 +40,7 @@ import type { Adventure, NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 import { useLandscape } from "@/src/orientation";
-import { PAGE_HOLD_MS, useScreenFade } from "@/src/screen-fade";
+import { useScreenFade } from "@/src/screen-fade";
 
 // How long the picked card shows its ring before the map takes over.
 const SELECT_MS = 250;
@@ -259,9 +259,9 @@ const hasEverything = (
 export default function Choice() {
 	const router = useRouter();
 	// Opens from the night veil when it follows a place; nothing leaves from here.
-	const { held, leave, veil } = useScreenFade();
+	const { held, holdMs, leave, veil } = useScreenFade();
 	// The photos arrive as the night-sky veil clears (after its hold), or at once when it did not close.
-	const [enterDelay] = useState(held ? PAGE_HOLD_MS : 0);
+	const [enterDelay] = useState(held ? holdMs : 0);
 	const params = useLocalSearchParams<{
 		drawing?: string;
 		from?: string;
