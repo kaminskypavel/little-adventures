@@ -231,9 +231,12 @@ function Halves({
 }
 
 /** 13 Choice, 13b goodnight locked, 14 goodnight open, E2 place still drawing. */
-/** The screen has what it draws: the adventure, the walked places and the child's name. */
-const hasEverything = (...parts: unknown[]) =>
-	parts.every((part) => part !== null && part !== undefined);
+/** The screen has what it draws (the same rule as its early return): adventure, walked places, name loaded. */
+const hasEverything = (
+	adventure: unknown,
+	visited: unknown,
+	childName: unknown
+) => Boolean(adventure && visited) && childName !== undefined;
 
 export default function Choice() {
 	const router = useRouter();
