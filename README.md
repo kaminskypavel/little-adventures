@@ -46,7 +46,7 @@ One adventure, step by step:
 2. **Write the map.** Muse Spark 1.3 (`llm`, structured output) writes the adventure as a themed map: an end goal, four places with one true fact each that answers the question, and a goodnight that recaps them.
 3. **Check and rewrite.** The checker answers yes or no to the story checks (calm for the child's age, names stay the same, one fact per place, the goodnight recaps, nothing scary, the facts are true and answer the question). It is our LoRA on Muse Glimmer 30B, served on Modal; while its GPU wakes, Muse Spark Open on Baseten answers instead. A failed check comes back with one sentence of reason, the writer rewrites with those reasons, and after two failed rounds the engine stops rather than give the child a weak story.
 4. **Draw the cast.** Muse Image draws the story's cast and the end-goal picture, starting from the looks the app server drew from the child's photo. SAM 3.1 finds the end-goal object so it can be cut out cleanly.
-5. **Pictures, clips and voice.** The place pictures, the short clips and the narration are made inside the engine by our proprietary technology and the models it runs. Muse Spark 1.3 looks at frames of every clip and sends back any clip with a visible fault before the child sees it.
+5. **Clips and voice.** The short clips and the narration are made inside the engine by our proprietary technology and the models it runs. Muse Spark 1.3 looks at frames of every clip and sends back any clip with a visible fault before the child sees it.
 6. **Play.** The app polls the player API and plays each place as soon as it is ready.
 
 Every model call, Meta or not, is recorded with its model, operation, time and cost.
@@ -94,7 +94,7 @@ On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 tim
 
 ## Limits
 
-- The place pictures, short clips and narration are made in the Kodio engine by our proprietary technology and the models it runs, not by Meta models. Without the engine, the app plays one bundled sample adventure.
+- The short clips and narration are made in the Kodio engine by our proprietary technology and the models it runs, not by Meta models. Without the engine, the app plays one bundled sample adventure.
 - English only.
 - The iOS and Android builds are not in the stores. The app runs in the browser and in Expo.
 - The Glimmer LoRA numbers above are the team's own, on synthetic data. The 96.8% hybrid is optimistic (see Open weights).
