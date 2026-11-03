@@ -132,7 +132,7 @@ export const useMusic = create<Music>()(
 				player = createAudioPlayer({ uri: url });
 				player.loop = true;
 				player.volume = 0;
-				set({ adventureId, faded: false, paused: false, speaking: false, url });
+				set({ adventureId, paused: false, speaking: false, url });
 				player.play();
 				fade(player, level(get()));
 			},

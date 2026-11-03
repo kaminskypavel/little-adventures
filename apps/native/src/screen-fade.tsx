@@ -1,9 +1,12 @@
-// The soft landing between the map, a place video and the pick-a-way screen: a navy veil (the
-// same night navy as the dip between parts) that clears when a screen opens and closes before it
-// goes. The music bed fades with it (music-store `setFaded`) and the narration is let down too.
-// Navigation never waits on the animation: a timer, not its callback, decides when to go.
+// The soft hand-over between the screens of an adventure: the night sky closes over the old
+// screen (1 s), holds for a breath while a few stars twinkle (450 ms), and opens on the new one
+// (1 s). The music bed fades with it (music-store `setFaded`: down with the closing, silent in
+// the hold, back up with the opening) and the narration is let down too. Navigation never waits
+// on the animation: timers, not its callbacks, decide when to go and when the hold ends.
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { skyPalettes } from "@little-adventures/native-ui/tokens";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router";
 import {
 	type ReactNode,
 	useCallback,
@@ -11,31 +14,44 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
 	cancelAnimation,
 	Easing,
 	useAnimatedStyle,
 	useSharedValue,
+	withSequence,
 	withTiming,
 } from "react-native-reanimated";
 import { rampVolume } from "@/src/data/music-rules";
 import { useMusic } from "@/src/data/music-store";
 
-/** A screen opens from the veil: transitions.dev `--duration-very-slow`, with `--ease-smooth-out`. */
-export const PAGE_IN_MS = 500;
-const PAGE_IN_EASING = Easing.bezier(0.22, 1, 0.36, 1);
-/** A screen closes to the veil, quicker than it opens: `--duration-medium`, with `--ease-in-out`. */
-export const PAGE_OUT_MS = 350;
+/** The sky closes over a screen: `--ease-in-out`, 1 s (the user asked for a longer fade). */
+export const PAGE_OUT_MS = 1000;
 const PAGE_OUT_EASING = Easing.inOut(Easing.ease);
+/** A breath on the full sky, with the stars twinkling, before the next screen opens. */
+export const PAGE_HOLD_MS = 450;
+/** The sky opens on a screen: `--ease-smooth-out`, 1 s. */
+export const PAGE_IN_MS = 1000;
+const PAGE_IN_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
-/** How long after a screen left a new one still counts as its neighbour and opens from the veil. */
+/** How long after a screen began to leave a new one still counts as its neighbour. */
 const HANDOVER_MS = 3000;
-// When the last screen began to leave through the veil: the next screen opens from it. A screen
-// the grown-up reaches any other way (Home, a reload) simply appears.
+// Until when the screen that comes next opens from the sky: set when a screen begins to leave
+// through `leave`. A screen reached any other way (a reload, a link) simply appears.
 let handoverUntil = 0;
 
-const [NIGHT] = skyPalettes.night.colors;
+/** The stars of the hold, as a share of the screen: [left, top, size in pt]. */
+const STARS = [
+	["12%", "20%", 4],
+	["30%", "65%", 3],
+	["55%", "30%", 4],
+	["72%", "72%", 3],
+	["88%", "18%", 4],
+	["45%", "85%", 3],
+] as const;
+const STAR_PEAK = 0.9;
+const STAR_STEP_MS = PAGE_HOLD_MS / 3;
 
 interface Volume {
 	volume: number;
@@ -73,43 +89,36 @@ function fadeVoices(ms: number) {
 	}
 }
 
-interface Leave {
-	/** Leave the music bed alone (the goodnight hands it to the end screen). */
-	keepMusic?: boolean;
-}
+type LeaveFn = (go: () => void) => void;
+// The leave of the screen in front, so the shared back button can close its screen too.
+let active: LeaveFn | null = null;
+
+/** Goes through the screen in front's sky when it has one, else straight away. */
+export const leaveActive: LeaveFn = (go) => (active ? active(go) : go());
 
 /**
- * The veil of a screen. `veil` goes last in the screen (it covers everything); `leave(go)`
- * closes the screen to the veil, then calls `go` (the navigation). The screen opens from the
- * veil when the screen before it left through `leave`. With reduced motion there is no veil:
+ * The sky of a screen. `veil` goes last in the screen (it covers everything); `leave(go)` closes
+ * the screen, then calls `go` (the navigation). The screen opens from the sky when the screen
+ * before it left through `leave`, and `held` is true until the sky starts to open: the place waits
+ * on it, so its narration never starts under a closed sky. With reduced motion there is no sky:
  * `leave` goes at once.
  */
 export function useScreenFade(): {
-	leave: (go: () => void, options?: Leave) => void;
+	held: boolean;
+	leave: LeaveFn;
 	veil: ReactNode;
 } {
 	const calm = useCalm();
 	const [opening] = useState(() => !calm && Date.now() < handoverUntil);
+	const [held, setHeld] = useState(opening);
 	const opacity = useSharedValue(opening ? 1 : 0);
+	const stars = useSharedValue(0);
 	const leaving = useRef<boolean>(false);
-	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const goTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const holdTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-	useEffect(() => {
-		handoverUntil = 0;
-		useMusic.getState().setFaded(false, calm ? 0 : PAGE_IN_MS);
-		if (opening) {
-			opacity.set(
-				withTiming(0, { duration: PAGE_IN_MS, easing: PAGE_IN_EASING })
-			);
-		}
-		return () => {
-			clearTimeout(timer.current);
-			cancelAnimation(opacity);
-		};
-	}, [calm, opacity, opening]);
-
-	const leave = useCallback(
-		(go: () => void, options?: Leave) => {
+	const leave = useCallback<LeaveFn>(
+		(go) => {
 			if (leaving.current) {
 				return;
 			}
@@ -118,29 +127,90 @@ export function useScreenFade(): {
 				go();
 				return;
 			}
-			handoverUntil = Date.now() + HANDOVER_MS;
+			handoverUntil = Date.now() + PAGE_OUT_MS + HANDOVER_MS;
 			try {
 				opacity.set(
 					withTiming(1, { duration: PAGE_OUT_MS, easing: PAGE_OUT_EASING })
 				);
 				fadeVoices(PAGE_OUT_MS);
-				if (!options?.keepMusic) {
-					useMusic.getState().setFaded(true, PAGE_OUT_MS);
-				}
+				useMusic.getState().setFaded(true, PAGE_OUT_MS);
 			} catch {
 				// A failed animation must not hold the screen: it goes anyway.
 			}
-			timer.current = setTimeout(go, PAGE_OUT_MS);
+			goTimer.current = setTimeout(go, PAGE_OUT_MS);
 		},
 		[calm, opacity]
 	);
 
+	// Each time the screen comes to the front (also when a screen above it goes): open from the
+	// sky if the last screen left through it, else be clear at once.
+	useFocusEffect(
+		useCallback(() => {
+			leaving.current = false;
+			active = leave;
+			const music = useMusic.getState();
+			if (calm || Date.now() >= handoverUntil) {
+				opacity.set(0);
+				setHeld(false);
+				music.setFaded(false, calm ? 0 : PAGE_IN_MS);
+			} else {
+				opacity.set(1);
+				setHeld(true);
+				stars.set(
+					withSequence(
+						withTiming(STAR_PEAK, { duration: STAR_STEP_MS }),
+						withTiming(STAR_PEAK, { duration: STAR_STEP_MS }),
+						withTiming(0, { duration: STAR_STEP_MS })
+					)
+				);
+				holdTimer.current = setTimeout(() => {
+					setHeld(false);
+					music.setFaded(false, PAGE_IN_MS);
+					opacity.set(
+						withTiming(0, { duration: PAGE_IN_MS, easing: PAGE_IN_EASING })
+					);
+				}, PAGE_HOLD_MS);
+			}
+			return () => {
+				clearTimeout(holdTimer.current);
+				clearTimeout(goTimer.current);
+				cancelAnimation(stars);
+				if (active === leave) {
+					active = null;
+				}
+			};
+		}, [calm, leave, opacity, stars])
+	);
+
 	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+	const starStyle = useAnimatedStyle(() => ({ opacity: stars.get() }));
 	const veil = (
 		<Animated.View
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, { backgroundColor: NIGHT }, style]}
-		/>
+			style={[StyleSheet.absoluteFill, style]}
+		>
+			<LinearGradient
+				colors={skyPalettes.night.colors}
+				locations={skyPalettes.night.locations}
+				style={StyleSheet.absoluteFill}
+			/>
+			<Animated.View style={[StyleSheet.absoluteFill, starStyle]}>
+				{STARS.map(([left, top, size]) => (
+					<View
+						key={`${left}-${top}`}
+						style={{
+							backgroundColor: "#FFFFFF",
+							borderRadius: size,
+							height: size,
+							left,
+							position: "absolute",
+							top,
+							width: size,
+						}}
+					/>
+				))}
+			</Animated.View>
+		</Animated.View>
 	);
-	return { leave, veil };
+	return { held, leave, veil };
 }

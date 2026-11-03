@@ -251,6 +251,7 @@ function PlayerChrome({
 function TimerPlayer({
 	durationMs,
 	frame,
+	held,
 	name,
 	node,
 	onBack,
@@ -259,6 +260,7 @@ function TimerPlayer({
 }: {
 	durationMs: number;
 	frame: ReactNode;
+	held: boolean;
 	name: string;
 	node: NodeId;
 	onBack: () => void;
@@ -307,9 +309,12 @@ function TimerPlayer({
 	}, [durationMs, fireEnd, progress]);
 
 	useEffect(() => {
+		if (held) {
+			return;
+		}
 		run();
 		return () => cancelAnimation(progress);
-	}, [progress, run]);
+	}, [held, progress, run]);
 
 	const toggle = () => {
 		if (playing) {
@@ -601,6 +606,7 @@ function MediaPlayer({
 	audio,
 	cover,
 	hasPicture,
+	held: skyClosed,
 	name,
 	node,
 	onBack,
@@ -612,6 +618,8 @@ function MediaPlayer({
 	audio: NarrationAudio | null;
 	/** The picture, shown when there is no video and until the first part has a frame. */
 	cover: ReactNode;
+	/** The sky is still closed over this place: it does not begin until it opens. */
+	held: boolean;
 	/** The place has a real picture: it may lead while the first part is still being made. */
 	hasPicture: boolean;
 	name: string;
@@ -909,7 +917,9 @@ function MediaPlayer({
 			: view.at < 0 && upcoming(view) !== null;
 	const slotStatus = statuses[view.slot];
 	const ready =
-		(!hasNarration || shownVoice.isLoaded || narrationFailed) && !videoPending;
+		!skyClosed &&
+		(!hasNarration || shownVoice.isLoaded || narrationFailed) &&
+		!videoPending;
 	useEffect(() => {
 		if (!playing) {
 			return;
@@ -1027,6 +1037,7 @@ function MediaPlayer({
 function TvPlayer({
 	audio,
 	cover,
+	held,
 	id,
 	name,
 	node,
@@ -1038,6 +1049,8 @@ function TvPlayer({
 }: {
 	audio: NarrationAudio | null;
 	cover: ReactNode;
+	/** The sky is still closed over this place: the TV is not asked until it opens. */
+	held: boolean;
 	id: string;
 	name: string;
 	node: NodeId;
@@ -1060,7 +1073,7 @@ function TvPlayer({
 
 	// The phone may not reach the TV yet on the first render: loading then would fail and drop
 	// the place back to the phone, so the request waits for it.
-	const tvReady = tv.ready;
+	const tvReady = tv.ready && !held;
 	useEffect(() => {
 		if (!tvReady) {
 			return;
@@ -1199,18 +1212,21 @@ function GoodnightFrame({ adventure }: { adventure: Adventure }) {
 
 /** 12 Place video and 15 Goodnight video. It opens from the night veil and closes to it. */
 export default function Place() {
-	const { leave, veil } = useScreenFade();
+	const { held, leave, veil } = useScreenFade();
 	return (
 		<>
-			<PlaceScreen leave={leave} />
+			<PlaceScreen held={held} leave={leave} />
 			{veil}
 		</>
 	);
 }
 
 function PlaceScreen({
+	held,
 	leave,
 }: {
+	/** The sky is still closed: nothing plays yet, so the narration begins as the picture opens. */
+	held: boolean;
 	leave: ReturnType<typeof useScreenFade>["leave"];
 }) {
 	const router = useRouter();
@@ -1235,13 +1251,10 @@ function PlaceScreen({
 
 	const onEnd = useCallback(async () => {
 		await visit(node);
-		// The goodnight hands the music to the end screen, which fades it itself.
-		leave(
-			() =>
-				router.replace(
-					goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
-				),
-			{ keepMusic: goodnight }
+		leave(() =>
+			router.replace(
+				goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
+			)
 		);
 	}, [goodnight, id, leave, node, router, visit]);
 
@@ -1287,6 +1300,7 @@ function PlaceScreen({
 			<TimerPlayer
 				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
 				frame={cover}
+				held={held}
 				name={place.name}
 				node={node}
 				onBack={onBack}
@@ -1300,6 +1314,7 @@ function PlaceScreen({
 			<TvPlayer
 				audio={audio}
 				cover={cover}
+				held={held}
 				id={id}
 				key={node}
 				name={place.name}
@@ -1321,6 +1336,7 @@ function PlaceScreen({
 			audio={audio}
 			cover={cover}
 			hasPicture={place.picture !== null}
+			held={held}
 			// By place and narration, never by a part's url: a part keeps playing when a read brings
 			// other urls. A new narration url (fresh urls after a failed file) starts the place over.
 			key={`${node}|${audio?.url}|${ownVoices(place.parts)}`}
