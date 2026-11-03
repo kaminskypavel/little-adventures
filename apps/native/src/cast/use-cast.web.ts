@@ -186,7 +186,7 @@ export function useCastConnected(): boolean {
 }
 
 /** Pictures on the TV are native only (the map): nothing happens in Chrome. */
-export function useTvImage(): (image: TvImage) => Promise<void> {
+export function useTvImage(): ((image: TvImage) => Promise<void>) | null {
 	return noImage;
 }
 const noImage = (_image: TvImage) => Promise.resolve();
@@ -232,5 +232,6 @@ export function useTvRemote(): TvRemote {
 	}, []);
 	const toggle = useCallback(() => controller?.playOrPause(), []);
 	const stop = useCallback(() => controller?.stop(), []);
-	return { deviceName, ended, load, playing, position, stop, toggle };
+	const ready = Boolean(context()?.getCurrentSession());
+	return { deviceName, ended, load, playing, position, ready, stop, toggle };
 }

@@ -25,6 +25,8 @@ export interface TvRemote {
 	playing: boolean;
 	/** Seconds into the video on the TV. */
 	position: number;
+	/** True once the phone can talk to the TV: wait for it before loading. */
+	ready: boolean;
 	/** Stops the TV's video (the child left the place). */
 	stop: () => void;
 	toggle: () => void;

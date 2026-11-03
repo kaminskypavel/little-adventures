@@ -38,9 +38,9 @@ export function useCastConnected(): boolean {
  * Shows a still picture on the connected TV. Rejects when no TV is connected or it refuses.
  * Separate from useTvRemote: that one re-renders its screen with the TV's position.
  */
-export function useTvImage(): (image: TvImage) => Promise<void> {
+export function useTvImage(): ((image: TvImage) => Promise<void>) | null {
 	const client = useRemoteMediaClient();
-	return useCallback(
+	const load = useCallback(
 		async (image: TvImage) => {
 			if (!client) {
 				throw new Error("No TV connected");
@@ -57,6 +57,8 @@ export function useTvImage(): (image: TvImage) => Promise<void> {
 		},
 		[client]
 	);
+	// Null until the phone can talk to the TV, so callers wait instead of failing.
+	return client ? load : null;
 }
 
 /** The connected TV. Call it only where the video is shown: it owns the position listener. */
@@ -135,6 +137,7 @@ export function useTvRemote(): TvRemote {
 		load,
 		playing,
 		position: position ?? 0,
+		ready: client !== null,
 		stop,
 		toggle,
 	};

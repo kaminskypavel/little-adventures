@@ -43,13 +43,14 @@ export function useMapOnTv({
 	const ref = useRef<View>(null);
 	const connected = useCastConnected();
 	const loadImage = useTvImage();
+	const tvReady = loadImage !== null;
 	const latest = useRef({ loadImage, title });
 	useEffect(() => {
 		latest.current = { loadImage, title };
 	});
 
 	useEffect(() => {
-		if (!(connected && ready)) {
+		if (!(connected && ready && tvReady)) {
 			return;
 		}
 		let live = true;
@@ -81,7 +82,7 @@ export function useMapOnTv({
 					method: "PUT",
 				});
 				if (live && put.ok) {
-					await latest.current.loadImage({
+					await latest.current.loadImage?.({
 						title: latest.current.title,
 						url: target.url,
 					});
@@ -95,7 +96,7 @@ export function useMapOnTv({
 			live = false;
 			clearTimeout(timer);
 		};
-	}, [adventureId, connected, ready, version]);
+	}, [adventureId, connected, ready, tvReady, version]);
 
 	return ref;
 }

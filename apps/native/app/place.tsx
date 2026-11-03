@@ -782,7 +782,13 @@ function TvPlayer({
 		latest.current = { name, onUnavailable, posterUrl, tv };
 	});
 
+	// The phone may not reach the TV yet on the first render: loading then would fail and drop
+	// the place back to the phone, so the request waits for it.
+	const tvReady = tv.ready;
 	useEffect(() => {
+		if (!tvReady) {
+			return;
+		}
 		let live = true;
 		const run = async () => {
 			try {
@@ -818,7 +824,7 @@ function TvPlayer({
 				latest.current.tv.stop();
 			}
 		};
-	}, [id, node]);
+	}, [id, node, tvReady]);
 
 	const endRef = useRef(onEnd);
 	useLayoutEffect(() => {
