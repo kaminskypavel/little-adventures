@@ -22,6 +22,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdventureMenu } from "@/src/adventure-menu";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import {
 	choicesFrom,
@@ -226,6 +227,7 @@ function Halves({
 				</View>
 			) : null}
 			{starTake ? <Star size={SIDEWAYS_STAR_SIZE} take={starTake} /> : null}
+			<AdventureMenu right={insets.right + layout.sideMargin} top={top} />
 		</View>
 	);
 }
