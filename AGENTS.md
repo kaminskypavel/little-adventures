@@ -4,6 +4,8 @@ Product docs, wireframes and design decisions live in `docs/`. The folder is loc
 
 `docs/solutions/` holds learnings from past work (bugs, design patterns, tooling choices, workflows), one Markdown file each, in category folders with YAML frontmatter (`module`, `tags`, `problem_type`). It is local only for the same reason, and relevant when building or debugging in an area it covers.
 
+`documents/` is the opposite: it is committed, pushed and public, and the README links its long text there. Judges and their agents read every file in it. Before committing anything there, read each whole file and look at each image as a reader would: it may describe only what this repo does and the Meta models it uses. Never put in it a non-Meta model or provider name, anything about how the Kodio engine works inside, a key, an invite code or anything about a real child. The same check applies to `README.md`, `ARCHITECTURE.md`, `PRODUCT.md` and `.github/readme/`.
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
