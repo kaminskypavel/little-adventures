@@ -34,8 +34,6 @@ const TRACK_TINT = "rgba(244,236,216,0.2)";
 const BAR_WIDTH = 20;
 const BAR_HEIGHT = 3;
 const BAR_GAP = 4;
-// The menu closes itself after this long without a touch.
-const IDLE_CLOSE_MS = 4000;
 const SWITCH_WIDTH = 52;
 const SWITCH_HEIGHT = 30;
 const THUMB = 24;
@@ -63,17 +61,8 @@ function MenuGlyph() {
 	);
 }
 
-let idleTimer: ReturnType<typeof setTimeout> | undefined;
-
 function closeMenu() {
-	clearTimeout(idleTimer);
 	usePlayerPrefs.getState().setMenuOpen(false);
-}
-
-/** Starts (or restarts) the countdown that closes the menu when nobody touches it. */
-function armIdleClose() {
-	clearTimeout(idleTimer);
-	idleTimer = setTimeout(closeMenu, IDLE_CLOSE_MS);
 }
 
 function toggleMenu() {
@@ -83,7 +72,6 @@ function toggleMenu() {
 		return;
 	}
 	setMenuOpen(true);
-	armIdleClose();
 }
 
 const menuEntering = () => {
@@ -154,10 +142,7 @@ function Row({
 			accessibilityLabel={label}
 			accessibilityRole={role}
 			accessibilityState={checked === undefined ? undefined : { checked }}
-			onPress={() => {
-				armIdleClose();
-				onPress();
-			}}
+			onPress={onPress}
 			style={styles.row}
 		>
 			<Text allowFontScaling={false} style={styles.rowText}>
@@ -170,8 +155,16 @@ function Row({
 
 /** The TV row: a Cast glyph in a switch-sized pill, sun while a TV is connected. */
 function TvRow({ connected }: { connected: boolean }) {
+	// One element for screen readers, so the row's words are read, not the system control's own
+	// name ("Cast not connected"); a double tap still lands on the control under it.
 	return (
-		<View style={styles.row}>
+		<View
+			accessibilityLabel="Play on the TV"
+			accessibilityRole="button"
+			accessibilityState={{ selected: connected }}
+			accessible
+			style={styles.row}
+		>
 			<Text allowFontScaling={false} style={styles.rowText}>
 				Play on the TV
 			</Text>
@@ -251,8 +244,7 @@ function Dropdown({
 
 /**
  * The burger and its dropdown, laid over a whole screen: `right` and `top` place the button (and
- * the dropdown under it). The button toggles the dropdown; a tap anywhere else, or four seconds
- * without a touch, closes it. `onLeave` runs just before the Grown-ups row leaves the screen (a
+ * the dropdown under it). The button toggles the dropdown; a tap anywhere else closes it. `onLeave` runs just before the Grown-ups row leaves the screen (a
  * place pauses its video).
  */
 export function AdventureMenu({

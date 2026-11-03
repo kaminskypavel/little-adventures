@@ -7,11 +7,5 @@ import { CastButton } from "react-native-google-cast";
  * exactly as the round Cast button does. tv-hit.web.tsx does the same for Chrome.
  */
 export function TvHit() {
-	return (
-		<CastButton
-			accessibilityLabel="Play on the TV"
-			style={StyleSheet.absoluteFill}
-			tintColor="transparent"
-		/>
-	);
+	return <CastButton style={StyleSheet.absoluteFill} tintColor="transparent" />;
 }
