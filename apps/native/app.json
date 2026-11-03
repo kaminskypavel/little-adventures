@@ -14,6 +14,9 @@
         "dark": "./assets/images/icon-ios-dark.png",
         "light": "./assets/images/icon.png",
         "tinted": "./assets/images/icon-ios-tinted.png"
+      },
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Little Adventures looks for your TV on your home network, so a story can play on the big screen."
       }
     },
     "android": {
@@ -65,7 +68,13 @@
           "microphonePermission": "Little Adventures listens only while your child says a question."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "react-native-google-cast",
+        {
+          "receiverAppId": "CC1AD845"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
