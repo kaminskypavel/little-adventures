@@ -360,7 +360,8 @@ const setPaused = (
 const setupPlayer = (created: VideoPlayer) => {
 	created.loop = false;
 	created.muted = true;
-	created.playbackRate = 1;
+	// No playbackRate here: on iOS setting it sets AVPlayer.rate, which starts the player, and the
+	// next part would play itself out unseen before its turn. The default is already 1.
 	created.timeUpdateEventInterval = PART_TICK_SEC;
 };
 
@@ -846,6 +847,10 @@ function MediaPlayer({
 		const voiceSec = now.own ? voiceOf(now).currentTime : 0;
 		const wanted = tailRate(videoLeft, tailWordsLeft(now, voiceSec));
 		const player = players[now.slot];
+		// Only while it plays: on iOS a new rate also starts a paused player.
+		if (!player.playing) {
+			return;
+		}
 		const next = stepRate(player.playbackRate, wanted);
 		if (next !== player.playbackRate) {
 			player.playbackRate = next;
