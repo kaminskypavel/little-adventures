@@ -71,10 +71,12 @@ export const LEAD_ZOOM_MS = 15_000;
 export const LEAD_FADE_MS = 400;
 /** The still picture dissolves into the moving video over this long, so a place never snaps into motion. */
 export const COVER_FADE_MS = 700;
-/** The hand-over from one part to the next is a dissolve over this long (`--duration-very-slow`). */
-export const DISSOLVE_MS = 500;
-/** The same dissolve for a person who wants calm: quick. */
-export const DISSOLVE_REDUCED_MS = 150;
+/** The hand-over is a dip to night: the picture fades to navy over this many seconds, then back from it. */
+export const DIP_HALF_SEC = 0.2;
+/** Each half of the dip, in ms. */
+export const DIP_HALF_MS = DIP_HALF_SEC * 1000;
+/** The whole dip for a person who wants calm: quick, and still centred on the switch. */
+export const DIP_REDUCED_MS = 150;
 
 /**
  * The picture and narration lead while the first part is still being made. `since` is the
@@ -94,13 +96,10 @@ export interface PlayState {
 	at: number;
 	/** Parts whose file would not load, by id, with the url that failed. A fresh url may try again. */
 	bad: Record<string, string>;
+	/** Index of the part dipping out to night; the navy stays up until the next part shows a frame. */
+	dip: number | null;
 	/** The place has ended. */
 	done: boolean;
-	/**
-	 * Index of the part dissolving out into the one now on screen: its last frame stays in its
-	 * player, under the new part, until `dissolved` says the dissolve is over.
-	 */
-	fading: number | null;
 	/** Index of the half of the words playing, or the next one to play (own: the part's audio). */
 	half: number;
 	/** The place has a picture to stand on while the first part is still being made. */
@@ -130,8 +129,6 @@ export interface PlayState {
 
 export type PlayEvent =
 	| { type: "bad"; id: string }
-	/** The dissolve into the part on screen is over: the part before it may be let go. */
-	| { type: "dissolved" }
 	| { type: "ended" }
 	| { type: "grace" }
 	| { type: "lead-timeout" }
@@ -209,8 +206,8 @@ export const begin = (
 	skipSilent({
 		at: -1,
 		bad: {},
+		dip: null,
 		done: false,
-		fading: null,
 		half: 0,
 		hasPicture,
 		heard: 0,
@@ -340,9 +337,7 @@ export function slotParts(s: PlayState): [Part | null, Part | null] {
 	if (here && !isFailed(s, here)) {
 		held[s.slot] = here;
 	}
-	// While a part dissolves out, its player keeps its last frame; the next part waits for it.
-	const going = s.fading === null ? undefined : s.parts[s.fading];
-	held[other(s.slot)] = going && !isFailed(s, going) ? going : upcoming(s);
+	held[other(s.slot)] = upcoming(s);
 	return held;
 }
 
@@ -447,14 +442,37 @@ function play(s: PlayState, index: number, now: number): Step {
 		state: {
 			...s,
 			at: index,
-			// The part that was on screen dissolves out under the new one.
-			fading: s.at >= 0 ? s.at : null,
 			lead: lead && { ...lead, ended: true },
 			phase: "playing",
 			slot: other(s.slot),
 			stall: null,
 		},
 	};
+}
+
+/**
+ * The part on screen is within `DIP_HALF_SEC` of its end and another part follows: the picture
+ * dips to night. The navy stays up through the switch and clears once the next part shows a frame.
+ */
+function onPartTime(
+	s: PlayState,
+	event: Extract<PlayEvent, { type: "part-time" }>
+): Step {
+	if (s.phase !== "playing") {
+		return unchanged(s);
+	}
+	if (s.dip !== null && s.dip !== s.at) {
+		return { marks: [], state: { ...s, dip: null } };
+	}
+	if (
+		s.dip === null &&
+		event.duration > 0 &&
+		event.sec >= event.duration - DIP_HALF_SEC &&
+		nextIndex(s) !== -1
+	) {
+		return { marks: [], state: { ...s, dip: s.at } };
+	}
+	return unchanged(s);
 }
 
 /**
@@ -479,7 +497,7 @@ function settle(
 			return unchanged(s);
 		}
 		const marks = stallEnd(s);
-		const state: PlayState = { ...s, phase: "spent", stall: null };
+		const state: PlayState = { ...s, dip: null, phase: "spent", stall: null };
 		return s.narrationEnded
 			? { end: cause, marks, state: { ...state, done: true } }
 			: { marks, state };
@@ -575,7 +593,12 @@ function ended(s: PlayState, now: number): Step {
 	if (s.phase !== "playing") {
 		return unchanged(s);
 	}
-	const next = settle({ ...s, phase: "waiting" }, "last-part", now);
+	// An end with no dip yet (a coarse tick) still goes through the navy.
+	const next = settle(
+		{ ...s, dip: s.dip ?? s.at, phase: "waiting" },
+		"last-part",
+		now
+	);
 	return {
 		...next,
 		marks: [{ name: "part-end", part: s.at + 1 }, ...next.marks],
@@ -770,10 +793,8 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 				"narration",
 				now
 			);
-		case "dissolved":
-			return s.fading === null
-				? unchanged(s)
-				: unchanged({ ...s, fading: null });
+		case "part-time":
+			return onPartTime(s, event);
 		case "started":
 			return s.started ? unchanged(s) : startLead({ ...s, started: true }, now);
 		case "voice-ended":
