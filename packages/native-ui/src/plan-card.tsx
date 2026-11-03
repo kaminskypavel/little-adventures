@@ -7,21 +7,25 @@ const ROW_LINE = 24;
 
 /**
  * Grown-ups "Your plan": a flat sand panel (information, not a button) with a small tag at the top
- * right, a few dotted rows and a quiet note.
+ * right, a few dotted rows and a quiet note. `rtl` mirrors it for Hebrew: tag at the top left,
+ * text right-aligned, the dots on the right.
  */
 export function PlanCard({
 	items,
 	note,
+	rtl = false,
 	style,
 	tag,
 	title,
 }: {
 	items: string[];
 	note: string;
+	rtl?: boolean;
 	style?: StyleProp<ViewStyle>;
 	tag: string;
 	title: string;
 }) {
+	const align = rtl ? "right" : undefined;
 	return (
 		<View
 			style={[
@@ -43,7 +47,7 @@ export function PlanCard({
 					paddingHorizontal: plan.tag.padX,
 					paddingVertical: plan.tag.padY,
 					position: "absolute",
-					right: plan.tag.inset,
+					[rtl ? "left" : "right"]: plan.tag.inset,
 					top: plan.tag.inset,
 				}}
 			>
@@ -61,6 +65,7 @@ export function PlanCard({
 			</View>
 			<ClayText
 				accessibilityRole="header"
+				align={align}
 				style={{ fontSize: 24, lineHeight: 28 }}
 				variant="title"
 			>
@@ -71,7 +76,7 @@ export function PlanCard({
 					key={item}
 					style={{
 						alignItems: "center",
-						flexDirection: "row",
+						flexDirection: rtl ? "row-reverse" : "row",
 						gap: plan.rowGap,
 						marginTop: plan.rowGap,
 					}}
@@ -84,12 +89,17 @@ export function PlanCard({
 							width: plan.dot,
 						}}
 					/>
-					<ClayText style={{ flex: 1, lineHeight: ROW_LINE }} variant="label">
+					<ClayText
+						align={align}
+						style={{ flex: 1, lineHeight: ROW_LINE }}
+						variant="label"
+					>
 						{item}
 					</ClayText>
 				</View>
 			))}
 			<ClayText
+				align={align}
 				style={{
 					fontSize: 17,
 					lineHeight: 22,
