@@ -12,6 +12,8 @@ Website: [littleadventures.app](https://littleadventures.app) · Licence: evalua
 
 <p align="center"><img src=".github/readme/screens.webp" alt="Four app screens: the child's question confirmed, the adventure being made with the child's clay look on the hill, a place being read aloud word by word, and the adventure map." width="100%"></p>
 
+Every screen belongs to one clay world we built for this app: our own design system ([packages/native-ui](packages/native-ui): clay colours, type, buttons, the map and the animated sky), the star and the puppy, and the child drawn as the hero in the same clay style. Each screen got its own passes for motion and for colour before it shipped.
+
 ### Launch film (45 s)
 
 <p align="center"><a href="https://x.com/KaminskyPavel/status/2117210112993755191"><img src=".github/readme/launch-film.webp" alt="Little Adventures launch film: two children and the star look at a glowing phone. Click to watch the 45-second film." width="80%"></a></p>
