@@ -15,7 +15,7 @@ Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
 - **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the private engine; the public part is [packages/decision](packages/decision).
 - Demo video (3 min): added on submission day
-- **Try it:** the live app at [littleadventures.app/web](https://www.littleadventures.app/web) (a private beta, so a signed-in account past its daily live limit gets a recorded adventure). Or run it locally with no keys: `bun install`, `bun run dev:native`, press `w`. It plays one bundled sample adventure.
+- **Try it:** the live app at [littleadventures.app/web](https://www.littleadventures.app/web) is a private beta; judges find the invite code in our submission form. Or run it locally with no keys: `bun install`, `bun run dev:native`, press `w`. It plays one bundled sample adventure.
 
 ## For judges
 
@@ -49,7 +49,7 @@ Results on the full held-out set of 1,498 rows, as mean balanced accuracy:
 | --- | --- | --- |
 | Tuned Glimmer v2 alone | 94.5% | 1.05 s |
 | Muse Spark 1.3 | 89.8% | 4.49 s |
-| Base Muse Glimmer | 81.6% | not reported |
+| Base Muse Glimmer | 81.6% | 8.92 s |
 | Glimmer v1, with Muse Spark Open on the two fact checks | 96.8% | 2.07 s |
 
 The last row is optimistic: its routing was picked after seeing test results. Model card: [Hugging Face](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Method and data: [benchmarks/checker](benchmarks/checker). `bun run eval:checker` replays the results offline, with no key.
@@ -71,14 +71,10 @@ The last row is optimistic: its routing was picked after seeing test results. Mo
 - The Glimmer LoRA numbers above are the team's own, on synthetic data. The 96.8% hybrid is optimistic (see Open weights).
 - Deleting a whole child profile, or a whole account with its model-call rows, is not implemented. Only the photos and art can be deleted.
 - This repo cannot show what the private engine does with a child's data, or which model ids it uses. The no-data-sharing-tier statement above covers the ids in this repo only.
-- What Meta's Model API keeps on its side is governed by Meta's terms, not by this repo.
-- If a deployment sets a public read host for the bucket, reads skip signing. That is a deploy setting this repo cannot show.
 
-## Built at the Meta Global AI Developer Hackathon
+## How it fits together
 
-Everything in this repo was written during the hackathon (building period Oct 27 to Nov 4, 2026). This repo was started on Oct 30, 2026, and its commit history is the real record of that work.
-
-This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe). All of it was written this week. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app. The engine runs on our startup's proprietary technology, which existed before the hackathon. That technology uses Meta's models, through the public packages in this repo; how it uses them is what we cannot disclose during the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
+This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe, and the Glimmer checker through `decision`). Its commit history is the real record of the week's work. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app. The engine runs on our startup's proprietary technology, which existed before the hackathon. That technology uses Meta's models, through the public packages in this repo; how it uses them is what we cannot disclose during the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
 
 The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
 
