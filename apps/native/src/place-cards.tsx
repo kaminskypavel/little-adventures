@@ -21,7 +21,10 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+	useSafeAreaFrame,
+	useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useMusic } from "@/src/data/music-store";
 import { wordIndexAt } from "@/src/data/playback";
 import { useGate } from "@/src/data/question-gate";
@@ -50,6 +53,8 @@ const HOP_MS = 500;
 const HOP_EASING = Easing.bezier(...motion.overshoot);
 const VEIL = ["rgba(10,22,44,0.5)", "rgba(10,22,44,0.15)"] as const;
 const TAIL_W = 30;
+/** Below this much room beside the star, the question steps down from 30 to 25 pt. */
+const COMPACT_ROOM = 480;
 const TAIL_H = 26;
 
 const SCRIM_RECAP = 0.74;
@@ -79,7 +84,15 @@ function Scrim({ strength }: { strength: number }) {
 }
 
 /** A question with its words timed: the one being said sits on a sun chip, the rest stay full ink. */
-function Words({ current, words }: { current: number; words: string[] }) {
+function Words({
+	compact,
+	current,
+	words,
+}: {
+	compact: boolean;
+	current: number;
+	words: string[];
+}) {
 	const starts = balanceLines(words);
 	return (
 		<View accessibilityLabel={words.join(" ")} accessible>
@@ -94,7 +107,11 @@ function Words({ current, words }: { current: number; words: string[] }) {
 							>
 								<Text
 									allowFontScaling={false}
-									style={[styles.question, index === current && styles.nowInk]}
+									style={[
+										styles.question,
+										compact && styles.questionCompact,
+										index === current && styles.nowInk,
+									]}
 								>
 									{word}
 								</Text>
@@ -126,6 +143,7 @@ export function QuestionCard({
 }) {
 	const calm = useCalm();
 	const insets = useSafeAreaInsets();
+	const frame = useSafeAreaFrame();
 	const fading = useGate((s) => s.key === gateKey && s.phase === "fading");
 	const style = useFade(fading, ASK_FADE_MS);
 	const player = useAudioPlayer(audio?.url ?? null, {
@@ -192,6 +210,10 @@ export function QuestionCard({
 	const appear = useAnimatedStyle(() => ({ opacity: show.get() }));
 	const left = insets.left + layout.sideMargin;
 	const bottom = STAR_BOTTOM + insets.bottom;
+	const askLeft = left + STAR + 8;
+	// A narrow screen steps the words down a size so the balloon keeps clear of the top.
+	const compact =
+		frame.width - askLeft - insets.right - layout.sideMargin < COMPACT_ROOM;
 	return (
 		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
 			<LinearGradient
@@ -205,22 +227,28 @@ export function QuestionCard({
 				<Animated.View style={[styles.star, { bottom, left }, hop]}>
 					<StarTake size={STAR} take="think" />
 				</Animated.View>
-				<Animated.View
+				{/* The balloon's row spans to the right edge, so the words always have a definite width
+				    to wrap in: a long question takes more lines, never runs out of the balloon. */}
+				<View
 					style={[
-						styles.ask,
-						{ bottom: bottom + ASK_LIFT, left: left + STAR + 8 },
-						appear,
+						styles.askRow,
+						{
+							bottom: bottom + ASK_LIFT,
+							left: askLeft,
+							right: insets.right + layout.sideMargin,
+						},
 					]}
-					testID="question-card"
 				>
-					<View style={styles.tail} />
-					<Words current={current} words={words} />
-					{by ? (
-						<Text allowFontScaling={false} style={styles.by}>
-							{by}
-						</Text>
-					) : null}
-				</Animated.View>
+					<Animated.View style={[styles.ask, appear]} testID="question-card">
+						<View style={styles.tail} />
+						<Words compact={compact} current={current} words={words} />
+						{by ? (
+							<Text allowFontScaling={false} style={styles.by}>
+								{by}
+							</Text>
+						) : null}
+					</Animated.View>
+				</View>
 			</View>
 		</Animated.View>
 	);
@@ -302,11 +330,11 @@ const styles = StyleSheet.create({
 	ask: {
 		backgroundColor: colors.sand,
 		borderRadius: 28,
+		flexShrink: 1,
 		maxWidth: 520,
 		paddingBottom: 18,
 		paddingHorizontal: 24,
 		paddingTop: 16,
-		position: "absolute",
 	},
 	asked: {
 		color: colors.inkNavy,
@@ -315,6 +343,7 @@ const styles = StyleSheet.create({
 		lineHeight: 16,
 		opacity: 0.7,
 	},
+	askRow: { alignItems: "flex-start", position: "absolute" },
 	by: {
 		color: colors.inkNavy,
 		fontFamily: fonts.label,
@@ -337,6 +366,7 @@ const styles = StyleSheet.create({
 		fontSize: 30,
 		lineHeight: 34.5,
 	},
+	questionCompact: { fontSize: 25, lineHeight: 29 },
 	recap: {
 		backgroundColor: colors.cream,
 		borderRadius: 24,
