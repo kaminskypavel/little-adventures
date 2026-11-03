@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { AppState } from "react-native";
 import {
 	devFlags,
 	homeOptions,
@@ -60,24 +60,32 @@ export function useHomeData(first: string | undefined) {
 }
 
 /**
- * True when the mic is off: denied in the phone's settings (read on every focus, so a grown-up who
- * turns it on finds it on when they come back), `?mic=off` in development, or Android, which is
- * not a launch target and has no WAV recorder. `deny` marks it denied when the system says no.
+ * True when the mic is off: denied in the phone's settings (read on every focus and whenever the
+ * app comes back to the foreground, so a grown-up who turns it on in Settings finds it on when
+ * they return), or `?mic=off` in development. `deny` marks it denied when the system says no.
  */
 export function useMicOff(mic: string | undefined) {
 	const [denied, setDenied] = useState(false);
 	useFocusEffect(
 		useCallback(() => {
 			let live = true;
-			micPermission()
-				.then((status) => live && setDenied(status === "denied"))
-				.catch(() => undefined);
+			const read = () =>
+				micPermission()
+					.then((status) => live && setDenied(status === "denied"))
+					.catch(() => undefined);
+			read();
+			const sub = AppState.addEventListener("change", (state) => {
+				if (state === "active") {
+					read();
+				}
+			});
 			return () => {
 				live = false;
+				sub.remove();
 			};
 		}, [])
 	);
-	const off = dev(mic) === "off" || denied || Platform.OS === "android";
+	const off = dev(mic) === "off" || denied;
 	return { deny: () => setDenied(true), off };
 }
 
