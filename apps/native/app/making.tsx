@@ -54,6 +54,8 @@ import { toStyle } from "@/src/data/styles";
 import { mark } from "@/src/data/timeline";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
+import { useT } from "@/src/i18n";
+import { makingStrings } from "@/src/i18n/strings/making";
 import { useScreenFade } from "@/src/screen-fade";
 
 const LOADER = require("../assets/story/loader.mp4");
@@ -93,7 +95,6 @@ const NARROW_LINE = 38;
 const REVEAL_MS = 500; // progress, status, title, plates and Start
 const POP_MS = 1100;
 const FAIL_AFTER_MS = 4000;
-const FALLBACK_NOUN = "goal";
 const LAST_WORD = /\S+$/u;
 
 const pop = {
@@ -161,27 +162,38 @@ function useWaitProgress() {
 	return { finish, full, progress, stage };
 }
 
-/** What the first stage says, by the chosen style. */
-const FIRST_STAGE: Record<Style, string> = {
-	animated: "Lighting the scene",
-	clay: "Mixing the clay",
-	felt: "Stitching the felt",
-	wood: "Carving the wood",
-};
+type MakingT = (
+	key: keyof typeof makingStrings.en,
+	vars?: Record<string, number | string>
+) => string;
 
-function statusText(stage: number, full: boolean, noun: string, style: Style) {
+/** The first stage says its own thing by the chosen style (the style names are string keys). */
+function statusText({
+	full,
+	noun,
+	stage,
+	style,
+	t,
+}: {
+	full: boolean;
+	noun: string | null;
+	stage: number;
+	style: Style;
+	t: MakingT;
+}) {
 	if (full) {
-		return "All ready";
+		return t("allReady");
 	}
 	if (stage === 0) {
-		return FIRST_STAGE[style];
+		return t(style);
 	}
-	return stage === 1 ? `Shaping the ${noun}` : "Almost there";
+	return stage === 1
+		? t("shaping", { noun: noun ?? t("goalNoun") })
+		: t("almostThere");
 }
 
 /** "Goodnight moon" -> "moon". */
-const nounOf = (name: string) =>
-	LAST_WORD.exec(name.trim())?.[0] ?? FALLBACK_NOUN;
+const nounOf = (name: string) => LAST_WORD.exec(name.trim())?.[0] ?? null;
 
 /** Fades its content in or out. Hidden content is also hidden from screen readers and touches. */
 function Fade({
@@ -302,6 +314,7 @@ export default function Making() {
 		question?: string;
 		style?: string;
 	}>();
+	const t = useT(makingStrings);
 	const style = toStyle(pickedStyle);
 	const ridgePeople = useRidgePeople();
 	// Read once: the id this screen writes into the address must not start it again.
@@ -329,7 +342,7 @@ export default function Making() {
 	}, [hydrated, picked, question]);
 	const [adventureId, setAdventureId] = useState<string | null>(null);
 	const [adventure, setAdventure] = useState<Adventure | null>(null);
-	const [noun, setNoun] = useState(FALLBACK_NOUN);
+	const [noun, setNoun] = useState<string | null>(null);
 	const [engineStage, setEngineStage] = useState<number | null>(null);
 	const [serverReady, setServerReady] = useState(false);
 	const { finish, full, progress, stage } = useWaitProgress();
@@ -448,7 +461,7 @@ export default function Making() {
 					<Fade ms={fadeMs} show={revealed}>
 						<PrimaryButton
 							icon="play"
-							label="Start"
+							label={t("start")}
 							onPress={() =>
 								leave(() =>
 									router.replace({
@@ -499,7 +512,13 @@ export default function Making() {
 					style={[styles.row, { top: STATUS_TOP }]}
 				>
 					<StatusPill
-						text={statusText(engineStage ?? stage, full, noun, style)}
+						text={statusText({
+							full,
+							noun,
+							stage: engineStage ?? stage,
+							style,
+							t,
+						})}
 					/>
 				</Fade>
 				{facts.length > 0 ? (

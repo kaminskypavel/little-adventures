@@ -6,6 +6,8 @@ import { colors } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { useChild } from "@/src/data/profile-queries";
+import { useT } from "@/src/i18n";
+import { handoverStrings } from "@/src/i18n/strings/handover";
 
 // Round 7 06 at 0.72 scale: star 180 px = 250 pt at top 104 px, title 34 px = 47 pt at 318 px,
 // line 17 px = 24 pt at 372 px.
@@ -15,6 +17,7 @@ const LINE = { fontSize: 24, lineHeight: 30, opacity: 0.92 } as const;
 
 export default function Handover() {
 	const router = useRouter();
+	const t = useT(handoverStrings);
 	const profile = useChild().data?.profile;
 
 	if (!profile) {
@@ -27,7 +30,7 @@ export default function Handover() {
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={<PrimaryButton label="Let's go" onPress={go} />}
+			dock={<PrimaryButton label={t("go")} onPress={go} />}
 		>
 			<View style={styles.star}>
 				<StarTake size={STAR} take="jump" />
@@ -39,7 +42,7 @@ export default function Handover() {
 				style={[styles.title, TITLE]}
 				variant="headline"
 			>
-				All set!
+				{t("allSet")}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -47,7 +50,7 @@ export default function Handover() {
 				style={[styles.line, LINE]}
 				variant="body"
 			>
-				{`Hand the\nphone to ${profile.childName}.`}
+				{t("handOver", { name: profile.childName })}
 			</ClayText>
 		</Screen>
 	);

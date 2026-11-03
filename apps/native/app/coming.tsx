@@ -20,6 +20,8 @@ import {
 	useSaveProfile,
 } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { comingStrings } from "@/src/i18n/strings/coming";
 
 // Round 7 04b at 0.72 scale: portrait 96 px = 133 pt with a 4 px = 5.5 pt border.
 const PORTRAIT = 133;
@@ -75,6 +77,7 @@ function saved({ grownUp, puppy }: Profile): Who {
 }
 
 function Coming({ profile }: { profile: Profile }) {
+	const t = useT(comingStrings);
 	const router = useRouter();
 	// One companion: the grown-up or the puppy. Nothing is picked on a first run.
 	const [who, setWho] = useState<Who>(saved(profile));
@@ -105,12 +108,12 @@ function Coming({ profile }: { profile: Profile }) {
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={<PrimaryButton disabled={!who} label="Next" onPress={next} />}
-			title="Who else?"
+			dock={<PrimaryButton disabled={!who} label={t("next")} onPress={next} />}
+			title={t("title")}
 		>
 			<Portrait faceUrl={profile.faceUrl} name={profile.childName} />
 			<Plate
-				label={`${profile.childName}, the hero`}
+				label={t("hero", { name: profile.childName })}
 				style={styles.plate}
 				variant="hero"
 			/>
@@ -120,32 +123,28 @@ function Coming({ profile }: { profile: Profile }) {
 				style={[styles.line, LINE]}
 				variant="fieldError"
 			>
-				Pick one to come along
+				{t("pickOne")}
 			</ClayText>
 			<ToggleCard
 				avatar="you"
 				on={who === "grownUp"}
 				onPress={() => setWho("grownUp")}
 				photo={{
-					label: photoUri ? "Change your photo" : "Add your photo",
+					label: photoUri ? t("changePhoto") : t("addPhoto"),
 					onPress: openPhoto,
 					uri: photoUri,
 				}}
 				style={styles.you}
-				subtitle={
-					photoUri
-						? "Tap your photo to change"
-						: "Tap the circle to add a photo"
-				}
-				title="You"
+				subtitle={photoUri ? t("tapToChange") : t("tapToAdd")}
+				title={t("you")}
 			/>
 			<ToggleCard
 				avatar="puppy"
 				on={who === "puppy"}
 				onPress={() => setWho("puppy")}
 				style={styles.puppy}
-				subtitle="Best friend"
-				title="Puppy"
+				subtitle={t("bestFriend")}
+				title={t("puppy")}
 			/>
 		</Screen>
 	);

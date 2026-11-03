@@ -26,6 +26,8 @@ import { useFadeMusicOutAfter } from "@/src/data/music-store";
 import { useChildName } from "@/src/data/profile-queries";
 import { useReplay } from "@/src/data/replay-store";
 import { useAdventure } from "@/src/data/use-adventure";
+import { useT } from "@/src/i18n";
+import { endStrings } from "@/src/i18n/strings/end";
 import { useLandscape } from "@/src/orientation";
 import { useScreenFade } from "@/src/screen-fade";
 
@@ -39,6 +41,7 @@ const LIT_ROADS = litRoads(WALKED_ALL);
 
 /** 16 The end: the whole map walked, the moon open, and what we found out. */
 export default function End() {
+	const t = useT(endStrings);
 	const router = useRouter();
 	const { leave, veil } = useScreenFade();
 	const calm = useCalm();
@@ -80,13 +83,13 @@ export default function End() {
 					button={
 						<View style={styles.buttons}>
 							<SecondaryButton
-								label="Play again"
+								label={t("playAgain")}
 								onPress={playAgain}
 								size="md"
 								style={styles.sidewaysButton}
 							/>
 							<PrimaryButton
-								label="Home"
+								label={t("home")}
 								labelSize={21}
 								onPress={goHome}
 								size="md"
@@ -104,7 +107,7 @@ export default function End() {
 					lit={LIT_ROADS}
 					places={places}
 					route={["outro"]}
-					title="Goodnight!"
+					title={t("goodnight")}
 				/>
 				{veil}
 			</>
@@ -118,13 +121,13 @@ export default function End() {
 				dock={
 					<View style={styles.buttons}>
 						<SecondaryButton
-							label="Play again"
+							label={t("playAgain")}
 							onPress={playAgain}
 							size="md"
 							style={styles.dockButton}
 						/>
 						<PrimaryButton
-							label="Home"
+							label={t("home")}
 							onPress={goHome}
 							size="md"
 							style={styles.dockButton}
@@ -133,7 +136,7 @@ export default function End() {
 				}
 				scrolls
 				// A blank line keeps the headline's room while the name loads.
-				title="Goodnight!"
+				title={t("goodnight")}
 			>
 				{adventure && childName ? (
 					<Animated.View
@@ -156,6 +159,7 @@ export default function End() {
 									Boolean
 								)}
 								style={{ marginTop: PANEL_GAP }}
+								title={t("found")}
 							/>
 						</ScrollView>
 					</Animated.View>
