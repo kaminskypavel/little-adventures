@@ -155,6 +155,10 @@ async function visitEngine(client: Engine, id: string, node: NodeId) {
 export const castPlace = (id: string, node: NodeId) =>
 	engine ? engine.cast(id, node) : Promise.resolve(null);
 
+/** Where to upload the map picture for the TV. Null in the bundled adventure: nothing to send. */
+export const castMap = (id: string) =>
+	engine ? engine.castMap(id) : Promise.resolve(null);
+
 export const getHome = async (): Promise<{
 	keepGoing: AdventureSummary[];
 	finished: AdventureSummary[];

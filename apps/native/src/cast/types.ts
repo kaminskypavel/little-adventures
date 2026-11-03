@@ -8,6 +8,12 @@ export interface TvMedia {
 	url: string;
 }
 
+/** A still picture for the TV, e.g. the map. */
+export interface TvImage {
+	title: string;
+	url: string;
+}
+
 /** The TV once a cast session is connected: load a video, then follow it. */
 export interface TvRemote {
 	/** Name of the TV, e.g. "Living room TV". Null until the session reports it. */

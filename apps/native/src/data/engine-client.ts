@@ -87,6 +87,11 @@ export interface CastMedia {
 	subtitlesUrl: string | null;
 	url: string;
 }
+/** Where to put the map picture for the TV (presigned PUT) and where the TV reads it (GET). */
+export interface CastMapTarget {
+	putUrl: string;
+	url: string;
+}
 export interface VisitResult {
 	outroLocked: boolean;
 	placesDone: number;
@@ -146,6 +151,11 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				throw error;
 			}
 		},
+		/** A fresh place to upload the map picture for the TV. */
+		castMap: (id: string) =>
+			call<CastMapTarget>(`/adventures/${encodeURIComponent(id)}/cast-map`, {
+				method: "POST",
+			}),
 		createAdventure: (childId: string, question: string, style: Style) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
 				body: JSON.stringify({ childId, question, style }),

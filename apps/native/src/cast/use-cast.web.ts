@@ -5,6 +5,7 @@ import { create } from "zustand";
 import {
 	SUBTITLE_STYLE,
 	SUBTITLE_TRACK,
+	type TvImage,
 	type TvMedia,
 	type TvRemote,
 } from "./types";
@@ -183,6 +184,12 @@ export function useCastConnected(): boolean {
 	useEffect(loadSdk, []);
 	return useStore((s) => s.connected);
 }
+
+/** Pictures on the TV are native only (the map): nothing happens in Chrome. */
+export function useTvImage(): (image: TvImage) => Promise<void> {
+	return noImage;
+}
+const noImage = (_image: TvImage) => Promise.resolve();
 
 export function useTvRemote(): TvRemote {
 	const deviceName = useStore((s) => s.deviceName);

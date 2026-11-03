@@ -14,6 +14,7 @@ import {
 import {
 	SUBTITLE_STYLE,
 	SUBTITLE_TRACK,
+	type TvImage,
 	type TvMedia,
 	type TvRemote,
 } from "./types";
@@ -21,6 +22,7 @@ import {
 // How often the TV's position is reported, in seconds: often enough for the words to follow.
 const POSITION_TICK_SEC = 0.25;
 const VIDEO_TYPE = "video/mp4";
+const IMAGE_TYPE = "image/jpeg";
 const BUSY: (MediaPlayerState | null)[] = [
 	MediaPlayerState.PLAYING,
 	MediaPlayerState.BUFFERING,
@@ -30,6 +32,31 @@ const BUSY: (MediaPlayerState | null)[] = [
 /** True while a cast session is connected. Cheap: safe to call wherever the screen needs it. */
 export function useCastConnected(): boolean {
 	return useCastState() === CastState.CONNECTED;
+}
+
+/**
+ * Shows a still picture on the connected TV. Rejects when no TV is connected or it refuses.
+ * Separate from useTvRemote: that one re-renders its screen with the TV's position.
+ */
+export function useTvImage(): (image: TvImage) => Promise<void> {
+	const client = useRemoteMediaClient();
+	return useCallback(
+		async (image: TvImage) => {
+			if (!client) {
+				throw new Error("No TV connected");
+			}
+			await client.loadMedia({
+				autoplay: true,
+				mediaInfo: {
+					contentType: IMAGE_TYPE,
+					contentUrl: image.url,
+					metadata: { images: [], title: image.title, type: "photo" },
+					streamType: MediaStreamType.BUFFERED,
+				},
+			});
+		},
+		[client]
+	);
 }
 
 /** The connected TV. Call it only where the video is shown: it owns the position listener. */

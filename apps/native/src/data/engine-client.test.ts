@@ -50,6 +50,13 @@ describe("engine client", () => {
 		expect(failure instanceof EngineError).toBe(true);
 	});
 
+	test("castMap posts to the adventure and answers the put and read urls", async () => {
+		const { client, requests } = engine(json({ putUrl: "p", url: "g" }));
+		expect(await client.castMap("a 1")).toEqual({ putUrl: "p", url: "g" });
+		expect(requests[0].path).toBe("/adventures/a%201/cast-map");
+		expect(requests[0].init?.method).toBe("POST");
+	});
+
 	test("createAdventure posts the child and the question", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", source: "recorded", status: "ready" })
