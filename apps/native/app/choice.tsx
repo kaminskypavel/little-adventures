@@ -5,7 +5,9 @@ import {
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ChoiceCard } from "@little-adventures/native-ui/choice-card";
 import { ChoiceHalf } from "@little-adventures/native-ui/choice-half";
+import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
+import { Icon } from "@little-adventures/native-ui/icons";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { Plate } from "@little-adventures/native-ui/plate";
 import { Screen } from "@little-adventures/native-ui/screen";
@@ -15,6 +17,7 @@ import {
 	layout,
 	listCards,
 	motion,
+	radii,
 	spacing,
 } from "@little-adventures/native-ui/tokens";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
@@ -54,6 +57,9 @@ const WAITING_LINE = "Still being drawn. One moment.";
 const SIDEWAYS_STAR_SIZE = 96;
 // The gap between the halves shows the night through.
 const HALF_GAP = 3;
+// The replay button: the gap to the burger beside it, and its icon (the burger glyph is about as big).
+const REPLAY_GAP = 8;
+const REPLAY_ICON = 24;
 // Three ways (a lane end now also reaches the other lane): the star would sit on the middle
 // half's name, so it stands this far up, over the picture.
 const STAR_LIFT_BOTTOM = 96;
@@ -162,6 +168,45 @@ function walked(
 		};
 	}
 	return { outroLocked: progress?.outroLocked, visited: progress?.visited };
+}
+
+/**
+ * The round button that plays the place just watched again, in the corner the burger menu sits
+ * in (so beside it, to its left, where there is a menu). Same size and clay as the burger.
+ */
+function ReplayButton({
+	beside,
+	onPress,
+}: {
+	/** There is a menu in the corner: the button stands to its left. */
+	beside: boolean;
+	onPress: () => void;
+}) {
+	const insets = useSafeAreaInsets();
+	return (
+		<View
+			pointerEvents="box-none"
+			style={[
+				styles.replay,
+				{
+					right:
+						insets.right +
+						layout.sideMargin +
+						(beside ? layout.minTarget + REPLAY_GAP : 0),
+					top: insets.top + layout.topBarOffset,
+				},
+			]}
+		>
+			<ClayPressable
+				accessibilityLabel="Watch it again"
+				onPress={onPress}
+				radius={radii.full}
+				style={styles.replayButton}
+			>
+				<Icon color={colors.inkNavy} name="replay" size={REPLAY_ICON} />
+			</ClayPressable>
+		</View>
+	);
 }
 
 /** The place tapped: it shows its ring for a moment, then the map walks the star there. */
@@ -279,7 +324,7 @@ const hasEverything = (
 export default function Choice() {
 	const router = useRouter();
 	// Opens from the night veil when it follows a place; nothing leaves from here.
-	const { veil } = useScreenFade();
+	const { leave, veil } = useScreenFade();
 	const params = useLocalSearchParams<{
 		drawing?: string;
 		from?: string;
@@ -346,6 +391,16 @@ export default function Choice() {
 	const starTake = starTakeFor({ drawing, goodnightOpen, waiting });
 	const missing = missingPlaces(visited);
 
+	// Watch the place just come from again: through the night sky, then its video.
+	const replay = (
+		<ReplayButton
+			beside={sideways}
+			onPress={() =>
+				leave(() => router.replace(`/place?id=${id}&node=${from}`))
+			}
+		/>
+	);
+
 	if (sideways) {
 		return (
 			<>
@@ -359,6 +414,7 @@ export default function Choice() {
 						title={sidewaysTitle({ goodnightOpen, peek, waiting })}
 					/>
 				</View>
+				{replay}
 				{veil}
 			</>
 		);
@@ -442,6 +498,7 @@ export default function Choice() {
 					{starTake ? <Star take={starTake} /> : null}
 				</Screen>
 			</View>
+			{replay}
 			{veil}
 		</>
 	);
@@ -461,6 +518,13 @@ const styles = StyleSheet.create({
 	message: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
 	pill: { alignSelf: "center" },
 	plate: { alignSelf: "center", marginTop: layout.gap },
+	replay: { position: "absolute" },
+	replayButton: {
+		alignItems: "center",
+		height: layout.minTarget,
+		justifyContent: "center",
+		width: layout.minTarget,
+	},
 	sideways: { flex: 1 },
 	starRow: {
 		alignItems: "center",
