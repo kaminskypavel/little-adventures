@@ -82,6 +82,8 @@ import {
 import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
+import { useGatePhase } from "@/src/data/question-gate";
+import { learnedRows } from "@/src/data/question-rules";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
 import type {
@@ -95,6 +97,7 @@ import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
+import { QuestionCard, RecapCard } from "@/src/place-cards";
 import { rampVoiceIn, useLeaveVoices, useScreenFade } from "@/src/screen-fade";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
@@ -1254,6 +1257,45 @@ export default function Place() {
 	);
 }
 
+/**
+ * The card that may hold a place until it lets go: the child's question at an opening, the recap
+ * before goodnight. It shows once the sky is clear; `holding` keeps the player waiting meanwhile.
+ */
+function useOpeningCard({
+	adventure,
+	held,
+	id,
+	node,
+}: {
+	adventure: Adventure | null;
+	held: boolean;
+	id: string;
+	node: NodeId;
+}): { card: ReactNode; holding: boolean } {
+	const gateKey = `${id}:${node}`;
+	const gate = useGatePhase(gateKey);
+	if (!adventure) {
+		return { card: null, holding: held };
+	}
+	const place = adventure.places[node];
+	const recap = node === "outro" ? learnedRows(adventure) : [];
+	const question = node === "outro" || node === "intro" ? null : place.question;
+	const carded = Boolean(question) || recap.length > 0;
+	let card: ReactNode = null;
+	if (carded && !held && gate !== "done") {
+		card = question ? (
+			<QuestionCard
+				audio={place.questionAudio ?? null}
+				gateKey={gateKey}
+				question={question}
+			/>
+		) : (
+			<RecapCard gateKey={gateKey} rows={recap} />
+		);
+	}
+	return { card, holding: held || (carded && gate === "card") };
+}
+
 function PlaceScreen({
 	held,
 	leave,
@@ -1271,6 +1313,7 @@ function PlaceScreen({
 	const childName = useChildName();
 
 	const goodnight = node === "outro";
+	const { card, holding } = useOpeningCard({ adventure, held, id, node });
 
 	// A connected TV plays the place; if it cannot (see TvPlayer) the place plays here.
 	const castConnected = useCastConnected();
@@ -1328,12 +1371,18 @@ function PlaceScreen({
 			<PlaceFrame onError={onMediaError} picture={place.picture} />
 		);
 
+	const withCard = (player: ReactNode) => (
+		<>
+			{player}
+			{card}
+		</>
+	);
 	if (audio === null && !hasParts(place.parts)) {
-		return (
+		return withCard(
 			<TimerPlayer
 				durationMs={goodnight ? GOODNIGHT_MS : PLACE_MS}
 				frame={cover}
-				held={held}
+				held={holding}
 				name={place.name}
 				node={node}
 				onBack={onBack}
@@ -1343,11 +1392,11 @@ function PlaceScreen({
 		);
 	}
 	if (castConnected && !tvOff) {
-		return (
+		return withCard(
 			<TvPlayer
 				audio={audio}
 				cover={cover}
-				held={held}
+				held={holding}
 				id={id}
 				key={node}
 				name={place.name}
@@ -1364,12 +1413,12 @@ function PlaceScreen({
 			/>
 		);
 	}
-	return (
+	return withCard(
 		<MediaPlayer
 			audio={audio}
 			cover={cover}
 			hasPicture={place.picture !== null}
-			held={held}
+			held={holding}
 			// By place and narration, never by a part's url: a part keeps playing when a read brings
 			// other urls. A new narration url (fresh urls after a failed file) starts the place over.
 			key={`${node}|${audio?.url}|${ownVoices(place.parts)}`}
