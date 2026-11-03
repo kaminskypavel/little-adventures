@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const CHILD_MIN_AGE = 2;
-export const CHILD_MAX_AGE = 11;
+export const CHILD_MAX_AGE = 16;
 const NAME_MAX = 30;
 
 /** The child set up by the grown-up: name, boy or girl, age. All required. */
