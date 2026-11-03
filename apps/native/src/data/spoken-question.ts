@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { deviceStorage } from "./device-storage";
 
 // The question the child just asked, between Listening and the start of the adventure. It stays
 // on the device (AsyncStorage: browser storage on the web, app storage on a phone) so a reload of
@@ -22,7 +22,7 @@ const EMPTY: Spoken = { facts: [], question: "", short: "" };
 export const useSpokenQuestion = create<Spoken>()(
 	persist(() => EMPTY, {
 		name: "spoken-question",
-		storage: createJSONStorage(() => AsyncStorage),
+		storage: deviceStorage(),
 	})
 );
 

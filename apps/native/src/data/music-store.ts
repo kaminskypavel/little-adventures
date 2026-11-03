@@ -1,11 +1,11 @@
 // One music bed for a whole adventure, from the map to the goodnight and the end screen. It lives
 // here, outside any screen, so moving between map, place and choice never restarts it. The screens
 // tell the store who is speaking and whether the player is paused; the store fades the volume.
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type AudioPlayer, createAudioPlayer } from "expo-audio";
 import { useEffect } from "react";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { deviceStorage } from "./device-storage";
 import { bedVolume, FADE_MS, PLACE_EASE_MS, rampVolume } from "./music-rules";
 
 // How often a fade sets the volume, in ms.
@@ -168,7 +168,7 @@ export const useMusic = create<Music>()(
 				}
 			},
 			partialize: (s) => ({ muted: s.muted }),
-			storage: createJSONStorage(() => AsyncStorage),
+			storage: deviceStorage(),
 		}
 	)
 );

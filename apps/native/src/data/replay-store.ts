@@ -3,9 +3,9 @@
 // here, goodnight lock) is the replay's, wherever the adventure reads it (see useAdventure). It
 // ends when the replay reaches the end screen. Kept on the phone, per adventure id, so closing
 // the app mid-replay resumes it.
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { deviceStorage } from "./device-storage";
 import type { NodeId, Progress } from "./types";
 
 interface Replay {
@@ -50,7 +50,7 @@ export const useReplay = create<Replay>()(
 		}),
 		{
 			name: "replay-progress",
-			storage: createJSONStorage(() => AsyncStorage),
+			storage: deviceStorage(),
 		}
 	)
 );

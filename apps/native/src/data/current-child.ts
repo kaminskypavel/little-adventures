@@ -1,6 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { deviceStorage } from "./device-storage";
 
 // Which of the account's children is listening. Kept on the phone (AsyncStorage) and readable
 // outside React, so the adventure client asks the same child the screens show. Null, or an id
@@ -8,7 +8,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 export const useCurrentChild = create<{ id: string | null }>()(
 	persist<{ id: string | null }>(() => ({ id: null }), {
 		name: "current-child",
-		storage: createJSONStorage(() => AsyncStorage),
+		storage: deviceStorage(),
 	})
 );
 
