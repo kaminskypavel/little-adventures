@@ -20,10 +20,10 @@ Website: [littleadventures.app](https://littleadventures.app) · Licence: evalua
 
 Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement: **Build for Your World**.
 
-- **Provenance:** this repo was started on Oct 30, 2026, inside the building period (Oct 27 to Nov 4). Everything in it was written then. The private engine runs on Kodio Ltd's pre-existing technology; [ARCHITECTURE.md](ARCHITECTURE.md) shows the split.
+- **Provenance:** this repo was started on Oct 30, 2026, inside the building period (Oct 27 to Nov 4). Everything in it was written then. The Kodio engine runs on Kodio Ltd's pre-existing technology; [ARCHITECTURE.md](ARCHITECTURE.md) shows the split.
 - **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks, and beats Muse Spark 1.3 and two frontier models from another lab at their high reasoning effort. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures) (access on request). Results: [benchmarks/checker](benchmarks/checker).
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
-- **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the private engine; the public part is [packages/decision](packages/decision).
+- **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the Kodio engine; the public part is [packages/decision](packages/decision).
 - Demo video (3 min): added on submission day
 - Launch film (45 s): [on X](https://x.com/KaminskyPavel/status/2117210112993755191)
 - **Try it:** the live app at [littleadventures.app/web](https://www.littleadventures.app/web) is a private beta; judges find the invite code in our submission form. Or run it locally with no keys: `bun install`, `bun run dev:native`, press `w`. It plays one bundled sample adventure.
@@ -104,18 +104,18 @@ On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 tim
 - The iOS and Android builds are not in the stores. The app runs in the browser and in Expo.
 - The Glimmer LoRA numbers above are the team's own, on synthetic data. The 96.8% hybrid is optimistic (see Open weights).
 - Deleting a whole child profile, or a whole account with its model-call rows, is not implemented. Only the photos and art can be deleted.
-- This repo cannot show what the private engine does with a child's data, or which model ids it uses. The no-data-sharing-tier statement above covers the ids in this repo only.
+- This repo cannot show what the Kodio engine does with a child's data, or which model ids it uses. The no-data-sharing-tier statement above covers the ids in this repo only.
 
 ## How it fits together
 
 This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe, and the Glimmer checker through `decision`). Its commit history is the real record of the week's work. The production prompts, plus the video and voice production, live in a private engine at engine.littleadventures.app. The engine runs on our startup's proprietary technology, which existed before the hackathon. That technology uses Meta's models, through the public packages in this repo; how it uses them is what we cannot disclose during the hackathon. [ARCHITECTURE.md](ARCHITECTURE.md) shows the split and why.
 
-The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the private engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
+The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the Kodio engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
 
 ```
 apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* ─► Meta models
         │                              └─ Postgres (waitlist)
-        └─ player API, same token ─► private engine (engine.littleadventures.app)
+        └─ player API, same token ─► Kodio engine (engine.littleadventures.app)
 ```
 
 ## Apps
@@ -159,7 +159,7 @@ Each app declares its environment in `.env.schema`, and Varlock generates a type
 | Variable | App | Value |
 | --- | --- | --- |
 | `EXPO_PUBLIC_SERVER_URL` | `apps/native` | Base URL of the apps/web API |
-| `EXPO_PUBLIC_ENGINE_URL` | `apps/native` | Optional. Base URL of the private engine's player API. Unset: the bundled sample adventure plays |
+| `EXPO_PUBLIC_ENGINE_URL` | `apps/native` | Optional. Base URL of the Kodio engine's player API. Unset: the bundled sample adventure plays |
 | `DATABASE_URL` | `apps/web` | Postgres connection string for the waitlist |
 
 ## Prompts
@@ -171,7 +171,7 @@ Each app declares its environment in `.env.schema`, and Varlock generates a type
 - `image-editing`: the image or images and the edit or generation request per call. Calls throw on failure; the caller decides what that means.
 - `transcribe`: a WAV recording (16 kHz, mono).
 
-The production prompts were written this week and are held by the private engine, so the shape of the product's output cannot be copied. The engine runs on our startup's proprietary technology, which predates the hackathon. It calls Meta's models through the public packages above; how it uses them is the team's trade secret. [ARCHITECTURE.md](ARCHITECTURE.md) has the reasoning and the organizers' ruling.
+The production prompts were written this week and are held by the Kodio engine, so the shape of the product's output cannot be copied. The engine runs on Kodio Ltd's proprietary technology, which predates the hackathon. It calls Meta's models through the public packages above, in the steps shown in [How Meta's models run inside the Kodio engine](#how-metas-models-run-inside-the-kodio-engine); only its prompts and question sets stay private. [ARCHITECTURE.md](ARCHITECTURE.md) has the reasoning and the organizers' ruling.
 
 ## Scripts
 
