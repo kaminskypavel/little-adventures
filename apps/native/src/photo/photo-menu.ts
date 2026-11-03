@@ -5,8 +5,10 @@ import {
 	useDeleteChildPhoto,
 	useSaveProfile,
 } from "@/src/data/profile-queries";
+import { tNow, useT } from "@/src/i18n";
+import { photoStrings } from "@/src/i18n/strings/photo";
 import { showMenu } from "@/src/menu/show-menu";
-import { CAMERA_OFF, pick, type Source, UPLOAD_FAILED } from "./photo-step";
+import { pick, type Source } from "./photo-step";
 
 /** The system sheet for a photo: Take, Choose, and (when there is one) Remove. */
 export const photoMenu = (
@@ -15,10 +17,16 @@ export const photoMenu = (
 	remove: (() => void) | null
 ) =>
 	showMenu(title, [
-		{ label: "Take a photo", onPress: () => set("camera") },
-		{ label: "Choose a photo", onPress: () => set("library") },
+		{ label: tNow(photoStrings, "take"), onPress: () => set("camera") },
+		{ label: tNow(photoStrings, "choose"), onPress: () => set("library") },
 		...(remove
-			? [{ destructive: true, label: "Remove photo", onPress: remove }]
+			? [
+					{
+						destructive: true,
+						label: tNow(photoStrings, "remove"),
+						onPress: remove,
+					},
+				]
 			: []),
 	]);
 
@@ -27,6 +35,7 @@ export const photoMenu = (
  * the screen (the current child is not touched). Returns what the camera badge opens.
  */
 export function useChildPhotoMenu(childId: string) {
+	const t = useT(photoStrings);
 	const saveProfile = useSaveProfile();
 	const deletePhoto = useDeleteChildPhoto();
 	const child = useChildById(childId).data;
@@ -34,7 +43,7 @@ export function useChildPhotoMenu(childId: string) {
 		try {
 			const uri = await pick(source);
 			if (uri === "denied") {
-				Alert.alert(CAMERA_OFF);
+				Alert.alert(t("cameraOff"));
 			} else if (uri) {
 				await saveProfile(
 					{ hasPhoto: true, photoKey: await uploadChildPhoto(uri) },
@@ -42,12 +51,12 @@ export function useChildPhotoMenu(childId: string) {
 				);
 			}
 		} catch {
-			Alert.alert(UPLOAD_FAILED);
+			Alert.alert(t("uploadFailed"));
 		}
 	};
 	return () =>
 		photoMenu(
-			child ? `${child.profile.childName}'s photo` : "Photo",
+			child ? t("menuTitle", { name: child.profile.childName }) : t("photo"),
 			set,
 			child?.profile.hasPhoto ? () => deletePhoto(childId) : null
 		);
