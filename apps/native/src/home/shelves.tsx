@@ -70,11 +70,13 @@ function Pictures({
 /** The label and shelf of the child's own adventures, at `labelTop` and `top`. */
 export function YoursShelf({
 	adventures,
+	label,
 	labelTop,
 	onOpen,
 	top,
 }: {
 	adventures: AdventureSummary[] | null;
+	label: string;
 	labelTop: number;
 	onOpen: (adventure: AdventureSummary) => void;
 	top: number;
@@ -86,7 +88,7 @@ export function YoursShelf({
 				style={[styles.label, { top: labelTop }]}
 				variant="label"
 			>
-				Yours
+				{label}
 			</ClayText>
 			<StoryShelf
 				gap={homeShelf.door.gap}

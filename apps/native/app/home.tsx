@@ -39,6 +39,9 @@ import { IdeasShelf, YoursShelf } from "@/src/home/shelves";
 import { useGreeting } from "@/src/home/use-greeting";
 import { useFocusRun, useHomeData, useMicOff } from "@/src/home/use-home";
 import { useMorph } from "@/src/home/use-morph";
+import { useT } from "@/src/i18n";
+import { askStrings } from "@/src/i18n/strings/ask";
+import { homeStrings } from "@/src/i18n/strings/home";
 import { useScreenFade } from "@/src/screen-fade";
 import { lineFor, takeFor, titleFor } from "@/src/voice/ask-copy";
 import { useAsk } from "@/src/voice/use-ask";
@@ -48,7 +51,6 @@ const PILL_WIDTH = 300;
 const MIC = 176;
 const PLATE_BOX = 88;
 const HINT = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
-const MIC_OFF_TEXT = "Ask a grown-up to turn on the mic.";
 const FADE_MS = 200;
 const overshoot = Easing.bezier(...motion.overshoot);
 /** "Hi {name}!" pops in: a little smaller, with the app's overshoot. */
@@ -169,6 +171,7 @@ function ListenWords({
 	progress: SharedValue<number>;
 	stage: Stage;
 }) {
+	const t = useT(askStrings);
 	const style = useAnimatedStyle(() => ({ opacity: progress.get() }));
 	return (
 		<Animated.View
@@ -187,7 +190,7 @@ function ListenWords({
 				style={[styles.at, { top: stage.listen.headlineTop }]}
 				variant="headline"
 			>
-				{titleFor(ask.state, ask.hint)}
+				{titleFor(t, ask.state, ask.hint)}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -195,7 +198,7 @@ function ListenWords({
 				style={[styles.at, HINT, { top: stage.listen.hintTop }]}
 				variant="body"
 			>
-				{lineFor(ask.state, ask.hint)}
+				{lineFor(t, ask.state, ask.hint)}
 			</ClayText>
 		</Animated.View>
 	);
@@ -262,6 +265,7 @@ function RestLayer({
 	run: number;
 	stage: Stage;
 }) {
+	const t = useT(homeStrings);
 	const { adventures, avatar, name } = data;
 	const spots = stage.rest;
 	const insets = useSafeAreaInsets();
@@ -269,11 +273,11 @@ function RestLayer({
 	// After another child is picked the star greets first (phase 1), then asks (phase 2).
 	const greeting = useGreeting(data.childId);
 	const hi = greeting === 1 && !micOff;
-	let text = `What shall we explore, ${name}?`;
+	let text = t("greet", { name: name ?? "" });
 	if (micOff) {
-		text = MIC_OFF_TEXT;
+		text = t("micOff");
 	} else if (hi) {
-		text = `Hi ${name}!`;
+		text = t("hi", { name: name ?? "" });
 	}
 	const { calm } = stage;
 	let entering: typeof popIn | undefined;
@@ -294,7 +298,7 @@ function RestLayer({
 			>
 				<TopBar
 					action={{
-						accessibilityLabel: "Grown-ups",
+						accessibilityLabel: t("grownUps"),
 						icon: "lock",
 						onPress: onGate,
 					}}
@@ -327,6 +331,7 @@ function RestLayer({
 			)}
 			<YoursShelf
 				adventures={adventures}
+				label={t("yours")}
 				labelTop={spots.yoursLabelTop}
 				onOpen={onOpen}
 				top={spots.yoursTop}
@@ -354,6 +359,7 @@ function ListenIdeas({
 	progress: SharedValue<number>;
 	stage: Stage;
 }) {
+	const t = useT(homeStrings);
 	const style = useAnimatedStyle(() => ({ opacity: progress.get() }));
 	const busy = ask.pressing || ask.thinking;
 	const open = listening && !busy;
@@ -376,7 +382,7 @@ function ListenIdeas({
 			>
 				<IdeasShelf
 					ideas={ideas}
-					label="Or pick one"
+					label={t("orPickOne")}
 					labelTop={stage.listen.ideasLabelTop}
 					onAsk={onAsk}
 					top={stage.listen.ideasTop}
@@ -388,6 +394,7 @@ function ListenIdeas({
 
 export default function Home() {
 	useScreenAdminTools("Home", PRESET_TOOLS);
+	const t = useT(homeStrings);
 	const router = useRouter();
 	const { leave, veil } = useScreenFade();
 	const insets = useSafeAreaInsets();
@@ -469,7 +476,7 @@ export default function Home() {
 					<HomeStar ask={ask} listening={listening} run={run} stage={stage} />
 					<MorphPill
 						icon="plus"
-						label="New adventure"
+						label={t("newAdventure")}
 						listening={listening}
 						mic={{ cx: width / 2, cy: stage.listen.micCy }}
 						off={mic.off || !ready}
