@@ -39,6 +39,8 @@ import { mark, markScreen } from "@/src/data/timeline";
 import type { Adventure, NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useT } from "@/src/i18n";
+import { choiceStrings } from "@/src/i18n/strings/choice";
 import { useLandscape } from "@/src/orientation";
 import { useScreenFade } from "@/src/screen-fade";
 
@@ -48,7 +50,6 @@ const SELECT_MS = 250;
 const CARDS_BELOW_TITLE = 28;
 // Round 7 message lines: 800 at 21 pt.
 const LINE = { fontSize: 21, lineHeight: 26 } as const;
-const WAITING_LINE = "Still being drawn. One moment.";
 // The replay button: the gap to the burger beside it, and its icon (the burger glyph is about as big).
 const REPLAY_GAP = 8;
 const REPLAY_ICON = 24;
@@ -129,6 +130,7 @@ function ReplayButton({
 	beside: boolean;
 	onPress: () => void;
 }) {
+	const t = useT(choiceStrings);
 	const insets = useSafeAreaInsets();
 	return (
 		<View
@@ -145,7 +147,7 @@ function ReplayButton({
 			]}
 		>
 			<ClayPressable
-				accessibilityLabel="Watch it again"
+				accessibilityLabel={t("watchAgain")}
 				onPress={onPress}
 				radius={radii.full}
 				style={styles.replayButton}
@@ -176,23 +178,30 @@ function usePick(id: string) {
 	return { pick, picked };
 }
 
+type ChoiceT = (
+	key: keyof typeof choiceStrings.en,
+	vars?: Record<string, number | string>
+) => string;
+
 /** The pill at the top of the sideways choice: it also carries the waiting and peek lines. */
 function sidewaysTitle({
 	goodnightOpen,
 	peek,
+	t,
 	waiting,
 }: {
 	goodnightOpen: boolean;
 	peek: Way | undefined;
+	t: ChoiceT;
 	waiting: boolean;
 }) {
 	if (goodnightOpen) {
-		return "All 4 places done!";
+		return t("allDone");
 	}
 	if (waiting) {
-		return WAITING_LINE;
+		return t("waiting");
 	}
-	return peek ? `Peek at ${peek.name} first?` : "Pick a way";
+	return peek ? t("peekFirst", { name: peek.name }) : t("pickAWay");
 }
 
 /** Sideways: the ways as storybook photos on the night sky, the star between them, a title pill. */
@@ -257,6 +266,7 @@ const hasEverything = (
 ) => Boolean(adventure && visited) && childName !== undefined;
 
 export default function Choice() {
+	const t = useT(choiceStrings);
 	const router = useRouter();
 	// Opens from the night veil when it follows a place; nothing leaves from here.
 	const { held, holdMs, leave, veil } = useScreenFade();
@@ -319,7 +329,7 @@ export default function Choice() {
 	const choiceOnTv = useMapOnTv({
 		adventureId: id,
 		ready: arrived && hasEverything(adventure, visited, childName),
-		title: "Pick a way",
+		title: t("pickAWay"),
 		version: cards.map((c) => `${c.node}:${c.state}`).join(","),
 	});
 
@@ -355,7 +365,7 @@ export default function Choice() {
 						onPick={pick}
 						picked={picked}
 						starTake={starTake}
-						title={sidewaysTitle({ goodnightOpen, peek, waiting })}
+						title={sidewaysTitle({ goodnightOpen, peek, t, waiting })}
 						ways={cards}
 					/>
 				</View>
@@ -376,12 +386,12 @@ export default function Choice() {
 					dock={
 						peek ? (
 							<PrimaryButton
-								label={`Peek at ${peek.name}`}
+								label={t("peekButton", { name: peek.name })}
 								onPress={() => walkTo(peek.node)}
 							/>
 						) : undefined
 					}
-					title="Pick a way"
+					title={t("pickAWay")}
 				>
 					{goodnightOpen ? (
 						<ClayText
@@ -390,7 +400,7 @@ export default function Choice() {
 							style={[LINE, styles.done]}
 							variant="label"
 						>
-							All 4 places done!
+							{t("allDone")}
 						</ClayText>
 					) : null}
 					<View style={styles.cards}>
@@ -411,7 +421,7 @@ export default function Choice() {
 							style={[LINE, styles.message]}
 							variant="label"
 						>
-							{`That one is almost ready. Peek at ${peek.name} first?`}
+							{t("almostReady", { name: peek.name })}
 						</ClayText>
 					) : null}
 					{waiting ? (
@@ -421,7 +431,7 @@ export default function Choice() {
 							style={[LINE, styles.message]}
 							variant="label"
 						>
-							{WAITING_LINE}
+							{t("waiting")}
 						</ClayText>
 					) : null}
 				</Screen>

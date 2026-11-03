@@ -35,6 +35,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useMusic } from "@/src/data/music-store";
 import type { NodeId, Picture } from "@/src/data/types";
+import { type Language, useLanguage, useT } from "@/src/i18n";
+import { choiceStrings } from "@/src/i18n/strings/choice";
 
 const { choice } = listCards;
 
@@ -89,40 +91,62 @@ export const enterMs = (count: number) =>
 	PHOTO_MS + PHOTO_STAGGER_MS * (count - 1) + STAR_MS + BALLOON_MS;
 
 // The star's spoken line (bundled, so it plays offline), and the words the balloon shows: the whole
-// line when it fits in the room between the photos, else the short one.
-/** What the star asks, spoken and written (the balloon shows `long` only when it fits). */
+// line when it fits in the room between the photos, else the short one. The words live in the
+// choice strings (`ask1Long`, `ask1Short`, ...); the voice has one file per language.
 const ASKS = [
 	{
-		audio: require("../assets/voice/which-way.mp3"),
-		long: "Which way shall we go?",
-		short: "Which way?",
+		audio: {
+			en: require("../assets/voice/which-way.mp3"),
+			he: require("../assets/voice/which-way.mp3"),
+		},
+		long: "ask1Long",
+		short: "ask1Short",
 	},
 	{
-		audio: require("../assets/voice/which-way-2.mp3"),
-		long: "Where shall we go next?",
-		short: "Where next?",
+		audio: {
+			en: require("../assets/voice/which-way-2.mp3"),
+			he: require("../assets/voice/which-way-2.mp3"),
+		},
+		long: "ask2Long",
+		short: "ask2Short",
 	},
 	{
-		audio: require("../assets/voice/which-way-3.mp3"),
-		long: "Which path looks fun?",
-		short: "Which path?",
+		audio: {
+			en: require("../assets/voice/which-way-3.mp3"),
+			he: require("../assets/voice/which-way-3.mp3"),
+		},
+		long: "ask3Long",
+		short: "ask3Short",
 	},
 	{
-		audio: require("../assets/voice/which-way-4.mp3"),
-		long: "Hmm, which way now?",
-		short: "Which way now?",
+		audio: {
+			en: require("../assets/voice/which-way-4.mp3"),
+			he: require("../assets/voice/which-way-4.mp3"),
+		},
+		long: "ask4Long",
+		short: "ask4Short",
 	},
 	{
-		audio: require("../assets/voice/which-way-5.mp3"),
-		long: "What shall we find next?",
-		short: "What next?",
+		audio: {
+			en: require("../assets/voice/which-way-5.mp3"),
+			he: require("../assets/voice/which-way-5.mp3"),
+		},
+		long: "ask5Long",
+		short: "ask5Short",
 	},
 	{
-		audio: require("../assets/voice/which-way-6.mp3"),
-		long: "Pick a way, and off we go!",
-		short: "Pick a way!",
+		audio: {
+			en: require("../assets/voice/which-way-6.mp3"),
+			he: require("../assets/voice/which-way-6.mp3"),
+		},
+		long: "ask6Long",
+		short: "ask6Short",
 	},
-] as const;
+] as const satisfies readonly {
+	audio: Record<Language, number>;
+	long: keyof typeof choiceStrings.en;
+	short: keyof typeof choiceStrings.en;
+}[];
 type Ask = (typeof ASKS)[number];
 // The last ask, so the next visit picks a different one.
 let lastAsk = -1;
@@ -297,6 +321,7 @@ function Photo({
 		opacity: opacity.get(),
 		transform: [{ rotate: tilt }, { scale: scale.get() }],
 	}));
+	const t = useT(choiceStrings);
 	const locked = way.state === "locked";
 	const drawing = way.state === "drawing";
 	const pad = width * PAD;
@@ -304,7 +329,7 @@ function Photo({
 	return (
 		<Animated.View style={[{ width }, style]}>
 			<Pressable
-				accessibilityLabel={locked ? `${way.name}, locked` : way.name}
+				accessibilityLabel={locked ? t("locked", { name: way.name }) : way.name}
 				accessibilityRole="button"
 				accessibilityState={{ busy: drawing, selected: picked }}
 				disabled={drawing}
@@ -350,7 +375,9 @@ function Photo({
 								allowFontScaling={false}
 								style={[styles.noteText, { fontSize: font * 0.85 }]}
 							>
-								{`${missing} more ${missing > 1 ? "places" : "place"} first`}
+								{missing > 1
+									? t("morePlaces", { count: missing })
+									: t("morePlace")}
 							</Text>
 						</View>
 					) : null}
@@ -374,7 +401,7 @@ function Photo({
  * Says the star's question once, as the balloon pops: the music bed ducks under the voice, as
  * under any voice. Not again on a repaint; with reduced motion it is still spoken.
  */
-function useAskAloud(atMs: number, audio: Ask["audio"]) {
+function useAskAloud(atMs: number, audio: number) {
 	const player = useAudioPlayer(audio);
 	const { didJustFinish, isLoaded } = useAudioPlayerStatus(player);
 	const spoken = useRef<boolean>(false);
@@ -412,6 +439,8 @@ function StarAndBalloon({
 	take: "jump" | "point";
 }) {
 	const calm = useCalm();
+	const t = useT(choiceStrings);
+	const language = useLanguage();
 	// A different question each visit (never the same twice in a row).
 	const [ask] = useState(nextAsk);
 	const rise = useArrival({
@@ -426,10 +455,10 @@ function StarAndBalloon({
 		ms: BALLOON_MS,
 		spring: true,
 	});
-	useAskAloud(calm ? delay : delay + STAR_MS, ask.audio);
-	const longWidth =
-		ask.long.length * BALLOON_FONT * CHAR_WIDTH + 2 * BALLOON_PAD_X;
-	const line = room >= longWidth ? ask.long : ask.short;
+	useAskAloud(calm ? delay : delay + STAR_MS, ask.audio[language]);
+	const long = t(ask.long);
+	const longWidth = long.length * BALLOON_FONT * CHAR_WIDTH + 2 * BALLOON_PAD_X;
+	const line = room >= longWidth ? long : t(ask.short);
 	const starStyle = useAnimatedStyle(() => ({
 		opacity: rise.opacity.get(),
 		// Rises from below: the spring's scale (0.7 to 1) says how far it has come.
