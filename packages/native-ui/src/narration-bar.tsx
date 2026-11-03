@@ -5,6 +5,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors, flat, type } from "./tokens";
 
+/** The right-to-left mark (U+200F). */
+const RLM = "\u200f";
+
 const bar = flat.narration;
 
 /**
@@ -76,7 +79,9 @@ export function NarrationBar({
 								{ color: index === current ? colors.nowWordInk : colors.cream },
 							]}
 						>
-							{word}
+							{/* Each word is its own text, laid out left to right: a right-to-left mark after it puts
+							    its full stop or comma on its left, where Hebrew reads it. */}
+							{rtl ? `${word}${RLM}` : word}
 						</Text>
 					</View>
 				))}

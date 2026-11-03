@@ -15,6 +15,10 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
+import { isRtl, useLanguage } from "@/src/i18n";
+
+/** The right-to-left mark (U+200F). */
+const RLM = "\u200f";
 
 // The sideways player keeps the video clear: a menu (see adventure-menu), a small name, one slim
 // caption band and a thin line of progress along the bottom edge.
@@ -68,6 +72,7 @@ export function LandscapeChrome({
 }) {
 	const insets = useSafeAreaInsets();
 	const captions = usePlayerPrefs((s) => s.captions);
+	const rtl = isRtl(useLanguage());
 	const left = insets.left + layout.sideMargin;
 	const right = insets.right + layout.sideMargin;
 	const top = insets.top + layout.topBarOffset;
@@ -93,7 +98,7 @@ export function LandscapeChrome({
 					<View
 						accessibilityLabel={words.join(" ")}
 						accessible
-						style={styles.band}
+						style={[styles.band, rtl && styles.bandRtl]}
 					>
 						{words.map((word, index) => (
 							<View
@@ -115,7 +120,8 @@ export function LandscapeChrome({
 										},
 									]}
 								>
-									{word}
+									{/* A right-to-left mark after a Hebrew word puts its full stop or comma on its left. */}
+									{rtl ? `${word}${RLM}` : word}
 								</Text>
 							</View>
 						))}
@@ -169,6 +175,8 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 	},
+	// Hebrew: the first word on the right, lines filling leftward.
+	bandRtl: { flexDirection: "row-reverse" },
 	captionRow: {
 		alignItems: "center",
 		left: 0,
