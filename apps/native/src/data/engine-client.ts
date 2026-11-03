@@ -14,6 +14,13 @@ interface EngineWord {
 	startSec: number;
 	text: string;
 }
+/** The question's words are sent as `word`; `text` is tolerated. */
+interface EngineQuestionWord {
+	endSec: number;
+	startSec: number;
+	text?: string;
+	word?: string;
+}
 type EngineNarration = EngineMedia & { words: EngineWord[] };
 /** One part of a node's video. `video` is set only when `status` is "playable". */
 export interface EnginePart {
@@ -40,6 +47,14 @@ export interface EngineNode {
 	/** The video in parts, played back to back. Null or absent: use `clip`. */
 	parts?: EnginePart[] | null;
 	picture: EngineMedia | null;
+	/** The child's question this place answers with its fact; null on intro, goodnight and older adventures. */
+	question?: string | null;
+	/** The narrator asking it; null when none. */
+	questionAudio?: {
+		id?: string;
+		url: string;
+		words: EngineQuestionWord[];
+	} | null;
 	status: string;
 	visited: boolean;
 }

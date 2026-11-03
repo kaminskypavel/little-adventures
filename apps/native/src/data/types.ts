@@ -50,6 +50,10 @@ export interface Place {
 	parts: Part[];
 	/** An image, or null = neutral placeholder. */
 	picture: Picture | null;
+	/** The child's question this place answers with its `fact`. Absent or null: older adventures. */
+	question?: string | null;
+	/** The narrator asking the question, with its word timings. Absent or null: none. */
+	questionAudio?: NarrationAudio | null;
 	status: PlaceStatus;
 }
 /** e.g. "Goodnight moon", gate image, open image. The pictures are null until they are made. */

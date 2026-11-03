@@ -12,6 +12,7 @@ import type {
 	Adventure,
 	AdventureSummary,
 	MakeStatus,
+	NarrationAudio,
 	NodeId,
 	Part,
 	PartStatus,
@@ -99,6 +100,23 @@ const pictureOf = (
 export const placeStatus = (status: string, polling: boolean): PlaceStatus =>
 	status === "ready" || !polling ? "ready" : "drawing";
 
+/** The narrator's question: pinned by its storage key (else by node), words on the app's own timing type. */
+const questionAudioOf = (
+	id: NodeId,
+	raw: EngineNode["questionAudio"],
+	urls: KnownUrls
+): NarrationAudio | null =>
+	raw?.url
+		? {
+				url: pin(raw.id ?? `question-voice:${id}`, raw.url, urls),
+				words: (raw.words ?? []).map((w) => ({
+					endSec: w.endSec,
+					startSec: w.startSec,
+					text: w.word ?? w.text ?? "",
+				})),
+			}
+		: null;
+
 function toPlace(
 	id: NodeId,
 	node: EngineNode | undefined,
@@ -125,6 +143,8 @@ function toPlace(
 		narration: words.map((word) => word.text),
 		parts: partsOf(node, urls),
 		picture: pictureOf(node.picture, urls),
+		question: node.question || null,
+		questionAudio: questionAudioOf(id, node.questionAudio, urls),
 		status: placeStatus(node.status, polling),
 	};
 }

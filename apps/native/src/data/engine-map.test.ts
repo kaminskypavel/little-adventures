@@ -322,6 +322,32 @@ describe("toAdventure", () => {
 		expect(place.narration).toEqual(["Whales", "sing"]);
 	});
 
+	test("the question and its audio come through, words on the app's own timing type", () => {
+		const raw = adventure({
+			nodes: IDS.map((id) =>
+				node(
+					id,
+					id === "p1"
+						? {
+								question: "Where does the moon go?",
+								questionAudio: {
+									url: "https://files.test/q?sig=1",
+									words: [{ endSec: 0.4, startSec: 0, word: "Where" }],
+								},
+							}
+						: {}
+				)
+			),
+		});
+		const { p1, p2 } = toAdventure(raw, new Map()).places;
+		expect(p1.question).toBe("Where does the moon go?");
+		expect(p1.questionAudio?.words).toEqual([
+			{ endSec: 0.4, startSec: 0, text: "Where" },
+		]);
+		expect(p2.question).toBe(null);
+		expect(p2.questionAudio).toBe(null);
+	});
+
 	test("pictures are cached by their storage key", () => {
 		const a = toAdventure(adventure(), new Map());
 		expect(a.places.p1.picture).toEqual({

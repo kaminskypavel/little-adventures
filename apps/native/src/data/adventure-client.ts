@@ -5,6 +5,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
 import { currentChildReady, getCurrentChildId } from "./current-child";
+import { withDevQuestions } from "./dev-questions";
 import { createDraftStore } from "./draft-store";
 import {
 	createEngineClient,
@@ -338,7 +339,7 @@ export const getAdventure = async (id: string): Promise<Adventure> => {
 	if (!engine) {
 		return wait(mockAdventure);
 	}
-	return toAdventure(await readEngine(engine, id), knownUrls);
+	return withDevQuestions(toAdventure(await readEngine(engine, id), knownUrls));
 };
 
 export const reloadAdventure = (id: string): Promise<Adventure> => {
