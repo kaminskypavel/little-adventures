@@ -175,7 +175,7 @@ Why private:
 - The production prompts and question sets were written this week, and are kept private so the shape of the product's output cannot be copied. The code that calls Meta's models with them is the public packages above.
 - The organizers allowed keeping a pre-existing platform private as a hosted service, with a note in the README (Kai, Cerebral Valley, 2026-10-26: [message in the hackathon Discord](https://discord.com/channels/1557169028080869426/1564256986848043148/1564310060702896240)).
 
-This repo documents what crosses the boundary: the player API the app calls, and the interface of the public packages. Which Meta model the engine uses at each step is in the table above and in the [README](README.md#how-metas-models-run-inside-the-kodio-engine).
+This repo documents what crosses the boundary: the player API the app calls, and the interface of the public packages. Which Meta model the engine uses at each step is in the table above and in the [how it works](documents/how-it-works.md#how-metas-models-run-inside-the-kodio-engine).
 
 ## What you see without the engine
 

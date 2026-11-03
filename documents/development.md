@@ -1,0 +1,97 @@
+# Development
+
+## Apps
+
+| Path | What it is | Stack |
+| --- | --- | --- |
+| `apps/native` | The app the child and parent use. Runs in the browser first, then ships to iOS from the same code. | Expo, React Native, Uniwind |
+| `apps/web` | Public landing page and the tRPC API the app talks to. | Next.js, GSAP, tRPC |
+| `packages/api` | tRPC routers: child and grown-up profiles, photo upload, voice transcription, waitlist. | tRPC, Zod |
+| `packages/auth` | Sign-in, the app's bearer token and the private beta allowlist. | Neon Auth |
+| `packages/llm` | Structured-output client for Muse Spark. | Zod |
+| `packages/decision` | Yes or no question sets on Muse Spark, with a pass threshold. | Zod |
+| `packages/image-editing` | SAM 3.1 person cut-out and Muse Image looks, edits and generation. | |
+| `packages/transcribe` | Muse Voice Transcribe for the child's spoken question. | |
+| `packages/storage` | Photos and drawn looks in an S3-compatible bucket, with signed URLs. | AWS SDK (S3) |
+| `packages/validation` | Zod schemas the app and the server share (child, photo, sign-in). | Zod |
+| `packages/db` | Database schema and client. | Drizzle, Postgres (Neon) |
+| `packages/native-ui` | The app's clay design system: tokens, text, buttons, the map and the sky. | React Native, Reanimated |
+| `packages/ui` | Shared web UI primitives. | shadcn/ui, Tailwind CSS |
+| `packages/config` | Shared TypeScript config. | |
+
+## Run it
+
+Needs Node 24 (pinned in `.nvmrc`) and bun.
+
+```bash
+nvm use
+bun install
+bun run dev:web      # landing + API on http://localhost:3001
+bun run dev:native   # Expo dev server, press w to open the app in the browser
+```
+
+The app runs with no engine: with `EXPO_PUBLIC_ENGINE_URL` unset it plays its bundled sample adventure, so you can try it alone. To use an engine, set the variable (see [Configuration](#configuration)) before `bun run dev:native`. Allowlisted accounts then get live adventures and every other account gets a recorded adventure.
+
+To build for iOS, run `bun run ios` from `apps/native` (needs Xcode).
+
+## Configuration
+
+Each app declares its environment in `.env.schema`, and Varlock generates a typed `src/env.ts` on install (`bun run env:generate` after a schema change). Real values go in ignored `.env` files.
+
+| Variable | App | Value |
+| --- | --- | --- |
+| `EXPO_PUBLIC_SERVER_URL` | `apps/native` | Base URL of the apps/web API |
+| `EXPO_PUBLIC_ENGINE_URL` | `apps/native` | Optional. Base URL of the Kodio engine's player API. Unset: the bundled sample adventure plays |
+| `DATABASE_URL` | `apps/web` | Postgres connection string for the waitlist |
+
+## Prompts
+
+`llm` and `decision` ship no production prompts and no question sets. The only prompts in this repo are the avatar look prompts in `packages/image-editing/src/looks.ts`. `packages/llm` throws without instructions, and `packages/decision` throws when `createDecision` gets none. Each expects its caller to bring its own:
+
+- `llm`: instructions, a prompt and a zod schema per call. It returns JSON validated against the schema.
+- `decision`: the shared instructions (and optional note for attached images) when you create it, then a named question set per call, each question with its own instructions, plus a pass threshold and what to do when the API cannot be reached.
+- `image-editing`: the image or images and the edit or generation request per call. Calls throw on failure; the caller decides what that means.
+- `transcribe`: a WAV recording (16 kHz, mono).
+
+The production prompts were written this week and are held by the Kodio engine, so the shape of the product's output cannot be copied. The engine runs on Kodio Ltd's proprietary technology, which predates the hackathon. It calls Meta's models through the public packages above, in the steps shown in [How Meta's models run inside the Kodio engine](how-it-works.md#how-metas-models-run-inside-the-kodio-engine); only its prompts and question sets stay private. [ARCHITECTURE.md](../ARCHITECTURE.md) has the reasoning and the organizers' ruling.
+
+## Scripts
+
+| Command | Does |
+| --- | --- |
+| `bun run dev` | Start every app |
+| `bun run dev:web` | Start the Next.js app |
+| `bun run dev:native` | Start the Expo dev server |
+| `bun run build` | Build every app |
+| `bun run check-types` | Type-check the whole repo |
+| `bun run test` | Run every unit test suite |
+| `bun run test:e2e` (in `apps/native`) | Smoke-test the app in a phone-sized browser: Welcome to the email step (Playwright; CI runs it when the app changes) |
+| `bun run db:generate` / `bun run db:migrate` | Create and apply database migrations |
+| `bunx ultracite check` / `bunx ultracite fix` | Lint and format (Biome) |
+
+A Husky pre-commit hook runs lint-staged with Ultracite on staged files.
+
+## Project structure
+
+```
+little-adventures/
+├── apps/
+│   ├── native/   # Expo app (web first, then iOS)
+│   └── web/      # Next.js landing page and tRPC API
+├── packages/
+│   ├── api/            # tRPC routers
+│   ├── auth/           # Sign-in and the private beta
+│   ├── config/         # Shared TypeScript config
+│   ├── db/             # Drizzle schema and client
+│   ├── decision/       # Muse Spark yes or no checks
+│   ├── image-editing/  # SAM 3.1 and Muse Image
+│   ├── llm/            # Muse Spark structured output
+│   ├── native-ui/      # The app's design system
+│   ├── storage/        # Photo and art bucket
+│   ├── transcribe/     # Muse Voice Transcribe
+│   ├── ui/             # Shared shadcn/ui components and styles
+│   └── validation/     # Shared zod schemas
+├── documents/          # How it works, Meta models, training, data, limits, development
+├── ARCHITECTURE.md     # The public and private split, for judges
+└── PRODUCT.md          # Who it is for and what it must do
+```
