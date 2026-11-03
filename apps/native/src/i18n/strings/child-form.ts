@@ -8,5 +8,12 @@ export const childFormStrings = defineStrings({
 		girl: "Girl",
 		name: "Name",
 	},
+	es: {
+		age: "Edad",
+		boy: "Niño",
+		boyOrGirl: "Niño o niña",
+		girl: "Niña",
+		name: "Nombre",
+	},
 	he: { age: "גיל", boy: "בן", boyOrGirl: "בן או בת", girl: "בת", name: "שם" },
 });

@@ -10,6 +10,15 @@ export const adventureMenuStrings = defineStrings({
 		startAgain: "Start again",
 		tv: "Play on the TV",
 	},
+	es: {
+		captions: "Subtítulos",
+		closeMenu: "Cerrar el menú",
+		grownups: "Adultos",
+		menu: "Menú",
+		music: "Música",
+		startAgain: "Empezar de nuevo",
+		tv: "Ver en la tele",
+	},
 	he: {
 		captions: "כתוביות",
 		closeMenu: "סגירת התפריט",

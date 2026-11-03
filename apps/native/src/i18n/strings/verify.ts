@@ -6,6 +6,7 @@ export const verifyStrings = defineStrings({
 		title: "Is that it?",
 		yes: "Yes, let's go!",
 	},
+	es: { sayAgain: "Decirlo otra vez", title: "¿Es eso?", yes: "¡Sí, vamos!" },
 	he: {
 		sayAgain: "לומר את זה שוב",
 		title: "זו השאלה?",

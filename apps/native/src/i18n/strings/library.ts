@@ -6,6 +6,11 @@ export const libraryStrings = defineStrings({
 		places: "{done} of {total} places",
 		title: "Your stories",
 	},
+	es: {
+		finished: "Terminado",
+		places: "{done} de {total} lugares",
+		title: "Tus cuentos",
+	},
 	he: {
 		finished: "הסתיים",
 		places: "{done} מתוך {total} מקומות",

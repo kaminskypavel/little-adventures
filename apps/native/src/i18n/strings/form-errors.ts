@@ -10,6 +10,13 @@ export const formErrorStrings = defineStrings({
 		nameLong: "That name is a little long.",
 		pickAge: "Pick an age.",
 	},
+	es: {
+		addName: "Agrega un nombre.",
+		badCode: "El código tiene 6 dígitos.",
+		badEmail: "Ese correo no parece correcto.",
+		nameLong: "Ese nombre es un poco largo.",
+		pickAge: "Elige una edad.",
+	},
 	he: {
 		addName: "הוסיפו שם.",
 		badCode: "הקוד כולל 6 ספרות.",

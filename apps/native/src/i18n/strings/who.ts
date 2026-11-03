@@ -10,6 +10,15 @@ export const whoStrings = defineStrings({
 		listening: "Who's listening?",
 		yourChildren: "Your children",
 	},
+	es: {
+		addChild: "Agregar a un peque",
+		close: "Cerrar",
+		doneEditing: "Terminar de editar",
+		edit: "Editar a {name}",
+		holdToEdit: "Mantén pulsado para editar a tus peques",
+		listening: "¿Quién escucha?",
+		yourChildren: "Tus peques",
+	},
 	he: {
 		addChild: "הוספת ילד או ילדה",
 		close: "סגירה",

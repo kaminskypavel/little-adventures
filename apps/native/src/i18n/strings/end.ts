@@ -7,6 +7,12 @@ export const endStrings = defineStrings({
 		home: "Home",
 		playAgain: "Play again",
 	},
+	es: {
+		found: "Esta noche descubrimos",
+		goodnight: "¡Buenas noches!",
+		home: "Inicio",
+		playAgain: "Jugar otra vez",
+	},
 	he: {
 		found: "הערב גילינו",
 		goodnight: "לילה טוב!",

@@ -12,6 +12,17 @@ export const photoStrings = defineStrings({
 		title: "Photo time",
 		uploadFailed: "That did not upload. Try again.",
 	},
+	es: {
+		cameraOff: "La cámara está apagada. Mejor elige una foto.",
+		choose: "Elegir una foto",
+		line: "Solo se usa para dibujar a {name} al estilo de un libro de cuentos. Nunca se muestra ni se comparte.",
+		menuTitle: "La foto de {name}",
+		photo: "Foto",
+		remove: "Quitar la foto",
+		take: "Tomar una foto",
+		title: "Hora de la foto",
+		uploadFailed: "No se pudo subir. Probemos otra vez.",
+	},
 	he: {
 		cameraOff: "המצלמה כבויה. אפשר לבחור תמונה במקום.",
 		choose: "לבחור תמונה",

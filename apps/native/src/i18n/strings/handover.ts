@@ -6,6 +6,11 @@ export const handoverStrings = defineStrings({
 		go: "Let's go",
 		handOver: "Hand the\nphone to {name}.",
 	},
+	es: {
+		allSet: "¡Todo listo!",
+		go: "¡Vamos!",
+		handOver: "Dale el\nteléfono a {name}.",
+	},
 	he: {
 		allSet: "הכול מוכן!",
 		go: "יוצאים לדרך",

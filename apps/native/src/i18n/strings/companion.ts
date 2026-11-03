@@ -8,6 +8,12 @@ export const companionStrings = defineStrings({
 		puppySubtitle: "Best friend",
 		you: "You",
 	},
+	es: {
+		group: "Quién nos acompaña",
+		puppy: "Cachorro",
+		puppySubtitle: "Mejor amigo",
+		you: "Tú",
+	},
 	he: {
 		group: "מי בא איתנו",
 		puppy: "גור כלבים",

@@ -10,6 +10,15 @@ export const helloStrings = defineStrings({
 		welcomeBack: "Welcome back, {name}!",
 		welcomeName: "Welcome, {name}!",
 	},
+	es: {
+		addChild: "Agregar a tu peque",
+		caption: "Más o menos un minuto:\nun nombre y una foto.",
+		line: "Hagamos de tu peque el protagonista del cuento de esta noche.",
+		signOut: "Cerrar sesión",
+		welcome: "¡Te damos la bienvenida!",
+		welcomeBack: "¡Qué bueno verte de nuevo, {name}!",
+		welcomeName: "¡Te damos la bienvenida, {name}!",
+	},
 	he: {
 		addChild: "הוספת ילד או ילדה",
 		caption: "בערך דקה אחת:\nשם ותמונה.",

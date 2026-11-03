@@ -14,6 +14,18 @@ export const askStrings = defineStrings({
 		ready: "Ask me anything",
 		thinking: "Let me think...",
 	},
+	es: {
+		holdAsk: "Mantén el botón y pregunta",
+		holdAskAgain: "Mantén el botón y pregunta otra vez",
+		holdAskQuestion: "Mantén el botón y haz una pregunta",
+		holdLonger: "Mantén un poquito más",
+		letGo: "Suelta cuando termines",
+		listening: "Te escucho...",
+		missed: "No te oí bien",
+		notQuestion: "Eso no era una pregunta",
+		ready: "Pregúntame lo que quieras",
+		thinking: "A ver, déjame pensar...",
+	},
 	he: {
 		holdAsk: "לוחצים על הכפתור ושואלים",
 		holdAskAgain: "לוחצים על הכפתור ושואלים שוב",

@@ -12,6 +12,17 @@ export const makingStrings = defineStrings({
 		start: "Start",
 		wood: "Carving the wood",
 	},
+	es: {
+		allReady: "Todo listo",
+		almostThere: "Ya casi",
+		animated: "Encendiendo la escena",
+		clay: "Mezclando la arcilla",
+		felt: "Cosiendo el fieltro",
+		goalNoun: "la meta",
+		shaping: "Dando forma a {noun}",
+		start: "Empezar",
+		wood: "Tallando la madera",
+	},
 	he: {
 		allReady: "הכול מוכן",
 		almostThere: "כמעט סיימנו",

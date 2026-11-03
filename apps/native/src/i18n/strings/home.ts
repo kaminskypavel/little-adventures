@@ -10,6 +10,15 @@ export const homeStrings = defineStrings({
 		orPickOne: "Or pick one",
 		yours: "Yours",
 	},
+	es: {
+		greet: "¿Qué exploramos hoy, {name}?",
+		grownUps: "Adultos",
+		hi: "¡Hola, {name}!",
+		micOff: "Pide a un adulto que active el micrófono.",
+		newAdventure: "Nueva aventura",
+		orPickOne: "O elige una",
+		yours: "Tuyas",
+	},
 	he: {
 		greet: "מה נחקור היום, {name}?",
 		grownUps: "מבוגרים",
