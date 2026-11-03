@@ -3,20 +3,14 @@ import {
 	useBackAction,
 } from "@little-adventures/native-ui/back-button";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
-import { ChoiceCard } from "@little-adventures/native-ui/choice-card";
-import { ChoiceHalf } from "@little-adventures/native-ui/choice-half";
 import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { Icon } from "@little-adventures/native-ui/icons";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
-import { Plate } from "@little-adventures/native-ui/plate";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { StarTake } from "@little-adventures/native-ui/star-take";
 import {
 	colors,
 	layout,
-	listCards,
-	motion,
 	radii,
 	spacing,
 } from "@little-adventures/native-ui/tokens";
@@ -28,6 +22,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import {
+	ChoicePhotos,
+	enterMs,
+	NightBackdrop,
+	TitleArrival,
+	type Way,
+} from "@/src/choice-photos";
+import {
 	choicesFrom,
 	isOutroLocked,
 	missingPlaces,
@@ -35,54 +36,29 @@ import {
 import { useChildName } from "@/src/data/profile-queries";
 import { choiceLabel } from "@/src/data/question-rules";
 import { mark, markScreen } from "@/src/data/timeline";
-import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
+import type { Adventure, NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
 import { useLandscape } from "@/src/orientation";
-import { useScreenFade } from "@/src/screen-fade";
-
-const { choice } = listCards;
+import { PAGE_HOLD_MS, useScreenFade } from "@/src/screen-fade";
 
 // How long the picked card shows its ring before the map takes over.
 const SELECT_MS = 250;
 // Round 7 puts the cards 150 pt from the top, 28 pt under the one-line headline.
 const CARDS_BELOW_TITLE = 28;
-// The small star at the bottom center, 19 pt above the screen edge, as in round 7.
-const STAR_SIZE = 78;
-const STAR_BOTTOM = 19;
 // Round 7 message lines: 800 at 21 pt.
 const LINE = { fontSize: 21, lineHeight: 26 } as const;
 const WAITING_LINE = "Still being drawn. One moment.";
-// Sideways the star waits in the gap between the two halves.
-const SIDEWAYS_STAR_SIZE = 96;
-// The gap between the halves shows the night through.
-const HALF_GAP = 3;
 // The replay button: the gap to the burger beside it, and its icon (the burger glyph is about as big).
 const REPLAY_GAP = 8;
 const REPLAY_ICON = 24;
-// Three ways (a lane end now also reaches the other lane): the star would sit on the middle
-// half's name, so it stands this far up, over the picture.
-const STAR_LIFT_BOTTOM = 96;
-// Upright, three cards share the body: each is this high so they and the goodnight plate fit.
-const THREE_CARDS_HEIGHT = 168;
-
-interface Card {
-	goal: boolean;
-	/** What the way says: the place's question, else its name. */
-	label: string;
-	name: string;
-	node: NodeId;
-	picture: Picture | null;
-	state: "drawing" | "locked" | "open";
-}
-
 /** The cards to choose from at `from`: a locked or still-drawing place shows as such. */
 function cardsOf(
 	adventure: Adventure,
 	from: NodeId,
 	progress: Pick<Progress, "outroLocked" | "visited">,
 	devDrawing: string | undefined
-): Card[] {
+): Way[] {
 	return choicesFrom(from, progress.visited).map(({ locked: ruled, node }) => {
 		const place = adventure.places[node];
 		const goal = node === "outro";
@@ -91,7 +67,7 @@ function cardsOf(
 		if (goal) {
 			picture = locked ? adventure.endGoal.closed : adventure.endGoal.open;
 		}
-		let state: Card["state"] = "open";
+		let state: Way["state"] = "open";
 		if (locked) {
 			state = "locked";
 		} else if (node === devDrawing || place.status === "drawing") {
@@ -125,35 +101,6 @@ function starTakeFor({
 		return null;
 	}
 	return goodnightOpen ? "jump" : "point";
-}
-
-/** The small star. No still under it: the take's arm would leave a ghost; the screen fade covers the load. */
-function Star({
-	lifted = false,
-	size = STAR_SIZE,
-	take,
-}: {
-	/** Stands higher, clear of the names at the foot of the halves. */
-	lifted?: boolean;
-	size?: number;
-	take: "jump" | "point" | "think";
-}) {
-	return (
-		<View
-			pointerEvents="none"
-			style={[styles.starRow, lifted && { bottom: STAR_LIFT_BOTTOM }]}
-		>
-			<StarTake size={size} take={take} />
-		</View>
-	);
-}
-
-/** Upright card height: the full one, tighter when the goodnight or a drawing place shares the body, less again for three. */
-function cardStyle(count: number, tight: boolean) {
-	if (count > 2) {
-		return { height: THREE_CARDS_HEIGHT };
-	}
-	return tight ? { height: choice.heightTight } : undefined;
 }
 
 /** What has been walked: the dev override (which never locks the goodnight), else the real progress. */
@@ -236,7 +183,7 @@ function sidewaysTitle({
 	waiting,
 }: {
 	goodnightOpen: boolean;
-	peek: Card | undefined;
+	peek: Way | undefined;
 	waiting: boolean;
 }) {
 	if (goodnightOpen) {
@@ -248,48 +195,43 @@ function sidewaysTitle({
 	return peek ? `Peek at ${peek.name} first?` : "Pick a way";
 }
 
-/** Sideways: two full-height pictures, one place each, the star between them, and a title pill. */
-function Halves({
-	cards,
+/** Sideways: the ways as storybook photos on the night sky, the star between them, a title pill. */
+function Sideways({
+	delay,
 	missing,
 	onPick,
 	picked,
 	starTake,
 	title,
+	ways,
 }: {
-	cards: Card[];
+	delay: number;
 	missing: number;
 	onPick: (node: NodeId) => void;
 	picked: NodeId | null;
 	starTake: "jump" | "point" | "think" | null;
 	title: string;
+	ways: Way[];
 }) {
 	const insets = useSafeAreaInsets();
 	const onBack = useBackAction();
 	const top = insets.top + layout.topBarOffset;
 	return (
 		<View style={styles.sideways}>
-			<View style={styles.halves}>
-				{cards.map((card) => (
-					<ChoiceHalf
-						key={card.node}
-						kind={card.goal ? "goal" : "place"}
-						name={card.label}
-						note={
-							card.state === "locked"
-								? `${missing} more ${missing > 1 ? "places" : "place"} first`
-								: undefined
-						}
-						onPress={() => onPick(card.node)}
-						picture={card.picture}
-						selected={picked === card.node}
-						state={card.state}
-						testID={`choice-${card.node}`}
-					/>
-				))}
-			</View>
+			<NightBackdrop />
+			<ChoicePhotos
+				delay={delay}
+				missing={missing}
+				onPick={onPick}
+				picked={picked}
+				sideways
+				starTake={starTake}
+				ways={ways}
+			/>
 			<View pointerEvents="none" style={[styles.titleRow, { top }]}>
-				<NamePill style={styles.pill} text={title} />
+				<TitleArrival delay={delay}>
+					<NamePill style={styles.pill} text={title} />
+				</TitleArrival>
 			</View>
 			{onBack ? (
 				<View
@@ -300,13 +242,6 @@ function Halves({
 				>
 					<BackButton onPress={onBack} />
 				</View>
-			) : null}
-			{starTake ? (
-				<Star
-					lifted={cards.length > 2}
-					size={SIDEWAYS_STAR_SIZE}
-					take={starTake}
-				/>
 			) : null}
 			<AdventureMenu right={insets.right + layout.sideMargin} top={top} />
 		</View>
@@ -324,7 +259,9 @@ const hasEverything = (
 export default function Choice() {
 	const router = useRouter();
 	// Opens from the night veil when it follows a place; nothing leaves from here.
-	const { leave, veil } = useScreenFade();
+	const { held, leave, veil } = useScreenFade();
+	// The photos arrive as the night-sky veil clears (after its hold), or at once when it did not close.
+	const [enterDelay] = useState(held ? PAGE_HOLD_MS : 0);
 	const params = useLocalSearchParams<{
 		drawing?: string;
 		from?: string;
@@ -359,7 +296,6 @@ export default function Choice() {
 			: [];
 
 	const goodnight = cards.find((c) => c.goal);
-	const goodnightLocked = goodnight?.state === "locked";
 	const goodnightOpen = goodnight?.state === "open";
 	const drawing = cards.some((c) => c.state === "drawing");
 	const other = cards.find((c) => c.state === "open");
@@ -371,10 +307,18 @@ export default function Choice() {
 		}
 	}, [goodnightOpen]);
 
+	// The TV photographs the ways only once they have all arrived.
+	const [arrived, setArrived] = useState(false);
+	const arriveMs = enterDelay + enterMs(cards.length);
+	useEffect(() => {
+		const timer = setTimeout(() => setArrived(true), arriveMs);
+		return () => clearTimeout(timer);
+	}, [arriveMs]);
+
 	// A connected TV shows a picture of the ways to pick, taken again when a card changes.
 	const choiceOnTv = useMapOnTv({
 		adventureId: id,
-		ready: hasEverything(adventure, visited, childName),
+		ready: arrived && hasEverything(adventure, visited, childName),
 		title: "Pick a way",
 		version: cards.map((c) => `${c.node}:${c.state}`).join(","),
 	});
@@ -405,13 +349,14 @@ export default function Choice() {
 		return (
 			<>
 				<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
-					<Halves
-						cards={cards}
+					<Sideways
+						delay={enterDelay}
 						missing={missing}
 						onPick={pick}
 						picked={picked}
 						starTake={starTake}
 						title={sidewaysTitle({ goodnightOpen, peek, waiting })}
+						ways={cards}
 					/>
 				</View>
 				{replay}
@@ -423,6 +368,7 @@ export default function Choice() {
 	return (
 		<>
 			<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
+				<NightBackdrop />
 				<Screen
 					bodyStyle={{
 						paddingTop: goodnightOpen ? spacing.sm : CARDS_BELOW_TITLE,
@@ -448,33 +394,16 @@ export default function Choice() {
 						</ClayText>
 					) : null}
 					<View style={styles.cards}>
-						{cards.map((card, index) => (
-							<ChoiceCard
-								key={card.node}
-								kind={card.goal ? "goal" : "place"}
-								name={card.label}
-								onPress={
-									card.state === "drawing" ? undefined : () => pick(card.node)
-								}
-								picture={card.picture}
-								pulseDelay={
-									card.state === "drawing" ? null : index * motion.pulseOffset
-								}
-								selected={picked === card.node}
-								state={card.state}
-								style={cardStyle(cards.length, goodnightLocked || drawing)}
-								testID={`choice-${card.node}`}
-							/>
-						))}
-					</View>
-					{goodnightLocked ? (
-						<Plate
-							icon="lock"
-							label={`${missing} more ${missing > 1 ? "places" : "place"} first`}
-							style={styles.plate}
-							variant="big"
+						<ChoicePhotos
+							delay={enterDelay}
+							missing={missing}
+							onPick={pick}
+							picked={picked}
+							sideways={false}
+							starTake={starTake}
+							ways={cards}
 						/>
-					) : null}
+					</View>
 					{peek ? (
 						<ClayText
 							align="center"
@@ -495,7 +424,6 @@ export default function Choice() {
 							{WAITING_LINE}
 						</ClayText>
 					) : null}
-					{starTake ? <Star take={starTake} /> : null}
 				</Screen>
 			</View>
 			{replay}
@@ -507,17 +435,10 @@ export default function Choice() {
 const styles = StyleSheet.create({
 	backRow: { position: "absolute" },
 	capture: { flex: 1 },
-	cards: { gap: layout.gap },
+	cards: { flex: 1 },
 	done: { marginBottom: layout.gap },
-	halves: {
-		backgroundColor: colors.deepNavy,
-		flex: 1,
-		flexDirection: "row",
-		gap: HALF_GAP,
-	},
 	message: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
 	pill: { alignSelf: "center" },
-	plate: { alignSelf: "center", marginTop: layout.gap },
 	replay: { position: "absolute" },
 	replayButton: {
 		alignItems: "center",
@@ -526,12 +447,5 @@ const styles = StyleSheet.create({
 		width: layout.minTarget,
 	},
 	sideways: { flex: 1 },
-	starRow: {
-		alignItems: "center",
-		bottom: STAR_BOTTOM,
-		left: 0,
-		position: "absolute",
-		right: 0,
-	},
 	titleRow: { alignItems: "center", left: 0, position: "absolute", right: 0 },
 });
