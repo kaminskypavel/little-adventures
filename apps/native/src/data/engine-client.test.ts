@@ -55,7 +55,7 @@ describe("engine client", () => {
 		expect(await client.castMap("a 1")).toEqual({ putUrl: "p", url: "g" });
 		expect(requests[0].path).toBe("/adventures/a%201/cast-map");
 		expect(requests[0].init?.method).toBe("POST");
-		expect(requests[0].init?.body).toBeUndefined();
+		expect(requests[0].init?.body).toBe(undefined);
 	});
 
 	test("castMap sends the picture size when it is known", async () => {
