@@ -9,6 +9,8 @@ export type MarkName =
 	| "part-end"
 	| "narration-start"
 	| "narration-end"
+	| "voice-pause"
+	| "voice-resume"
 	| "place-end"
 	| "stall-start"
 	| "picture-lead-start"

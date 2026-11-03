@@ -47,7 +47,16 @@ export const partStatus = (status: string): PartStatus =>
 const partOf = (raw: EnginePart, urls: KnownUrls): Part => {
 	const status = partStatus(raw.status);
 	return {
+		durationSec: raw.durationSec ?? null,
 		id: raw.id,
+		narration: raw.narration
+			? {
+					durationSec: raw.narration.durationSec,
+					url: pin(`part-voice:${raw.id}`, raw.narration.url, urls),
+					words: raw.narration.words,
+				}
+			: null,
+		narrationFromSec: raw.narrationFromSec ?? null,
 		status,
 		url:
 			status === "playable" && raw.video
@@ -129,6 +138,9 @@ export function toAdventure(raw: EngineAdventure, urls: KnownUrls): Adventure {
 			open: pictureOf(raw.endGoal.open, urls),
 		},
 		id: raw.id,
+		music: raw.music
+			? { url: pin(`music:${raw.id}`, raw.music.url, urls) }
+			: null,
 		places: Object.fromEntries(
 			NODE_IDS.map((id) => [
 				id,
