@@ -9,7 +9,7 @@ import {
 } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
 	Easing,
 	FadeOut,
@@ -156,17 +156,22 @@ function Row({
 }
 
 /** The TV row: a Cast glyph in a switch-sized pill, sun while a TV is connected. */
+// On a phone the row is one element for screen readers, so the row's words are read, not the
+// system control's own name ("Cast not connected"); a double tap still lands on the control under
+// it. On the web the tap area is itself the labelled button, and a button cannot hold another.
+const tvRowA11y = (connected: boolean) =>
+	Platform.OS === "web"
+		? {}
+		: ({
+				accessibilityLabel: "Play on the TV",
+				accessibilityRole: "button",
+				accessibilityState: { selected: connected },
+				accessible: true,
+			} as const);
+
 function TvRow({ connected }: { connected: boolean }) {
-	// One element for screen readers, so the row's words are read, not the system control's own
-	// name ("Cast not connected"); a double tap still lands on the control under it.
 	return (
-		<View
-			accessibilityLabel="Play on the TV"
-			accessibilityRole="button"
-			accessibilityState={{ selected: connected }}
-			accessible
-			style={styles.row}
-		>
+		<View {...tvRowA11y(connected)} style={styles.row}>
 			<Text allowFontScaling={false} style={styles.rowText}>
 				Play on the TV
 			</Text>
