@@ -250,12 +250,11 @@ function Photo({
 		from: PHOTO_FROM,
 		ms: PHOTO_MS,
 	});
+	// Worked out on the JS side: the animated style runs on the UI thread and cannot call tiltOf.
+	const tilt = `${tiltOf(index, count)}deg`;
 	const style = useAnimatedStyle(() => ({
 		opacity: opacity.get(),
-		transform: [
-			{ rotate: `${tiltOf(index, count)}deg` },
-			{ scale: scale.get() },
-		],
+		transform: [{ rotate: tilt }, { scale: scale.get() }],
 	}));
 	const locked = way.state === "locked";
 	const drawing = way.state === "drawing";
