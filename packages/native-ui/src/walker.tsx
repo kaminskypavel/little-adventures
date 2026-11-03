@@ -44,7 +44,7 @@ export interface WalkerPoint {
 /**
  * The star on the map. With one stop in `route` it stands there and bobs (`Hop`). With two or
  * more it hops through them once, stone by stone, `motion.walk` in total, then calls `onDone`.
- * Reduced motion: no hops, the star appears at the last stop. `onLand(i)` runs as the star lands
+ * With no stop in `route` there is no star. Reduced motion: no hops, the star appears at the last stop. `onLand(i)` runs as the star lands
  * on stop `i` (1 to the last), so the map can light each stone as the star passes.
  */
 export function Walker({
@@ -126,6 +126,11 @@ export function Walker({
 			],
 		};
 	});
+
+	// No stop, no star: the map has not sent it out yet.
+	if (route.length === 0) {
+		return null;
+	}
 
 	const picture = (
 		<Image

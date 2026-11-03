@@ -41,6 +41,57 @@ const PLACE_IDS: readonly MapPlaceNode[] = ["intro", "p1", "p2", "p1a", "p2a"];
 const isNode = (value?: string): value is NodeId =>
 	value !== undefined && NODE_IDS.includes(value);
 
+/** The stops the sideways star walks: none before anything is walked (no star), else where it stands. */
+function routeOf({
+	fresh,
+	here,
+	visited,
+	walkTo,
+}: {
+	fresh: boolean;
+	here: NodeId;
+	visited: readonly NodeId[];
+	walkTo?: NodeId;
+}): NodeId[] {
+	if (walkTo) {
+		return pathBetween(here, walkTo, visited);
+	}
+	return fresh ? [] : [here];
+}
+
+/** The places the child can go to next: none before anything is walked (the intro is tapped first). */
+const nextFrom = (progress: Progress): NodeId[] =>
+	progress.visited.length === 0 ? [] : neighbours(progress.here);
+
+/** How a place shows: nothing walked leaves only the intro open; then here, walked, drawing, next, locked. */
+function placeState({
+	drawing,
+	fresh,
+	next,
+	node,
+	progress,
+}: {
+	drawing: boolean;
+	fresh: boolean;
+	next: readonly NodeId[];
+	node: NodeId;
+	progress: Progress;
+}): MapPlace["state"] {
+	if (fresh) {
+		return node === "intro" ? "ready" : "default";
+	}
+	if (node === progress.here) {
+		return "here";
+	}
+	if (progress.visited.includes(node)) {
+		return "done";
+	}
+	if (drawing) {
+		return "drawing";
+	}
+	return next.includes(node) ? "ready" : "default";
+}
+
 /** Sideways: the fork road. The star walks the roads, so its route is every stop on the way. */
 function SidewaysMap({
 	goodnight,
@@ -64,6 +115,8 @@ function SidewaysMap({
 	walkTo?: NodeId;
 }) {
 	const { here, visited } = progress;
+	// Nothing walked yet: the star is not here until the intro is tapped.
+	const fresh = visited.length === 0;
 	const ready: NodeId[] = PLACE_IDS.filter(
 		(node) => places[node].state === "ready"
 	);
@@ -91,7 +144,7 @@ function SidewaysMap({
 			lit={litRoads(visited)}
 			onWalked={onWalked}
 			places={places}
-			route={walkTo ? pathBetween(here, walkTo, visited) : [here]}
+			route={routeOf({ fresh, here, visited, walkTo })}
 			title={title}
 			walkTo={walkTo}
 		/>
@@ -148,19 +201,17 @@ export default function StoryMapScreen() {
 	let content: ReactNode = null;
 	let fork: ReactNode = null;
 	if (adventure && progress) {
-		const next = neighbours(progress.here);
-		const stateOf = (node: NodeId): MapPlace["state"] => {
-			if (node === progress.here) {
-				return "here";
-			}
-			if (progress.visited.includes(node)) {
-				return "done";
-			}
-			if (adventure.places[node].status === "drawing") {
-				return "drawing";
-			}
-			return next.includes(node) ? "ready" : "default";
-		};
+		// Nothing walked yet: everything is locked but the intro, and the star is not out.
+		const fresh = progress.visited.length === 0;
+		const next = nextFrom(progress);
+		const stateOf = (node: NodeId): MapPlace["state"] =>
+			placeState({
+				drawing: adventure.places[node].status === "drawing",
+				fresh,
+				next,
+				node,
+				progress,
+			});
 		const place = (node: MapPlaceNode): MapPlace => {
 			const state = stateOf(node);
 			const reachable =
@@ -218,6 +269,7 @@ export default function StoryMapScreen() {
 				glowFrom={at > 0 ? progress.visited[at - 1] : undefined}
 				goodnight={goodnight}
 				here={progress.here}
+				hideStar={fresh}
 				next={next}
 				onWalked={() => {
 					if (walkTo) {

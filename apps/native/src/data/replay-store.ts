@@ -12,7 +12,7 @@ interface Replay {
 	byId: Record<string, Progress>;
 	/** The replay is over: the stored progress shows again. */
 	clear: (id: string) => void;
-	/** Begins again from the intro. */
+	/** Begins again from nothing visited: the map opens on the intro alone. */
 	start: (id: string) => void;
 	/** The child watched `node` in the replay. Nothing when no replay is running. */
 	step: (id: string, node: NodeId) => Progress | null;
@@ -31,7 +31,7 @@ export const useReplay = create<Replay>()(
 			},
 			start: (id) =>
 				set((s) => ({
-					byId: { ...s.byId, [id]: { here: "intro", visited: ["intro"] } },
+					byId: { ...s.byId, [id]: { here: "intro", visited: [] } },
 				})),
 			step: (id, node) => {
 				const now = get().byId[id];

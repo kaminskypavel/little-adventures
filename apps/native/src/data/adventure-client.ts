@@ -81,7 +81,7 @@ const progressById = new Map<string, Progress>();
 const readProgress = (id: string): Progress => {
 	let p = progressById.get(id);
 	if (!p) {
-		p = { here: "intro", visited: ["intro"] };
+		p = { here: "intro", visited: [] };
 		progressById.set(id, p);
 	}
 	return p;

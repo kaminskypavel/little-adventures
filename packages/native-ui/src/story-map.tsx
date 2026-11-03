@@ -516,6 +516,7 @@ function Plates({
 export function StoryMap({
 	glowFrom,
 	goodnight,
+	hideStar = false,
 	here,
 	next,
 	onWalked,
@@ -525,6 +526,8 @@ export function StoryMap({
 	/** The place walked from to reach `here`: the road between them glows. */
 	glowFrom?: MapNode;
 	goodnight: MapGoodnight;
+	/** No star yet: nothing has been walked, so it is not out until the first place is tapped. */
+	hideStar?: boolean;
 	/** Where the star stands. */
 	here: MapNode;
 	/** The places the child can go to next: the roads to them stay at full strength. */
@@ -557,10 +560,13 @@ export function StoryMap({
 
 	const route = useMemo(() => {
 		const f = makeFrame(box.width, box.height);
+		if (hideStar) {
+			return [];
+		}
 		return walking
 			? stops.map((stop) => stand(spot(f, stop)))
 			: [stand(spot(f, { node: here }))];
-	}, [box, here, stops, walking]);
+	}, [box, here, hideStar, stops, walking]);
 
 	const lit = new Set<number>();
 	const glowing = walking

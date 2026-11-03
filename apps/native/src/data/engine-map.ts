@@ -159,10 +159,14 @@ export function toAdventure(raw: EngineAdventure, urls: KnownUrls): Adventure {
 	};
 }
 
-/** Where the child has been. The intro counts as walked from the start, as in the bundled map. */
+/**
+ * Where the child has been. Nothing is walked until the engine says so: the map then shows only
+ * the intro open. Once any place is walked the intro counts as walked too (it is how they got there).
+ */
 export function progressOf(raw: EngineAdventure): Progress {
+	const any = raw.nodes.some((n) => n.visited);
 	const walked = (id: NodeId) =>
-		id === "intro" || raw.nodes.some((n) => n.id === id && n.visited);
+		any && (id === "intro" || raw.nodes.some((n) => n.id === id && n.visited));
 	const visited = NODE_IDS.filter(walked);
 	return {
 		here: visited.at(-1) ?? "intro",
