@@ -49,7 +49,7 @@ Results on the full held-out set of 1,498 rows, as mean balanced accuracy:
 | --- | --- | --- |
 | Tuned Glimmer v2 alone | 94.5% | 1.05 s |
 | Muse Spark 1.3 | 89.8% | 4.49 s |
-| Base Muse Glimmer | 81.6% | not measured |
+| Base Muse Glimmer | 81.6% | not reported |
 | Glimmer v1, with Muse Spark Open on the two fact checks | 96.8% | 2.07 s |
 
 The last row is optimistic: its routing was picked after seeing test results. Model card: [Hugging Face](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Method and data: [benchmarks/checker](benchmarks/checker). `bun run eval:checker` replays the results offline, with no key.
