@@ -4,7 +4,7 @@ import {
 	photoUploadRequestSchema,
 } from "@little-adventures/validation/photo";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { artFolder, artKeys } from "../art";
@@ -19,7 +19,8 @@ export const photoRouter = router({
 			const ownerId = ctx.principal.user.id;
 			const owned = and(
 				eq(children.id, input.childId),
-				eq(children.ownerId, ownerId)
+				eq(children.ownerId, ownerId),
+				isNull(children.deletedAt)
 			);
 			const [row] = await ctx.db.select().from(children).where(owned);
 			if (!row) {

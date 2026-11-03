@@ -1,0 +1,1 @@
+ALTER TABLE "little_adventures"."children" ADD COLUMN "deleted_at" timestamp with time zone;

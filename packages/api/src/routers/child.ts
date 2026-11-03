@@ -1,7 +1,7 @@
 import { children } from "@little-adventures/db/schema/index";
 import { childSchema } from "@little-adventures/validation/child";
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { artFolder, artKeys, drawArt, withArtUrls } from "../art";
@@ -17,12 +17,43 @@ const saveInput = childSchema.extend({
 });
 
 export const childRouter = router({
-	/** The caller's children, oldest first, with signed urls for their face and looks. */
+	/**
+	 * Soft delete: stamps `deletedAt` on one of the caller's children. Nothing is removed: the
+	 * row, the photo, the face, the looks and the past adventures stay where they are, and every
+	 * read of children (here and in the engine) skips the row from now on.
+	 */
+	delete: protectedProcedure
+		.input(z.object({ id: z.uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			const [row] = await ctx.db
+				.update(children)
+				.set({ deletedAt: new Date() })
+				.where(
+					and(
+						eq(children.id, input.id),
+						eq(children.ownerId, ctx.principal.user.id),
+						isNull(children.deletedAt)
+					)
+				)
+				.returning({ id: children.id });
+			if (!row) {
+				// Not found, not theirs, or already deleted.
+				throw new TRPCError({ code: "NOT_FOUND" });
+			}
+			return { ok: true };
+		}),
+
+	/** The caller's children that are not deleted, oldest first, with signed urls for their face and looks. */
 	mine: protectedProcedure.query(async ({ ctx }) => {
 		const rows = await ctx.db
 			.select()
 			.from(children)
-			.where(eq(children.ownerId, ctx.principal.user.id))
+			.where(
+				and(
+					eq(children.ownerId, ctx.principal.user.id),
+					isNull(children.deletedAt)
+				)
+			)
 			.orderBy(asc(children.createdAt));
 		return await Promise.all(rows.map((row) => withArtUrls(ctx.storage, row)));
 	}),
@@ -47,7 +78,13 @@ export const childRouter = router({
 						photoKey: children.photoKey,
 					})
 					.from(children)
-					.where(and(eq(children.id, id), eq(children.ownerId, ownerId)))
+					.where(
+						and(
+							eq(children.id, id),
+							eq(children.ownerId, ownerId),
+							isNull(children.deletedAt)
+						)
+					)
 			: [];
 		const newPhoto =
 			fields.photoKey !== undefined && fields.photoKey !== before?.photoKey;
@@ -65,7 +102,13 @@ export const childRouter = router({
 			? await ctx.db
 					.update(children)
 					.set(stored)
-					.where(and(eq(children.id, id), eq(children.ownerId, ownerId)))
+					.where(
+						and(
+							eq(children.id, id),
+							eq(children.ownerId, ownerId),
+							isNull(children.deletedAt)
+						)
+					)
 					.returning()
 			: await ctx.db
 					.insert(children)

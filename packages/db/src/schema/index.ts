@@ -65,6 +65,11 @@ export const children = littleAdventures.table(
 			.defaultNow(),
 		/** R2 key of the drawn look cut out of its backdrop (the wait screen); null until cut. */
 		cutKey: text("cut_key"),
+		/**
+		 * Soft delete: set when a grown-up deletes the profile. The row, its photo, looks and
+		 * past adventures stay in place; every read of children skips a row with this set.
+		 */
+		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 		drawings: jsonb("drawings").$type<Drawings>().notNull().default({}),
 		faceKey: text("face_key"),
 		grownUp: boolean("grown_up").notNull().default(false),

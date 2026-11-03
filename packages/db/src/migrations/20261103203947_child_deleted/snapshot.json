@@ -1,0 +1,42 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "62d0e3ab-ad51-45fe-8370-1c369fb1877c",
+  "prevIds": ["cd0deda0-c156-4c0b-bcd5-f1f7bc4eda37"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "little_adventures",
+        "children",
+        "deleted_at"
+      ],
+      "writes": [
+        "s|col|little_adventures.children.deleted_at",
+        "n|col|little_adventures.children.deleted_at",
+        "e|col|little_adventures.children.deleted_at"
+      ],
+      "reads": ["n|tbl|little_adventures.children", "n|sch|little_adventures"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "little_adventures",
+        "table": "children",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

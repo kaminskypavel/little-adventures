@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import type { Database } from "@little-adventures/db";
 import { relations } from "@little-adventures/db/relations";
-import { aiCalls } from "@little-adventures/db/schema/index";
+import { aiCalls, children } from "@little-adventures/db/schema/index";
 import type { ImageEditing } from "@little-adventures/image-editing";
 import type { Storage } from "@little-adventures/storage";
 import type { Transcription } from "@little-adventures/transcribe";
@@ -130,6 +130,104 @@ describe("child", () => {
 			.child.save({ ...noah, age: 40 })
 			.catch((e) => e);
 		expect(error.code).toBe("BAD_REQUEST");
+	});
+});
+
+describe("child.delete (soft)", () => {
+	let db: Database;
+	const touched: string[] = [];
+	// Records every storage call: a soft delete must make none.
+	const storage = {
+		deleteObject: (key: string) => {
+			touched.push(key);
+			return Promise.resolve();
+		},
+		deletePrefix: (prefix: string) => {
+			touched.push(prefix);
+			return Promise.resolve();
+		},
+	} as unknown as Storage;
+	const callerFor = (userId: string) =>
+		appRouter.createCaller({
+			art: { isConfigured: false } as ImageEditing,
+			db,
+			isBeta: () => true,
+			principal: { user: { id: userId } },
+			storage,
+			voice: {} as Transcription,
+			waitUntil: () => undefined,
+		});
+	const photo = "little-adventures/users/u1/photos/a.jpg";
+
+	beforeEach(async () => {
+		db = (await freshDb()) as unknown as Database;
+		touched.length = 0;
+	});
+
+	test("marks the row deleted, keeps it and its files, and mine skips it", async () => {
+		const mia = await callerFor("u1").child.save({
+			...noah,
+			name: "Mia",
+			photoKey: photo,
+		});
+		const leo = await callerFor("u1").child.save({ ...noah, name: "Leo" });
+		expect(await callerFor("u1").child.delete({ id: mia.id })).toEqual({
+			ok: true,
+		});
+		const names = (await callerFor("u1").child.mine()).map((c) => c.name);
+		expect(names).toEqual(["Leo"]);
+		// The row is still there, stamped, with its photo key untouched.
+		const rows = await db.select().from(children);
+		expect(rows).toHaveLength(2);
+		const kept = rows.find((r) => r.id === mia.id);
+		expect(kept?.deletedAt).toBeInstanceOf(Date);
+		expect(kept?.photoKey).toBe(photo);
+		expect(rows.find((r) => r.id === leo.id)?.deletedAt).toBeNull();
+		expect(touched).toEqual([]);
+	});
+
+	test("deleting the last child leaves none", async () => {
+		const only = await callerFor("u1").child.save(noah);
+		await callerFor("u1").child.delete({ id: only.id });
+		expect(await callerFor("u1").child.mine()).toEqual([]);
+	});
+
+	test("another user's child is NOT_FOUND and stays", async () => {
+		const theirs = await callerFor("u2").child.save(noah);
+		const error = await callerFor("u1")
+			.child.delete({ id: theirs.id })
+			.catch((e) => e);
+		expect(error.code).toBe("NOT_FOUND");
+		expect(await callerFor("u2").child.mine()).toHaveLength(1);
+	});
+
+	test("deleting twice is NOT_FOUND the second time", async () => {
+		const child = await callerFor("u1").child.save(noah);
+		await callerFor("u1").child.delete({ id: child.id });
+		const error = await callerFor("u1")
+			.child.delete({ id: child.id })
+			.catch((e) => e);
+		expect(error.code).toBe("NOT_FOUND");
+	});
+
+	test("a deleted child cannot be saved over or lose its photo", async () => {
+		const child = await callerFor("u1").child.save({
+			...noah,
+			photoKey: photo,
+		});
+		await callerFor("u1").child.delete({ id: child.id });
+		const save = await callerFor("u1")
+			.child.save({ ...noah, id: child.id, name: "Back" })
+			.catch((e) => e);
+		expect(save.code).toBe("NOT_FOUND");
+		const removed = await callerFor("u1")
+			.photo.delete({ childId: child.id })
+			.catch((e) => e);
+		expect(removed.code).toBe("NOT_FOUND");
+		const [row] = await db.select().from(children);
+		expect(row?.name).toBe("Noah");
+		expect(row?.photoKey).toBe(photo);
+		expect(touched).toEqual([]);
 	});
 });
 
