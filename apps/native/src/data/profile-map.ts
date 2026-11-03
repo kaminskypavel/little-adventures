@@ -151,6 +151,12 @@ export const clearChildPhoto = <R extends ChildRow>(
 			: row
 	);
 
+/** The cache after `child.delete` would have succeeded: the child is gone from the list. */
+export const removeChild = <R extends ChildRow>(
+	rows: R[],
+	childId: string
+): R[] => rows.filter((row) => row.id !== childId);
+
 export interface GrownUpPhoto {
 	/** What the child calls the grown-up; null until asked. */
 	called: Called | null;

@@ -14,6 +14,7 @@ import {
 	type ChildRow,
 	clearChildPhoto,
 	emptyProfile,
+	removeChild,
 	toChild,
 	toChildById,
 	toChildren,
@@ -147,6 +148,27 @@ export function useDeleteChildPhoto() {
 		})
 	);
 	return (childId: string) => remove.mutateAsync({ childId });
+}
+
+/**
+ * Deletes the child with this id (soft: the server keeps the row and its files, and no longer lists
+ * the child). The cache drops the child at once. A deleted current child falls back to the first
+ * one left (see toChild), so nothing else needs resetting.
+ */
+export function useDeleteChild() {
+	const client = useQueryClient();
+	const remove = useMutation(
+		trpc.child.delete.mutationOptions<Snapshot<ChildRows>>({
+			onError: (_error, _input, snapshot) =>
+				rollback(client, childKey(), snapshot),
+			onMutate: ({ id }) =>
+				optimisticSet<ChildRows>(client, childKey(), (rows) =>
+					removeChild(rows, id)
+				),
+			onSettled: () => client.invalidateQueries(trpc.child.mine.queryFilter()),
+		})
+	);
+	return (id: string) => remove.mutateAsync({ id });
 }
 
 /** Saves the grown-up's photo by its storage key; the server's row (with urls) replaces the cache. */

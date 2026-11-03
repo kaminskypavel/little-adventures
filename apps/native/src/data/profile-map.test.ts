@@ -4,7 +4,9 @@ import {
 	type ChildRow,
 	clearChildPhoto,
 	emptyProfile,
+	removeChild,
 	toChild,
+	toChildren,
 	toGrownUpPhoto,
 } from "./profile-map";
 
@@ -57,6 +59,21 @@ describe("profile map", () => {
 		expect(a?.faceUrl).toBe(null);
 		expect(a?.drawingUrls).toEqual({});
 		expect(a?.artStatus).toBe("idle");
+	});
+
+	test("deleting a child drops it from the list and the pickers fall back", () => {
+		const other = { ...row, id: "c2", name: "Sam" };
+		const left = removeChild([row, other], "c1");
+		expect(left).toEqual([other]);
+		expect(toChildren(left).map((c) => c.id)).toEqual(["c2"]);
+		// The deleted child was the current one: the first child left is used.
+		expect(toChild(left, "c1").id).toBe("c2");
+		// The last child deleted: the empty profile, so the add-child flow starts.
+		expect(toChild(removeChild([row], "c1"), "c1")).toEqual({
+			avatar: null,
+			cutUrl: null,
+			profile: emptyProfile,
+		});
 	});
 
 	test("the grown-up photo maps a missing face and cut-out to null", () => {

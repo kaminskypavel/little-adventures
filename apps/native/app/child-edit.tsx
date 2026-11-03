@@ -4,16 +4,23 @@ import {
 } from "@little-adventures/native-ui/body-fade";
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
+import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { portrait, spacing } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { ChildFields, useChildForm } from "@/src/child/child-form";
 import type { Child } from "@/src/data/profile-map";
-import { useChildById, useSaveProfile } from "@/src/data/profile-queries";
-import { useT } from "@/src/i18n";
+import {
+	useChildById,
+	useChildren,
+	useDeleteChild,
+	useSaveProfile,
+} from "@/src/data/profile-queries";
+import { tNow, useT } from "@/src/i18n";
 import { childEditStrings } from "@/src/i18n/strings/child-edit";
+import { showMenuStrings } from "@/src/i18n/strings/show-menu";
 import { useChildPhotoMenu } from "@/src/photo/photo-menu";
 
 function EditChild({ child, id }: { child: Child; id: string }) {
@@ -21,6 +28,8 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 	const t = useT(childEditStrings);
 	const saveProfile = useSaveProfile();
 	const openPhoto = useChildPhotoMenu(id);
+	const deleteChild = useDeleteChild();
+	const childCount = useChildren()?.length ?? 0;
 	const { control, handleSubmit } = useChildForm(child.profile);
 
 	const done = handleSubmit(async ({ age, kind, name }) => {
@@ -30,6 +39,31 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 		);
 		router.back();
 	});
+
+	// This screen is only reached through the lock on "Who's listening?", so the grown-up gate is
+	// already passed. The delete is soft: the child is hidden everywhere and nothing is erased.
+	const confirmDelete = () =>
+		Alert.alert(
+			t("confirmTitle", { name: child.profile.childName }),
+			t("confirmBody", { name: child.profile.childName }),
+			[
+				{
+					onPress: () => {
+						deleteChild(id).catch(() => undefined);
+						if (childCount > 1) {
+							router.back();
+							return;
+						}
+						// The last child is gone: back to the first welcome, which adds one.
+						router.dismissAll();
+						router.replace("/hello");
+					},
+					style: "destructive",
+					text: t("confirmDelete"),
+				},
+				{ style: "cancel", text: tNow(showMenuStrings, "cancel") },
+			]
+		);
 
 	return (
 		<Screen
@@ -59,6 +93,12 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 					</Portrait>
 				</View>
 				<ChildFields control={control} />
+				<View style={styles.delete}>
+					<QuietLink
+						label={t("delete", { name: child.profile.childName })}
+						onPress={confirmDelete}
+					/>
+				</View>
 			</ScrollView>
 		</Screen>
 	);
@@ -72,5 +112,6 @@ export default function ChildEdit() {
 }
 
 const styles = StyleSheet.create({
+	delete: { marginTop: spacing.lg },
 	portrait: { alignItems: "center", marginBottom: spacing.lg },
 });
