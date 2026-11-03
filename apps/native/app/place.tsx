@@ -80,12 +80,7 @@ import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { useGate, useGatePhase } from "@/src/data/question-gate";
-import {
-	type LessonLine,
-	learnedRows,
-	lessonOf,
-	openingOf,
-} from "@/src/data/question-rules";
+import { learnedRows, openingOf } from "@/src/data/question-rules";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
 import type {
@@ -1422,10 +1417,10 @@ function PlaceScreen({
 	const onTvUnavailable = useCallback(() => setTvOff(true), []);
 
 	// The goodnight scene plays first; when it ends, "What we learned" sums up the places and its
-	// Goodnight button leaves for the end. Any other place says its lesson again (the lesson card),
-	// then dips quickly into pick-a-way.
+	// Goodnight button leaves for the end. Any other place shows what we learned there (the lesson
+	// card); its button dips quickly into pick-a-way.
 	const [learned, setLearned] = useState(false);
-	const [lesson, setLesson] = useState<LessonLine | null>(null);
+	const [lesson, setLesson] = useState<string | null>(null);
 	const leaveFor = useCallback(
 		() =>
 			leave(
@@ -1437,14 +1432,15 @@ function PlaceScreen({
 			),
 		[goodnight, id, leave, node, router]
 	);
-	// The visit is saved while the lesson plays (it takes about a second); pick-a-way needs it.
+	// The visit is saved while the lesson is up (it takes about a second); pick-a-way needs it.
 	const visited = useRef<Promise<unknown>>(Promise.resolve());
 	const onEnd = useCallback(async () => {
 		// A failed save must not hold the child here: pick-a-way reads what it can.
 		visited.current = visit(node).catch(() => undefined);
-		const line = adventure ? lessonOf(adventure.places[node]) : null;
-		if (line && !goodnight) {
-			setLesson(line);
+		const here = adventure?.places[node];
+		const fact = here?.question?.trim() ? here.fact.trim() : "";
+		if (fact && !goodnight) {
+			setLesson(fact);
 			return;
 		}
 		await visited.current;
@@ -1503,7 +1499,7 @@ function PlaceScreen({
 			{learned && adventure ? (
 				<RecapCard onDone={leaveFor} rows={learnedRows(adventure)} />
 			) : null}
-			{lesson ? <LessonCard line={lesson} onDone={afterLesson} /> : null}
+			{lesson ? <LessonCard fact={lesson} onDone={afterLesson} /> : null}
 		</>
 	);
 	if (audio === null && !hasParts(place.parts)) {
