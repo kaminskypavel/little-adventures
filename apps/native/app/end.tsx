@@ -2,7 +2,10 @@ import {
 	BODY_SCROLL_END,
 	BODY_SCROLL_START,
 } from "@little-adventures/native-ui/body-fade";
-import { PrimaryButton } from "@little-adventures/native-ui/button";
+import {
+	PrimaryButton,
+	SecondaryButton,
+} from "@little-adventures/native-ui/button";
 import { ForkMap } from "@little-adventures/native-ui/fork-map";
 import { FoundPanel } from "@little-adventures/native-ui/found-panel";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -12,14 +15,16 @@ import {
 	type MapPlace,
 	type MapPlaceNode,
 } from "@little-adventures/native-ui/story-map";
-import { motion, spacing } from "@little-adventures/native-ui/tokens";
+import { layout, motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { litRoads } from "@/src/data/fork-roads";
 import { END_FADE_AFTER_MS } from "@/src/data/music-rules";
 import { useFadeMusicOutAfter } from "@/src/data/music-store";
 import { useChildName } from "@/src/data/profile-queries";
+import { useReplay } from "@/src/data/replay-store";
 import { useAdventure } from "@/src/data/use-adventure";
 import { useLandscape } from "@/src/orientation";
 import { useScreenFade } from "@/src/screen-fade";
@@ -43,6 +48,15 @@ export default function End() {
 	const sideways = useLandscape();
 	useFadeMusicOutAfter(END_FADE_AFTER_MS);
 	const goHome = () => leave(() => router.replace("/home"));
+	// Here the replay is over: the stored progress shows again.
+	useEffect(() => {
+		useReplay.getState().clear(id);
+	}, [id]);
+	const playAgain = () =>
+		leave(() => {
+			useReplay.getState().start(id);
+			router.replace(`/map?id=${id}`);
+		});
 
 	// Sideways, the whole road is walked: every place done, the star at the open goodnight.
 	if (sideways) {
@@ -64,13 +78,21 @@ export default function End() {
 			<>
 				<ForkMap
 					button={
-						<PrimaryButton
-							label="Home"
-							labelSize={21}
-							onPress={goHome}
-							size="md"
-							style={styles.sidewaysButton}
-						/>
+						<View style={styles.buttons}>
+							<SecondaryButton
+								label="Play again"
+								onPress={playAgain}
+								size="md"
+								style={styles.sidewaysButton}
+							/>
+							<PrimaryButton
+								label="Home"
+								labelSize={21}
+								onPress={goHome}
+								size="md"
+								style={styles.sidewaysButton}
+							/>
+						</View>
 					}
 					dots={NO_ROADS}
 					goodnight={{
@@ -93,7 +115,22 @@ export default function End() {
 		<>
 			<Screen
 				compactTitle
-				dock={<PrimaryButton label="Home" onPress={goHome} />}
+				dock={
+					<View style={styles.buttons}>
+						<SecondaryButton
+							label="Play again"
+							onPress={playAgain}
+							size="md"
+							style={styles.dockButton}
+						/>
+						<PrimaryButton
+							label="Home"
+							onPress={goHome}
+							size="md"
+							style={styles.dockButton}
+						/>
+					</View>
+				}
 				scrolls
 				// A blank line keeps the headline's room while the name loads.
 				title="Goodnight!"
@@ -130,5 +167,7 @@ export default function End() {
 }
 
 const styles = StyleSheet.create({
+	buttons: { alignItems: "center", flexDirection: "row", gap: layout.gap },
+	dockButton: { flex: 1 },
 	sidewaysButton: { height: 60, paddingHorizontal: 24 },
 });

@@ -7,7 +7,7 @@ import {
 	motion,
 	radii,
 } from "@little-adventures/native-ui/tokens";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
@@ -22,6 +22,8 @@ import { TvHit } from "@/src/cast/tv-hit";
 import { useCastAvailable, useCastConnected } from "@/src/cast/use-cast";
 import { useMusic } from "@/src/data/music-store";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
+import { useReplay } from "@/src/data/replay-store";
+import { leaveActive } from "@/src/screen-fade";
 
 // The one menu of the sideways adventure, a burger at the top right of the map and of the place
 // player. It holds what a grown-up may want while the child plays: music, captions, the TV and
@@ -199,6 +201,7 @@ function Dropdown({
 	tv: boolean;
 }) {
 	const router = useRouter();
+	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const captions = usePlayerPrefs((s) => s.captions);
 	const muted = useMusic((s) => s.muted);
 	return (
@@ -225,6 +228,23 @@ function Dropdown({
 				<Switch on={captions} />
 			</Row>
 			{tv ? <TvRow connected={connected} /> : null}
+			<Row
+				label="Start again"
+				onPress={() => {
+					closeMenu();
+					onLeave?.();
+					// Through the night sky; the replay begins as the old screen goes.
+					leaveActive(() => {
+						useReplay.getState().start(id);
+						router.replace(`/map?id=${id}`);
+					});
+				}}
+				role="button"
+			>
+				<View pointerEvents="none" style={styles.lock}>
+					<Icon color={colors.cream} name="play" size={LOCK_ICON} />
+				</View>
+			</Row>
 			<Row
 				label="Grown-ups"
 				onPress={() => {
