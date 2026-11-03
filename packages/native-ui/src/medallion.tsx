@@ -17,7 +17,13 @@ import {
 	shadows,
 } from "./tokens";
 
-export type MedallionState = "default" | "here" | "ready" | "done" | "drawing";
+export type MedallionState =
+	| "default"
+	| "here"
+	| "ready"
+	| "done"
+	| "drawing"
+	| "sealed";
 
 const tones: Record<MedallionState, ClayTone> = {
 	default: "medal",
@@ -25,6 +31,7 @@ const tones: Record<MedallionState, ClayTone> = {
 	drawing: "drawing",
 	here: "sunReady",
 	ready: "sunReady",
+	sealed: "medal",
 };
 
 /** How far the ready ring swells (a scale) before it has faded out. */
@@ -94,6 +101,19 @@ function Disc({
 	state: MedallionState;
 }) {
 	const drawing = state === "drawing";
+	const sealed = state === "sealed";
+	let blur = 0;
+	if (drawing) {
+		blur = mapMedallion.drawingBlur;
+	} else if (sealed) {
+		blur = mapMedallion.sealedBlur;
+	}
+	let veil: string | null = null;
+	if (drawing) {
+		veil = mapMedallion.drawingVeil;
+	} else if (sealed) {
+		veil = mapMedallion.sealedVeil;
+	}
 	return (
 		<View
 			style={{
@@ -105,7 +125,7 @@ function Disc({
 		>
 			<FallbackImage
 				accessibilityIgnoresInvertColors
-				blurRadius={drawing ? mapMedallion.drawingBlur : 0}
+				blurRadius={blur}
 				contentFit="cover"
 				kind="place"
 				placeholder={
@@ -118,13 +138,10 @@ function Disc({
 				source={picture}
 				style={StyleSheet.absoluteFill}
 			/>
-			{drawing ? (
+			{veil ? (
 				<View
 					pointerEvents="none"
-					style={[
-						StyleSheet.absoluteFill,
-						{ backgroundColor: mapMedallion.drawingVeil },
-					]}
+					style={[StyleSheet.absoluteFill, { backgroundColor: veil }]}
 				/>
 			) : null}
 		</View>

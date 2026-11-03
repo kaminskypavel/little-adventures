@@ -1,32 +1,33 @@
+import type { ImageSource } from "expo-image";
 import { type StyleProp, View, type ViewStyle } from "react-native";
-import { Icon } from "./icons";
-import { colors, mapSeal } from "./tokens";
+import { Medallion } from "./medallion";
 
 /**
- * A place the road has not reached: a flat dark disc with a ring and a drawn question mark. No
- * picture, no plate, never tappable, no clay lift.
+ * A place the road has not reached: its own medallion with the picture blurred out, no plate,
+ * never tappable. Screen readers skip it until the road reaches it.
  */
-export function SealedDisc({ style }: { style?: StyleProp<ViewStyle> }) {
+export function SealedDisc({
+	picture,
+	size,
+	style,
+}: {
+	picture: ImageSource | number | null;
+	size: number;
+	style?: StyleProp<ViewStyle>;
+}) {
 	return (
 		<View
 			accessibilityElementsHidden
 			importantForAccessibility="no-hide-descendants"
 			pointerEvents="none"
-			style={[
-				{
-					alignItems: "center",
-					backgroundColor: colors.deepNavy,
-					borderColor: mapSeal.ring,
-					borderRadius: mapSeal.size / 2,
-					borderWidth: mapSeal.ringWidth,
-					height: mapSeal.size,
-					justifyContent: "center",
-					width: mapSeal.size,
-				},
-				style,
-			]}
+			style={[{ height: size, width: size }, style]}
 		>
-			<Icon color={mapSeal.iconInk} name="ask" size={mapSeal.icon} />
+			<Medallion
+				accessibilityLabel="Not reached yet"
+				picture={picture}
+				size={size}
+				state="sealed"
+			/>
 		</View>
 	);
 }

@@ -15,15 +15,7 @@ import { useCalm } from "./motion-provider";
 import { Plate } from "./plate";
 import { SealedDisc } from "./sealed-disc";
 import { SteppingStone } from "./stepping-stone";
-import {
-	flat,
-	layout,
-	mapMedallion,
-	mapSeal,
-	motion,
-	shadows,
-	spacing,
-} from "./tokens";
+import { flat, layout, mapMedallion, motion, shadows, spacing } from "./tokens";
 import { Walker, type WalkerPoint, walkerSize } from "./walker";
 
 export type MapNode = "intro" | "p1" | "p2" | "p1a" | "p2a" | "outro";
@@ -161,6 +153,7 @@ const stateHint: Record<MedallionState, string> = {
 	drawing: ", not drawn yet",
 	here: ", you are here",
 	ready: "",
+	sealed: ", not reached yet",
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -459,15 +452,17 @@ function Places({
 		const place = places[node];
 		const size =
 			place.state === "here" ? mapMedallion.sizeHere : mapMedallion.size;
-		// Not reachable yet: the same sealed disc as the sideways map.
+		// Not reachable yet: the same blurred medallion as the sideways map.
 		if (place.state === "default") {
 			return (
 				<SealedDisc
 					key={node}
+					picture={place.picture}
+					size={size}
 					style={{
-						left: frame.x(NODES[node].x) - mapSeal.size / 2,
+						left: frame.x(NODES[node].x) - size / 2,
 						position: "absolute",
-						top: frame.y(NODES[node].y) - mapSeal.size / 2,
+						top: frame.y(NODES[node].y) - size / 2,
 					}}
 				/>
 			);

@@ -481,6 +481,9 @@ export const mapMedallion = {
 	iconRatio: 0.35,
 	ring: 4,
 	ringActive: 5.5,
+	/** Sealed state (a place the road has not reached): its own picture, blurred out under a navy veil. */
+	sealedBlur: 5,
+	sealedVeil: "rgba(18,37,74,0.12)",
 	size: 86,
 	sizeHere: 97,
 } as const;
@@ -500,7 +503,7 @@ export const mapSeal = {
 	ringWidth: 3,
 	riseDelay: 1050,
 	riseDrop: 6,
-	sealedScale: 0.6,
+	sealedScale: 1,
 	size: 56,
 } as const;
 

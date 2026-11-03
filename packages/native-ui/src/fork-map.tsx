@@ -205,8 +205,9 @@ function NamePlate({
 }
 
 /**
- * One place on the stage. Sealed, it is a flat disc. Open, it is its medallion; a place that just
- * opened for the first time (`reveal`) breaks its seal and pops in, unless calm motion is asked for.
+ * One place on the stage. Sealed, it is its medallion with the picture blurred out. Open, it is its
+ * medallion; a place that just opened for the first time (`reveal`) clears and pops in, unless calm
+ * motion is asked for.
  */
 function Spot({
 	node,
@@ -220,12 +221,12 @@ function Spot({
 	const calm = useCalm();
 	const { x, y } = SPOTS[node];
 	const seal: ViewStyle = {
-		left: x - mapSeal.size / 2,
+		left: x - MEDALLION / 2,
 		position: "absolute",
-		top: y - mapSeal.size / 2,
+		top: y - MEDALLION / 2,
 	};
 	if (place.state === "default") {
-		return <SealedDisc style={seal} />;
+		return <SealedDisc picture={place.picture} size={MEDALLION} style={seal} />;
 	}
 	const size = place.state === "here" ? MEDALLION_HERE : MEDALLION;
 	const box: ViewStyle = {
@@ -247,7 +248,7 @@ function Spot({
 	if (place.reveal && !calm) {
 		return (
 			<>
-				<Unseal style={seal} />
+				<Unseal picture={place.picture} style={seal} />
 				<Pop style={box}>{medallion}</Pop>
 			</>
 		);
@@ -255,8 +256,14 @@ function Spot({
 	return <View style={box}>{medallion}</View>;
 }
 
-/** The seal shrinks and fades. */
-function Unseal({ style }: { style: ViewStyle }) {
+/** The blurred medallion fades as the clear one pops in over it. */
+function Unseal({
+	picture,
+	style,
+}: {
+	picture: MapPlace["picture"];
+	style: ViewStyle;
+}) {
 	return (
 		<EaseView
 			animate={{ opacity: 0, scale: mapSeal.sealedScale }}
@@ -269,7 +276,7 @@ function Unseal({ style }: { style: ViewStyle }) {
 				type: "timing",
 			}}
 		>
-			<SealedDisc />
+			<SealedDisc picture={picture} size={MEDALLION} />
 		</EaseView>
 	);
 }
