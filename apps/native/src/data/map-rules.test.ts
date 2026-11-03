@@ -15,8 +15,8 @@ describe("neighbours", () => {
 		["intro", ["p1", "p2"]],
 		["p1", ["p1a", "p2"]],
 		["p2", ["p2a", "p1"]],
-		["p1a", ["p2", "outro"]],
-		["p2a", ["p1", "outro"]],
+		["p1a", ["p2", "p2a", "outro"]],
+		["p2a", ["p1", "p1a", "outro"]],
 	] as [NodeId, NodeId[]][])("%s", (node, expected) => {
 		expect(neighbours(node)).toEqual(expected);
 	});
@@ -59,6 +59,7 @@ describe("choicesFrom", () => {
 	test("outro locked until open", () => {
 		expect(choicesFrom("p1a", ["intro", "p1", "p1a"])).toEqual([
 			{ locked: false, node: "p2" },
+			{ locked: false, node: "p2a" },
 			{ locked: true, node: "outro" },
 		]);
 	});
@@ -66,6 +67,7 @@ describe("choicesFrom", () => {
 	test("outro unlocked after 4", () => {
 		expect(choicesFrom("p2a", all)).toEqual([
 			{ locked: false, node: "p1" },
+			{ locked: false, node: "p1a" },
 			{ locked: false, node: "outro" },
 		]);
 	});

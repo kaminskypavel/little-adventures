@@ -6,9 +6,9 @@ const EDGES: Record<NodeId, NodeId[]> = {
 	intro: ["p1", "p2"],
 	outro: [],
 	p1: ["p1a", "p2"],
-	p1a: ["p2", "outro"],
+	p1a: ["p2", "p2a", "outro"],
 	p2: ["p2a", "p1"],
-	p2a: ["p1", "outro"],
+	p2a: ["p1", "p1a", "outro"],
 };
 
 /** Choice candidates from a node (never intro). */
