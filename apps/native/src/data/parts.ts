@@ -18,24 +18,24 @@ export const LEAD_OWN_HOLD_MS = 1500;
 /** Own audio: how long a first part is waited for once its audio has ended, before the rest play over the picture. */
 export const LEAD_AFTER_VOICE_MS = 20_000;
 
-/** The slowest a part's tail plays, as a share of normal speed (0.5 = half speed). */
-export const MIN_TAIL_RATE = 0.5;
-/** A part slows only in its last seconds: the tail starts this long before its video ends. */
+/** The fastest the words may go to end with a short clip, pitch kept (1.2 = a fifth faster). */
+export const MAX_VOICE_RATE = 1.2;
+/** The voice may hurry only in a part's last seconds: this long before its video ends. */
 export const TAIL_WINDOW_SEC = 3;
-/** How far the rate may move per tick (about 0.1 s), so the slowdown eases in with no visible jump. */
+/** How far the rate may move per tick (about 0.1 s), so the change eases in with no audible jump. */
 export const TAIL_RATE_STEP = 0.05;
 
 /**
- * How fast the part on screen should play so its video ends with its words. `videoLeft` is the
- * video seconds still to play, `wordsLeft` the seconds until the words before the next part end.
- * Normal speed outside the tail window and when the words end first; else the video stretches to
- * the words, never slower than `MIN_TAIL_RATE` (past that the next part still waits for the words).
+ * How fast the words should go so they end with the part on screen (the user picked a faster
+ * voice over a slower picture). `videoLeft` is the video seconds still to play, `wordsLeft` the
+ * voice seconds until the words before the next part end. Normal speed outside the tail window
+ * and when the words end first; else up to `MAX_VOICE_RATE` (past that the next part waits).
  */
-export function tailRate(videoLeft: number, wordsLeft: number) {
+export function voiceRate(videoLeft: number, wordsLeft: number) {
 	if (videoLeft <= 0 || videoLeft > TAIL_WINDOW_SEC || wordsLeft <= videoLeft) {
 		return 1;
 	}
-	return Math.max(MIN_TAIL_RATE, videoLeft / wordsLeft);
+	return Math.min(MAX_VOICE_RATE, wordsLeft / videoLeft);
 }
 
 /** One tick of easing from the rate now toward the wanted one. */

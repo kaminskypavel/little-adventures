@@ -12,7 +12,7 @@ import {
 	leadHolding,
 	leadHoldMs,
 	leadZoom,
-	MIN_TAIL_RATE,
+	MAX_VOICE_RATE,
 	neighbourUrls,
 	ownVoices,
 	type PlayEvent,
@@ -24,9 +24,9 @@ import {
 	stepRate,
 	TAIL_RATE_STEP,
 	TAIL_WINDOW_SEC,
-	tailRate,
 	upcoming,
 	voiceOffset,
+	voiceRate,
 	voiceUrls,
 	wordsEnd,
 	wordsStart,
@@ -1056,25 +1056,24 @@ describe("the picture leads while part 1 is still being made", () => {
 	});
 });
 
-describe("tailRate", () => {
-	test("slows the tail so the video ends with its words, within the bounds", () => {
-		// Words outlast the video by a third: 2 s of video stretch over 3 s.
-		expect(Math.round(tailRate(2, 3) * 1000)).toBe(667);
-		// Never slower than the floor; the next part then still waits for the words.
-		expect(tailRate(1, 10)).toBe(MIN_TAIL_RATE);
-		// No slowdown when the words end first, or before the tail window opens.
-		expect(tailRate(2, 1.5)).toBe(1);
-		expect(tailRate(TAIL_WINDOW_SEC + 0.5, 20)).toBe(1);
-		expect(tailRate(0, 5)).toBe(1);
+describe("voiceRate", () => {
+	test("speeds the words up to end with the video, up to the cap", () => {
+		expect(Math.round(voiceRate(2, 2.2) * 1000)).toBe(1100);
+		expect(voiceRate(2, 3)).toBe(MAX_VOICE_RATE);
 	});
+	test("normal speed when the words end first, outside the window, or with no video left", () => {
+		expect(voiceRate(2, 1.5)).toBe(1);
+		expect(voiceRate(TAIL_WINDOW_SEC + 0.5, 20)).toBe(1);
+		expect(voiceRate(0, 5)).toBe(1);
+	});
+});
 
-	test("the rate eases toward the wanted one", () => {
-		expect(Math.round(stepRate(1, 0.5) * 1000)).toBe(
-			Math.round((1 - TAIL_RATE_STEP) * 1000)
-		);
-		expect(stepRate(0.52, 0.5)).toBe(0.5);
-		expect(Math.round(stepRate(0.5, 1) * 1000)).toBe(
-			Math.round((0.5 + TAIL_RATE_STEP) * 1000)
-		);
-	});
+test("the rate eases toward the wanted one", () => {
+	expect(Math.round(stepRate(1, 0.5) * 1000)).toBe(
+		Math.round((1 - TAIL_RATE_STEP) * 1000)
+	);
+	expect(stepRate(0.52, 0.5)).toBe(0.5);
+	expect(Math.round(stepRate(0.5, 1) * 1000)).toBe(
+		Math.round((0.5 + TAIL_RATE_STEP) * 1000)
+	);
 });

@@ -69,9 +69,9 @@ import {
 	slotParts,
 	step,
 	stepRate,
-	tailRate,
 	tailWordsLeft,
 	upcoming,
+	voiceRate,
 	voiceSlot,
 	voiceUrls,
 	wordsStart,
@@ -782,6 +782,8 @@ function MediaPlayer({
 	useEffect(() => {
 		if (voiceUrl && speaking && playingRef.current) {
 			const player = voiceOf(machine.current);
+			// Each part's words start at normal speed, whatever the tail of the last one did.
+			player.setPlaybackRate(1, "high");
 			softStart(player);
 			player.play();
 		}
@@ -821,7 +823,7 @@ function MediaPlayer({
 		} else if (currentTime > 0) {
 			inPart.current = true;
 			showFrame(index);
-			slowTail(index, duration - currentTime);
+			hurryWords(index, duration - currentTime);
 			send({
 				duration: duration || 0,
 				sec: currentTime,
@@ -830,24 +832,24 @@ function MediaPlayer({
 		}
 	};
 
-	// The last seconds of a part play slower when its words would outlast it, so the video ends with
-	// them and the next part follows at once instead of the last frame waiting for the words.
-	// The rate eases toward the wanted one a tick at a time; it is on the part player (UI-side).
-	const slowTail = (index: number, videoLeft: number) => {
+	// In the last seconds of a part whose words would outlast its video, the words speed up a
+	// little (pitch kept) so they end with it and the next part follows at once. The rate eases a
+	// tick at a time on the voice player, never on the video.
+	const hurryWords = (index: number, videoLeft: number) => {
 		const now = machine.current;
 		if (now.at !== index) {
 			return;
 		}
-		const voiceSec = now.own ? voiceOf(now).currentTime : 0;
-		const wanted = tailRate(videoLeft, tailWordsLeft(now, voiceSec));
-		const player = players[now.slot];
-		// Only while it plays: on iOS a new rate also starts a paused player.
-		if (!player.playing) {
+		const voice = now.own ? voiceOf(now) : audioPlayer;
+		// Only while it speaks; expo-audio keeps a rate set on a paused player for its next play.
+		if (!voice.playing) {
 			return;
 		}
-		const next = stepRate(player.playbackRate, wanted);
-		if (next !== player.playbackRate) {
-			player.playbackRate = next;
+		const voiceSec = now.own ? voice.currentTime : 0;
+		const wanted = voiceRate(videoLeft, tailWordsLeft(now, voiceSec));
+		const next = stepRate(voice.playbackRate, wanted);
+		if (next !== voice.playbackRate) {
+			voice.setPlaybackRate(next, "high");
 		}
 	};
 
