@@ -15,10 +15,14 @@ interface Music {
 	adventureId: string | null;
 	/** A place has just opened: its first duck eases over PLACE_EASE_MS. */
 	easeNext: boolean;
+	/** A screen is closing or opening through the night veil: the bed is down to nothing. */
+	faded: boolean;
 	/** The grown-up turned the music off in the adventure menu. Kept on the phone; default on. */
 	muted: boolean;
 	paused: boolean;
 	setEasing: (easing: boolean) => void;
+	/** Fades the bed to nothing (or back to its level) over `ms`: the soft hand-over between screens. */
+	setFaded: (faded: boolean, ms: number) => void;
 	setMuted: (muted: boolean) => void;
 	setPaused: (paused: boolean) => void;
 	setSpeaking: (speaking: boolean) => void;
@@ -54,6 +58,10 @@ function fade(
 	fades.set(target, timer);
 }
 
+/** Where the bed sits: nothing while faded for a hand-over, else loud or low and muted. */
+const level = (s: Pick<Music, "faded" | "muted" | "speaking">) =>
+	s.faded ? 0 : bedVolume(s.speaking, s.muted);
+
 function release(target: AudioPlayer) {
 	clearInterval(fades.get(target));
 	fades.delete(target);
@@ -65,13 +73,23 @@ export const useMusic = create<Music>()(
 		(set, get) => ({
 			adventureId: null,
 			easeNext: false,
+			faded: false,
 			muted: false,
 			paused: false,
 			setEasing: (easeNext) => set({ easeNext }),
+			setFaded: (faded, ms) => {
+				if (get().faded === faded) {
+					return;
+				}
+				set({ faded });
+				if (player && !get().paused) {
+					fade(player, level(get()), undefined, ms);
+				}
+			},
 			setMuted: (muted) => {
 				set({ muted });
 				if (player && !get().paused) {
-					fade(player, bedVolume(get().speaking, muted));
+					fade(player, level(get()));
 				}
 			},
 			setPaused: (paused) => {
@@ -95,12 +113,7 @@ export const useMusic = create<Music>()(
 				const ease = speaking && get().easeNext;
 				set({ easeNext: ease ? false : get().easeNext, speaking });
 				if (player && !get().paused) {
-					fade(
-						player,
-						bedVolume(speaking, get().muted),
-						undefined,
-						ease ? PLACE_EASE_MS : FADE_MS
-					);
+					fade(player, level(get()), undefined, ease ? PLACE_EASE_MS : FADE_MS);
 				}
 			},
 			speaking: false,
@@ -119,15 +132,21 @@ export const useMusic = create<Music>()(
 				player = createAudioPlayer({ uri: url });
 				player.loop = true;
 				player.volume = 0;
-				set({ adventureId, paused: false, speaking: false, url });
+				set({ adventureId, faded: false, paused: false, speaking: false, url });
 				player.play();
-				fade(player, bedVolume(false, now.muted));
+				fade(player, level(get()));
 			},
 			stop: () => {
 				const old = player;
 				const wasPaused = get().paused;
 				player = null;
-				set({ adventureId: null, paused: false, speaking: false, url: null });
+				set({
+					adventureId: null,
+					faded: false,
+					paused: false,
+					speaking: false,
+					url: null,
+				});
 				if (!old) {
 					return;
 				}
@@ -145,7 +164,7 @@ export const useMusic = create<Music>()(
 			onRehydrateStorage: () => (state) => {
 				// The choice arrives a moment after launch: a bed already playing follows it.
 				if (state && player && !state.paused) {
-					fade(player, bedVolume(state.speaking, state.muted));
+					fade(player, level(state));
 				}
 			},
 			partialize: (s) => ({ muted: s.muted }),
