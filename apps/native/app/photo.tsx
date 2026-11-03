@@ -12,18 +12,19 @@ import { StyleSheet } from "react-native";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
 import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { photoStrings } from "@/src/i18n/strings/photo";
 import {
 	ADVANCE_MS,
-	CAMERA_OFF,
 	LINE,
 	PhotoRing,
 	pick,
 	type Source,
-	UPLOAD_FAILED,
 } from "@/src/photo/photo-step";
 
 function PhotoStep({ profile }: { profile: Profile }) {
 	const router = useRouter();
+	const t = useT(photoStrings);
 	const saveProfile = useSaveProfile();
 	const [done, setDone] = useState(false);
 	const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -48,7 +49,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 		try {
 			const uri = await pick(source);
 			if (uri === "denied") {
-				setNote(CAMERA_OFF);
+				setNote(t("cameraOff"));
 			} else if (uri) {
 				const photoKey = await uploadChildPhoto(uri);
 				await saveProfile({ hasPhoto: true, photoKey });
@@ -58,7 +59,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 				return;
 			}
 		} catch {
-			setNote(UPLOAD_FAILED);
+			setNote(t("uploadFailed"));
 		}
 		busy.current = false;
 	};
@@ -69,16 +70,16 @@ function PhotoStep({ profile }: { profile: Profile }) {
 			dock={
 				<PrimaryButton
 					icon="camera"
-					label="Take a photo"
+					label={t("take")}
 					onPress={() => choose("camera")}
 				/>
 			}
-			title="Photo time"
+			title={t("title")}
 		>
 			<PhotoRing done={done} photoUri={photoUri} />
 			<SecondaryButton
 				icon="image"
-				label="Choose a photo"
+				label={t("choose")}
 				onPress={() => choose("library")}
 				size="md"
 				style={styles.chip}
@@ -89,7 +90,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 				style={[styles.line, LINE]}
 				variant="body"
 			>
-				{`Only used to draw storybook ${profile.childName}. Never shown or shared.`}
+				{t("line", { name: profile.childName })}
 			</ClayText>
 			{note ? (
 				<ClayText

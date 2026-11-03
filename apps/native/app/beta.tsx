@@ -11,6 +11,8 @@ import { StyleSheet, View } from "react-native";
 import { signOut } from "@/src/auth/auth-client";
 import { startRoute } from "@/src/data/adventure-client";
 import { trpcClient } from "@/src/data/trpc";
+import { useT } from "@/src/i18n";
+import { betaStrings } from "@/src/i18n/strings/beta";
 
 // The same calm layout as the error screen: the star, a headline, one line, then the code.
 const STAR_SIZE = 150;
@@ -19,7 +21,6 @@ const TITLE_GAP = 24;
 const LINE_GAP = 14;
 const FIELD_GAP = 28;
 const LINE = { fontSize: 21, lineHeight: 27 } as const;
-const REFUSED = "That code did not work. Check it and try again.";
 
 /**
  * A signed-in grown-up outside the private beta: nothing here costs anything. The invite code
@@ -27,6 +28,7 @@ const REFUSED = "That code did not work. Check it and try again.";
  */
 export default function Beta() {
 	const router = useRouter();
+	const t = useT(betaStrings);
 	const [code, setCode] = useState("");
 	const [joining, setJoining] = useState(false);
 	const [error, setError] = useState<string | undefined>();
@@ -41,7 +43,7 @@ export default function Beta() {
 			await trpcClient.beta.join.mutate({ code });
 			router.replace(await startRoute());
 		} catch {
-			setError(REFUSED);
+			setError(t("refused"));
 			setJoining(false);
 		}
 	};
@@ -56,10 +58,10 @@ export default function Beta() {
 				<>
 					<PrimaryButton
 						disabled={!code.trim() || joining}
-						label={joining ? "Joining..." : "Join"}
+						label={joining ? t("joining") : t("join")}
 						onPress={join}
 					/>
-					<QuietLink label="Sign out" onPress={leave} />
+					<QuietLink label={t("signOut")} onPress={leave} />
 				</>
 			}
 		>
@@ -73,7 +75,7 @@ export default function Beta() {
 				style={styles.title}
 				variant="headline"
 			>
-				{"We're in a small\nprivate beta"}
+				{t("title")}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -81,13 +83,13 @@ export default function Beta() {
 				style={[LINE, styles.line]}
 				variant="body"
 			>
-				Have an invite code? Type it here to come in.
+				{t("line")}
 			</ClayText>
 			<TextField
 				autoCapitalize="none"
 				autoCorrect={false}
 				error={error}
-				label="Invite code"
+				label={t("code")}
 				onChangeText={(text) => {
 					setCode(text);
 					setError(undefined);

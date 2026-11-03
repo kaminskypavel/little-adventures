@@ -12,6 +12,8 @@ import {
 	useSpokenHydrated,
 	useSpokenQuestion,
 } from "@/src/data/spoken-question";
+import { useT } from "@/src/i18n";
+import { verifyStrings } from "@/src/i18n/strings/verify";
 
 // Round 7 09b at 0.72 scale (px / 0.72). The star is centered.
 const STAR_SIZE = 128;
@@ -27,6 +29,7 @@ const CARD_LINES = 4;
 /** 09b Did I hear you right?: the question read back, short, then yes or say it again. */
 export default function Verify() {
 	const router = useRouter();
+	const t = useT(verifyStrings);
 	// The words stay in memory, never in the address. Listening opens this screen only once the
 	// short version is back, so the card has its words at once.
 	const short = useSpokenQuestion((spoken) => spoken.short);
@@ -48,7 +51,7 @@ export default function Verify() {
 			<Screen
 				dock={
 					<PrimaryButton
-						label="Yes, let's go!"
+						label={t("yes")}
 						// The adventure starts from the full transcript, not the short one.
 						onPress={() => {
 							beginDraft(getSpokenQuestion());
@@ -56,7 +59,7 @@ export default function Verify() {
 						}}
 					/>
 				}
-				title="Is that it?"
+				title={t("title")}
 			>
 				<View style={styles.reader}>
 					<StarTake size={STAR_SIZE} take="idle" />
@@ -74,7 +77,7 @@ export default function Verify() {
 						</Text>
 					</View>
 					<IconButton
-						accessibilityLabel="Say it again"
+						accessibilityLabel={t("sayAgain")}
 						icon="mic"
 						// 09a replaced itself with this screen, so back would land on the pick screen.
 						onPress={() => router.replace("/listening")}

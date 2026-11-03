@@ -29,25 +29,23 @@ import {
 import { LIVE_STYLES } from "@/src/data/styles";
 import { mark } from "@/src/data/timeline";
 import type { Profile } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { styleStrings } from "@/src/i18n/strings/style";
 
-const looks: { label: string; picture: number; style: Style }[] = [
+const looks: { picture: number; style: Style }[] = [
 	{
-		label: "3D movie",
 		picture: require("../assets/styles/animated.jpg"),
 		style: "animated",
 	},
 	{
-		label: "Clay",
 		picture: require("../assets/styles/clay.jpg"),
 		style: "clay",
 	},
 	{
-		label: "Felt",
 		picture: require("../assets/styles/felt.jpg"),
 		style: "felt",
 	},
 	{
-		label: "Wood",
 		picture: require("../assets/styles/wood.jpg"),
 		style: "wood",
 	},
@@ -84,12 +82,13 @@ const THUMB_RING = "0px 0px 0px 3px rgba(244,236,216,0.67)";
 
 const youSubtitle = (
 	photo: GrownUpPhoto | null | undefined,
-	photoUri: string | null
+	photoUri: string | null,
+	t: (key: "addPhoto" | "grownUp") => string
 ) => {
 	if (!photoUri) {
-		return "Add your photo";
+		return t("addPhoto");
 	}
-	return photo?.called?.name ?? "Grown-up";
+	return photo?.called?.name ?? t("grownUp");
 };
 
 /** A look that is open: one wide card, picked. */
@@ -144,16 +143,18 @@ function LookCard({
 /** A look that is not open yet: a small dimmed chip with a lock, not pressable. */
 function LockedChip({
 	compact,
+	comingSoon,
 	label,
 	picture,
 }: {
 	compact: boolean;
+	comingSoon: string;
 	label: string;
 	picture: number;
 }) {
 	return (
 		<View
-			accessibilityLabel={`${label}, coming soon`}
+			accessibilityLabel={comingSoon}
 			accessibilityState={{ disabled: true }}
 			accessible
 			pointerEvents="none"
@@ -194,6 +195,7 @@ function Companion({
 	profile: Profile;
 }) {
 	const router = useRouter();
+	const t = useT(styleStrings);
 	const client = useQueryClient();
 	const saveProfile = useSaveProfile();
 	// A photo just replaced shows on return.
@@ -225,7 +227,7 @@ function Companion({
 			}
 			photoUri={photoUri}
 			value={value}
-			youSubtitle={youSubtitle(photo, photoUri)}
+			youSubtitle={youSubtitle(photo, photoUri, t)}
 		/>
 	);
 }
@@ -233,6 +235,7 @@ function Companion({
 /** Before an adventure starts: how should it be drawn. Reached from the check screen and Home's ideas. */
 export default function StylePicker() {
 	const router = useRouter();
+	const t = useT(styleStrings);
 	// An idea from Home brings its question; the child's own words wait on the device.
 	const { question } = useLocalSearchParams<{ question?: string }>();
 	const me = useMe();
@@ -260,8 +263,10 @@ export default function StylePicker() {
 		<View style={styles.root}>
 			<Screen
 				bodyFade={false}
-				dock={<PrimaryButton label="Start" onPress={start} testID="start" />}
-				title="Get ready"
+				dock={
+					<PrimaryButton label={t("start")} onPress={start} testID="start" />
+				}
+				title={t("title")}
 			>
 				{/* gap and paddingTop are the minimums; space-evenly shares the leftover height. */}
 				<View
@@ -270,15 +275,15 @@ export default function StylePicker() {
 				>
 					<View style={styles.section}>
 						<ClayText color={colors.cream} style={styles.label} variant="label">
-							Style
+							{t("label")}
 						</ClayText>
 						{looks
 							.filter(({ style }) => LIVE_STYLES.includes(style))
-							.map(({ label, picture, style }) => (
+							.map(({ picture, style }) => (
 								<LookCard
 									compact={compact}
 									key={style}
-									label={label}
+									label={t(style)}
 									onPress={() => setPicked(style)}
 									picture={picture}
 									selected={picked === style}
@@ -287,11 +292,12 @@ export default function StylePicker() {
 						<View style={styles.chips}>
 							{looks
 								.filter(({ style }) => !LIVE_STYLES.includes(style))
-								.map(({ label, picture, style }) => (
+								.map(({ picture, style }) => (
 									<LockedChip
+										comingSoon={t("comingSoon", { label: t(style) })}
 										compact={compact}
 										key={style}
-										label={label}
+										label={t(style)}
 										picture={picture}
 									/>
 								))}
@@ -299,7 +305,7 @@ export default function StylePicker() {
 					</View>
 					<View style={styles.section}>
 						<ClayText color={colors.cream} style={styles.label} variant="label">
-							{"Who's coming?"}
+							{t("who")}
 						</ClayText>
 						{child ? (
 							<Companion compact={compact} profile={child.profile} />

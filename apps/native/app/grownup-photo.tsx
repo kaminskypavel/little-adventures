@@ -20,20 +20,16 @@ import {
 	useSaveProfile,
 	useSetCalled,
 } from "@/src/data/profile-queries";
-import {
-	CAMERA_OFF,
-	LINE,
-	PhotoRing,
-	pick,
-	type Source,
-	UPLOAD_FAILED,
-} from "@/src/photo/photo-step";
+import { useT } from "@/src/i18n";
+import { grownUpPhotoStrings } from "@/src/i18n/strings/grownup-photo";
+import { LINE, PhotoRing, pick, type Source } from "@/src/photo/photo-step";
 
 // With the question under it the ring shrinks from 236 to 150 pt to make room.
 const SMALL_RING = 150;
 
 export default function GrownUpPhoto() {
 	const router = useRouter();
+	const t = useT(grownUpPhotoStrings);
 	const { replace, source: autoSource } = useLocalSearchParams<{
 		replace?: string;
 		source?: Source;
@@ -71,12 +67,12 @@ export default function GrownUpPhoto() {
 		try {
 			const uri = await pick(source);
 			if (uri === "denied") {
-				setNote(CAMERA_OFF);
+				setNote(t("cameraOff"));
 			} else if (uri) {
 				setPending(uri);
 			}
 		} catch {
-			setNote(UPLOAD_FAILED);
+			setNote(t("uploadFailed"));
 		}
 		busy.current = false;
 	};
@@ -110,7 +106,7 @@ export default function GrownUpPhoto() {
 			setDone(true);
 			return;
 		} catch {
-			setNote(UPLOAD_FAILED);
+			setNote(t("uploadFailed"));
 		}
 		busy.current = false;
 	};
@@ -123,12 +119,12 @@ export default function GrownUpPhoto() {
 				dock={
 					<PrimaryButton
 						disabled={!saved?.called}
-						label="Next"
+						label={t("next")}
 						onPress={next}
 					/>
 				}
 				scrolls
-				title="Your photo"
+				title={t("title")}
 			>
 				<ScrollView
 					automaticallyAdjustKeyboardInsets
@@ -140,7 +136,7 @@ export default function GrownUpPhoto() {
 						<PhotoRing done photoUri={photoUri} size={SMALL_RING} />
 					</View>
 					<ClayText color={colors.cream} style={styles.ask} variant="label">
-						{`What does ${childName} call you?`}
+						{t("ask", { name: childName ?? "" })}
 					</ClayText>
 					<CalledChips onChange={setCalled} value={saved?.called ?? null} />
 					<ClayText
@@ -149,7 +145,7 @@ export default function GrownUpPhoto() {
 						style={[styles.line, LINE]}
 						variant="body"
 					>
-						{`${childName} hears this word in every story.`}
+						{t("hears", { name: childName ?? "" })}
 					</ClayText>
 				</ScrollView>
 			</Screen>
@@ -161,25 +157,21 @@ export default function GrownUpPhoto() {
 			bodyStyle={styles.body}
 			dock={
 				pending ? (
-					<PrimaryButton
-						icon="check"
-						label="Use this photo"
-						onPress={approvePhoto}
-					/>
+					<PrimaryButton icon="check" label={t("use")} onPress={approvePhoto} />
 				) : (
 					<PrimaryButton
 						icon="camera"
-						label="Take a photo"
+						label={t("take")}
 						onPress={() => choose("camera")}
 					/>
 				)
 			}
-			title="Your photo"
+			title={t("title")}
 		>
 			<PhotoRing done={false} photoUri={pending ?? photoUri} />
 			<SecondaryButton
 				icon="image"
-				label={pending ? "Pick another" : "Choose a photo"}
+				label={pending ? t("pickAnother") : t("choose")}
 				onPress={() => choose(pending ? lastSource.current : "library")}
 				size="md"
 				style={styles.chip}
@@ -190,7 +182,7 @@ export default function GrownUpPhoto() {
 				style={[styles.line, LINE]}
 				variant="body"
 			>
-				Only used to draw you in the story. Never shown or shared.
+				{t("line")}
 			</ClayText>
 			{note ? (
 				<ClayText

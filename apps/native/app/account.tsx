@@ -27,6 +27,8 @@ import {
 	verifyCode,
 } from "@/src/auth/auth-client";
 import { startRoute } from "@/src/data/adventure-client";
+import { useT } from "@/src/i18n";
+import { accountStrings } from "@/src/i18n/strings/account";
 
 type Step = "choose" | "email" | "code";
 
@@ -37,14 +39,10 @@ const CODE_SPACING = 10;
 const CODE_STYLE = { letterSpacing: CODE_SPACING } as const;
 const NON_DIGITS = /\D/gu;
 
-const SIGN_IN_FAILED = {
-	apple: "Apple did not work. Try again.",
-	google: "Google did not work. Try again.",
-	returned: "That sign-in did not work. Try again.",
+const PROVIDER_FAILED = {
+	apple: "appleFailed",
+	google: "googleFailed",
 } as const;
-const SEND_FAILED = "That did not send. Try again.";
-const CODE_FAILED = "That code did not work. Try again.";
-const RESENT = "A new code is on its way.";
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -55,6 +53,7 @@ async function goNext(router: Router) {
 
 export default function Account() {
 	const router = useRouter();
+	const t = useT(accountStrings);
 	const params = useLocalSearchParams();
 	const [step, setStep] = useState<Step>("choose");
 	const [address, setAddress] = useState("");
@@ -89,10 +88,10 @@ export default function Account() {
 				goNext(router);
 			} else {
 				setReturning(false);
-				setNote(SIGN_IN_FAILED.returned);
+				setNote(t("returnedFailed"));
 			}
 		});
-	}, [query, router]);
+	}, [query, router, t]);
 
 	/** One request at a time: a second tap while one runs does nothing. */
 	const run = async (task: () => Promise<void>) => {
@@ -114,7 +113,7 @@ export default function Account() {
 			if (result === "ok") {
 				await goNext(router);
 			} else if (result === "failed") {
-				setNote(SIGN_IN_FAILED[provider]);
+				setNote(t(PROVIDER_FAILED[provider]));
 			}
 		});
 
@@ -125,14 +124,14 @@ export default function Account() {
 				codeForm.reset();
 				setStep("code");
 			} else {
-				setNote(SEND_FAILED);
+				setNote(t("sendFailed"));
 			}
 		})
 	);
 
 	const resend = () =>
 		run(async () => {
-			setNote((await sendCode(address)) ? RESENT : SEND_FAILED);
+			setNote(t((await sendCode(address)) ? "resent" : "sendFailed"));
 		});
 
 	const signIn = codeForm.handleSubmit(({ code }) =>
@@ -140,7 +139,7 @@ export default function Account() {
 			if (await verifyCode(address, code)) {
 				await goNext(router);
 			} else {
-				setNote(CODE_FAILED);
+				setNote(t("codeFailed"));
 			}
 		})
 	);
@@ -159,8 +158,8 @@ export default function Account() {
 		return (
 			<Screen
 				bodyStyle={styles.fieldBody}
-				dock={<PrimaryButton label="Send me a code" onPress={send} />}
-				title="Hello!"
+				dock={<PrimaryButton label={t("sendCode")} onPress={send} />}
+				title={t("hello")}
 			>
 				<Controller
 					control={emailForm.control}
@@ -174,7 +173,7 @@ export default function Account() {
 							error={fieldState.error?.message ?? note ?? undefined}
 							key="email"
 							keyboardType="email-address"
-							label="Email"
+							label={t("email")}
 							long
 							onBlur={field.onBlur}
 							onChangeText={(text) => {
@@ -196,8 +195,8 @@ export default function Account() {
 		return (
 			<Screen
 				bodyStyle={styles.fieldBody}
-				dock={<PrimaryButton label="Sign in" onPress={signIn} />}
-				title="Hello!"
+				dock={<PrimaryButton label={t("signIn")} onPress={signIn} />}
+				title={t("hello")}
 			>
 				<Controller
 					control={codeForm.control}
@@ -210,7 +209,7 @@ export default function Account() {
 							inputStyle={CODE_STYLE}
 							key="code"
 							keyboardType="number-pad"
-							label="6-digit code from your email"
+							label={t("codeLabel")}
 							maxLength={CODE_LENGTH}
 							onBlur={field.onBlur}
 							onChangeText={(text) => {
@@ -227,8 +226,8 @@ export default function Account() {
 					)}
 				/>
 				<View style={styles.links}>
-					<QuietLink label="Send a new code" onPress={resend} />
-					<QuietLink label="Use a different email" onPress={changeEmail} />
+					<QuietLink label={t("newCode")} onPress={resend} />
+					<QuietLink label={t("differentEmail")} onPress={changeEmail} />
 				</View>
 			</Screen>
 		);
@@ -240,26 +239,26 @@ export default function Account() {
 			dock={
 				<>
 					<SecondaryButton
-						label="Continue with email"
+						label={t("continueEmail")}
 						onPress={() => {
 							setNote(null);
 							setStep("email");
 						}}
 					/>
 					<PrimaryButton
-						label="Continue with Google"
+						label={t("continueGoogle")}
 						leading={<GoogleMark />}
 						onPress={() => social("google")}
 					/>
 					<PrimaryButton
-						label="Continue with Apple"
+						label={t("continueApple")}
 						leading={<AppleMark color={colors.black} />}
 						onPress={() => social("apple")}
 						tone="white"
 					/>
 				</>
 			}
-			title="Hello!"
+			title={t("hello")}
 		>
 			<ClayText
 				align="center"
@@ -267,7 +266,7 @@ export default function Account() {
 				style={[styles.lead, LEAD]}
 				variant="body"
 			>
-				Your account keeps your child's adventures safe.
+				{t("lead")}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -275,7 +274,7 @@ export default function Account() {
 				style={[styles.kids, QUIET]}
 				variant="label"
 			>
-				Kids, ask a grown-up to help.
+				{t("kids")}
 			</ClayText>
 			{note ? (
 				<ClayText
