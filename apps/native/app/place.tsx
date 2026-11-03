@@ -74,6 +74,7 @@ import {
 	voiceUrls,
 	wordsStart,
 } from "@/src/data/parts";
+import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { readWindow } from "@/src/data/read-window";
@@ -87,6 +88,7 @@ import type {
 } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
+import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
@@ -119,13 +121,6 @@ const GOAL_RATIO = 365 / 500;
 // The read-along card shows one sentence (see readWindow) and stops here, so the place name and
 // the picture above it stay visible.
 const NARRATION_MAX_HEIGHT = 270;
-// Sideways, the words share the bottom row with the pause button and the bar is slimmer.
-const LANDSCAPE_NARRATION_MAX_HEIGHT = 150;
-const LANDSCAPE_NARRATION = {
-	borderRadius: 30,
-	paddingBottom: 14,
-	paddingTop: 12,
-} as const;
 // The goodnight picture sideways: this share of the frame height.
 const GOAL_HEIGHT_SIDEWAYS = "78%";
 
@@ -171,6 +166,23 @@ function PlayerChrome({
 	);
 	const shown = useMemo(() => words.slice(start, end), [words, start, end]);
 	const bottom = insets.bottom + layout.dockBottom;
+	if (sideways) {
+		return (
+			<View style={styles.root} testID="place-player">
+				{frame}
+				<Scrim />
+				<LandscapeChrome
+					current={current - start}
+					name={name}
+					onBack={onBack}
+					onToggle={onToggle}
+					playing={playing}
+					progress={progress}
+					words={shown}
+				/>
+			</View>
+		);
+	}
 	return (
 		<View style={styles.root} testID="place-player">
 			{frame}
@@ -200,42 +212,13 @@ function PlayerChrome({
 			<NarrationBar
 				current={current - start}
 				progress={progress}
-				style={
-					sideways
-						? [
-								styles.narration,
-								styles.narrationSideways,
-								LANDSCAPE_NARRATION,
-								{
-									bottom: bottom + (layout.primaryHeight - 76) / 2,
-									left: insets.left + layout.sideMargin,
-									right:
-										insets.right +
-										layout.sideMargin +
-										layout.primaryHeight +
-										layout.gap,
-								},
-							]
-						: [
-								styles.narration,
-								{ bottom: bottom + layout.primaryHeight + layout.gap },
-							]
-				}
+				style={[
+					styles.narration,
+					{ bottom: bottom + layout.primaryHeight + layout.gap },
+				]}
 				words={shown}
 			/>
-			<View
-				pointerEvents="box-none"
-				style={[
-					styles.control,
-					sideways
-						? {
-								alignItems: "flex-end",
-								paddingRight: insets.right + layout.sideMargin,
-							}
-						: null,
-					{ bottom },
-				]}
-			>
+			<View pointerEvents="box-none" style={[styles.control, { bottom }]}>
 				<ClayPressable
 					accessibilityLabel={playing ? "Pause" : "Play"}
 					onPress={onToggle}
@@ -578,7 +561,6 @@ function useReadAlong({
 	const said = hasNarration ? wordIndexAt(timings, spoken, length) : 0;
 	return {
 		current: own && view.narrationEnded ? Math.max(0, read.length - 1) : said,
-		progress: length > 0 ? spoken / length : 0,
 		read,
 	};
 }
@@ -642,6 +624,9 @@ function MediaPlayer({
 	const [status1, setStatus1] = useState(player1.status);
 	const statuses = [status0, status1] as const;
 	const [framed, setFramed] = useState(false);
+	// How far through the whole place (every part together) the video is, read on the UI thread.
+	const progress = useSharedValue(0);
+	const seenSec = useRef<number[]>([]);
 	const [playing, setPlaying] = useState(true);
 	// For the machine's callbacks, which must not wait for a repaint to know about a pause.
 	const playingRef = useRef<boolean>(true);
@@ -751,6 +736,17 @@ function MediaPlayer({
 	// A tick of the part on screen: its first frame, or its end when no end event came.
 	const tickPart = (index: number, currentTime: number, videoSec: number) => {
 		const duration = playableSec(machine.current.parts[index], videoSec);
+		if (duration > 0) {
+			seenSec.current[index] = duration;
+		}
+		progress.set(
+			placeProgress(
+				machine.current.parts,
+				seenSec.current,
+				index,
+				reachedEnd(currentTime, duration) ? duration : currentTime
+			)
+		);
 		if (reachedEnd(currentTime, duration)) {
 			if (inPart.current) {
 				// A part cut short by its durationSec stops here, so the held frame is the last one shown.
@@ -773,6 +769,14 @@ function MediaPlayer({
 		onEnd: () => {
 			const now = machine.current;
 			if (now.slot === slot) {
+				progress.set(
+					placeProgress(
+						now.parts,
+						seenSec.current,
+						now.at,
+						Number.POSITIVE_INFINITY
+					)
+				);
 				send({ type: "ended" });
 			}
 		},
@@ -946,7 +950,7 @@ function MediaPlayer({
 	const led = view.lead !== null;
 	const showCover = led || !framed;
 	const zoom = leadZoom(view, useReducedMotion());
-	const { current, progress, read } = useReadAlong({
+	const { current, read } = useReadAlong({
 		audio,
 		hasNarration,
 		paused: !playing,
@@ -1156,7 +1160,6 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: layout.sideMargin,
 	},
-	narrationSideways: { maxHeight: LANDSCAPE_NARRATION_MAX_HEIGHT },
 	pause: {
 		alignItems: "center",
 		height: layout.primaryHeight,

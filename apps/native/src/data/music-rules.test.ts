@@ -4,6 +4,7 @@ import {
 	BED_LOW,
 	bedVolume,
 	FADE_MS,
+	PLACE_EASE_MS,
 	rampVolume,
 	speakingAt,
 } from "./music-rules";
@@ -19,11 +20,21 @@ describe("the bed's volume", () => {
 		expect(bedVolume(false)).toBe(BED_FULL);
 	});
 
+	test("the bed is quiet under a voice and silent when muted", () => {
+		expect(BED_LOW).toBe(0.06);
+		expect(BED_FULL).toBe(0.18);
+		expect(bedVolume(true, true)).toBe(0);
+		expect(bedVolume(false, true)).toBe(0);
+	});
+
 	test("a fade runs in a straight line and lands on the target", () => {
 		expect(rampVolume(0.35, 0.12, 0)).toBe(0.35);
 		expect(Math.round(rampVolume(0.35, 0.12, FADE_MS / 2) * 1000)).toBe(235);
 		expect(rampVolume(0.35, 0.12, FADE_MS)).toBe(0.12);
 		expect(rampVolume(0.35, 0.12, FADE_MS * 3)).toBe(0.12);
+		expect(Math.round(rampVolume(0.18, 0.06, 500, PLACE_EASE_MS) * 1000)).toBe(
+			120
+		);
 	});
 });
 

@@ -2,15 +2,22 @@
 import type { WordTiming } from "./types";
 
 /** How loud the bed is under the narration. */
-export const BED_LOW = 0.12;
+export const BED_LOW = 0.06;
 /** How loud the bed is when no one speaks: the map, the choice, holds and gaps. */
-export const BED_FULL = 0.35;
+export const BED_FULL = 0.18;
 /** How long the bed takes to move between the two, and to fade out. */
 export const FADE_MS = 400;
+/** How long the first duck after a place opens from the map takes, so the bed eases in. */
+export const PLACE_EASE_MS = 1000;
 /** How long the end screen plays the bed before it fades out. */
 export const END_FADE_AFTER_MS = 4000;
 
-export const bedVolume = (speaking: boolean) => (speaking ? BED_LOW : BED_FULL);
+export const bedVolume = (speaking: boolean, muted = false) => {
+	if (muted) {
+		return 0;
+	}
+	return speaking ? BED_LOW : BED_FULL;
+};
 
 /** The volume `elapsedMs` into a fade of `ms` from `from` to `to`, in a straight line. */
 export function rampVolume(

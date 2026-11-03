@@ -4,14 +4,20 @@
 import { type AudioPlayer, createAudioPlayer } from "expo-audio";
 import { useEffect } from "react";
 import { create } from "zustand";
-import { bedVolume, FADE_MS, rampVolume } from "./music-rules";
+import { bedVolume, FADE_MS, PLACE_EASE_MS, rampVolume } from "./music-rules";
 
 // How often a fade sets the volume, in ms.
 const FADE_TICK_MS = 50;
 
 interface Music {
 	adventureId: string | null;
+	/** A place has just opened: its first duck eases over PLACE_EASE_MS. */
+	easeNext: boolean;
+	/** The grown-up turned the music off from the player menu, for this session. */
+	muted: boolean;
 	paused: boolean;
+	setEasing: (easing: boolean) => void;
+	setMuted: (muted: boolean) => void;
 	setPaused: (paused: boolean) => void;
 	setSpeaking: (speaking: boolean) => void;
 	speaking: boolean;
@@ -25,14 +31,19 @@ interface Music {
 let player: AudioPlayer | null = null;
 const fades = new Map<AudioPlayer, ReturnType<typeof setInterval>>();
 
-function fade(target: AudioPlayer, to: number, done?: () => void) {
+function fade(
+	target: AudioPlayer,
+	to: number,
+	done?: () => void,
+	ms = FADE_MS
+) {
 	clearInterval(fades.get(target));
 	const from = target.volume;
 	const began = Date.now();
 	const timer = setInterval(() => {
 		const elapsed = Date.now() - began;
-		target.volume = rampVolume(from, to, elapsed);
-		if (elapsed >= FADE_MS) {
+		target.volume = rampVolume(from, to, elapsed, ms);
+		if (elapsed >= ms) {
 			clearInterval(timer);
 			fades.delete(target);
 			done?.();
@@ -49,7 +60,16 @@ function release(target: AudioPlayer) {
 
 export const useMusic = create<Music>((set, get) => ({
 	adventureId: null,
+	easeNext: false,
+	muted: false,
 	paused: false,
+	setEasing: (easeNext) => set({ easeNext }),
+	setMuted: (muted) => {
+		set({ muted });
+		if (player && !get().paused) {
+			fade(player, bedVolume(get().speaking, muted));
+		}
+	},
 	setPaused: (paused) => {
 		if (get().paused === paused) {
 			return;
@@ -68,9 +88,15 @@ export const useMusic = create<Music>((set, get) => ({
 		if (get().speaking === speaking) {
 			return;
 		}
-		set({ speaking });
+		const ease = speaking && get().easeNext;
+		set({ easeNext: ease ? false : get().easeNext, speaking });
 		if (player && !get().paused) {
-			fade(player, bedVolume(speaking));
+			fade(
+				player,
+				bedVolume(speaking, get().muted),
+				undefined,
+				ease ? PLACE_EASE_MS : FADE_MS
+			);
 		}
 	},
 	speaking: false,
@@ -91,7 +117,7 @@ export const useMusic = create<Music>((set, get) => ({
 		player.volume = 0;
 		set({ adventureId, paused: false, speaking: false, url });
 		player.play();
-		fade(player, bedVolume(false));
+		fade(player, bedVolume(false, now.muted));
 	},
 	stop: () => {
 		const old = player;
@@ -117,6 +143,10 @@ export const stopMusic = () => useMusic.getState().stop();
  * go when the screen goes, so the map and the choice get the full bed again.
  */
 export function usePlayerMusic(speaking: boolean, paused: boolean) {
+	useEffect(() => {
+		useMusic.getState().setEasing(true);
+		return () => useMusic.getState().setEasing(false);
+	}, []);
 	useEffect(() => {
 		useMusic.getState().setSpeaking(speaking);
 	}, [speaking]);
