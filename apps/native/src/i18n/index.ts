@@ -1,10 +1,10 @@
-// The app's two languages. Every screen's words live in a strings file under src/i18n/strings,
-// English and Hebrew side by side (`defineStrings`), and `useT` picks the language the grown-up
+// The app's three languages. Every screen's words live in a strings file under src/i18n/strings,
+// English, Spanish and Hebrew side by side (`defineStrings`), and `useT` picks the language the grown-up
 // chose (Grown-ups > Language, kept in player-prefs). Hebrew keeps the left-to-right layout; only
-// its text reads right to left (the user's call).
+// its text reads right to left (Spanish reads left to right) (the user's call).
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 
-export type Language = "en" | "he";
+export type Language = "en" | "es" | "he";
 
 /** The choices on the Language row, each named in its own language, with its flag (an emoji). */
 export const LANGUAGES: readonly {
@@ -13,17 +13,19 @@ export const LANGUAGES: readonly {
 	name: string;
 }[] = [
 	{ code: "en", flag: "🇺🇸", name: "English" },
+	{ code: "es", flag: "🇪🇸", name: "Español" },
 	{ code: "he", flag: "🇮🇱", name: "עברית" },
 ];
 
 type Strings = Record<string, string>;
 export interface StringSet<E extends Strings> {
 	en: E;
+	es: { [K in keyof E]: string };
 	he: { [K in keyof E]: string };
 }
 type Vars = Record<string, number | string>;
 
-/** One screen's words: every key in English, and the same keys in Hebrew (the type checks both). */
+/** One screen's words: every key in English, and the same keys in Spanish and Hebrew (the type checks both). */
 export const defineStrings = <const E extends Strings>(set: StringSet<E>) =>
 	set;
 

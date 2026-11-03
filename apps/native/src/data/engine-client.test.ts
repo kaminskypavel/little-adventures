@@ -155,7 +155,17 @@ describe("engine client", () => {
 		});
 	});
 
-	test("reads ask for the Hebrew version only in Hebrew", async () => {
+	test("a Spanish call carries language es", async () => {
+		const { client, requests } = engine(json({}, 202), json({ items: [] }));
+		await client.prepareChild("child-1", "es");
+		await client.listAdventures("es");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			language: "es",
+		});
+		expect(requests[1].path).toBe("/adventures?language=es");
+	});
+
+	test("reads ask for another version only outside English", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", nodes: [], pollAfterSec: null }),
 			json({ id: "a1", nodes: [], pollAfterSec: null }),
