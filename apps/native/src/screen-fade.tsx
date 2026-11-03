@@ -1,5 +1,5 @@
 // The soft hand-over between the screens of an adventure: the night sky closes over the old
-// screen (1 s), holds for a breath while a few stars twinkle (450 ms), and opens on the new one
+// screen (1 s), holds for a breath on the full sky (450 ms), and opens on the new one
 // (1 s). The music bed fades with it (music-store `setFaded`: down with the closing, silent in
 // the hold, back up with the opening) and the narration is let down too. Navigation never waits
 // on the animation: timers, not its callbacks, decide when to go and when the hold ends.
@@ -14,13 +14,11 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, {
-	cancelAnimation,
 	Easing,
 	useAnimatedStyle,
 	useSharedValue,
-	withSequence,
 	withTiming,
 } from "react-native-reanimated";
 import { rampVolume } from "@/src/data/music-rules";
@@ -29,7 +27,7 @@ import { useMusic } from "@/src/data/music-store";
 /** The sky closes over a screen: `--ease-in-out`, 1 s (the user asked for a longer fade). */
 export const PAGE_OUT_MS = 1000;
 const PAGE_OUT_EASING = Easing.inOut(Easing.ease);
-/** A breath on the full sky, with the stars twinkling, before the next screen opens. */
+/** A breath on the full sky before the next screen opens. */
 export const PAGE_HOLD_MS = 450;
 /** The sky opens on a screen: `--ease-smooth-out`, 1 s. */
 export const PAGE_IN_MS = 1000;
@@ -48,18 +46,6 @@ const HANDOVER_MS = 3000;
 // Until when the screen that comes next opens from the sky: set when a screen begins to leave
 // through `leave`. A screen reached any other way (a reload, a link) simply appears.
 let handoverUntil = 0;
-
-/** The stars of the hold, as a share of the screen: [left, top, size in pt]. */
-const STARS = [
-	["12%", "20%", 4],
-	["30%", "65%", 3],
-	["55%", "30%", 4],
-	["72%", "72%", 3],
-	["88%", "18%", 4],
-	["45%", "85%", 3],
-] as const;
-const STAR_PEAK = 0.9;
-const STAR_STEP_MS = PAGE_HOLD_MS / 3;
 
 interface Volume {
 	volume: number;
@@ -137,7 +123,6 @@ export function useScreenFade(): {
 	const [opening] = useState(() => !calm && Date.now() < handoverUntil);
 	const [held, setHeld] = useState(opening);
 	const opacity = useSharedValue(opening ? 1 : 0);
-	const stars = useSharedValue(0);
 	const leaving = useRef<boolean>(false);
 	const goTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const holdTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -182,13 +167,6 @@ export function useScreenFade(): {
 			} else {
 				opacity.set(1);
 				setHeld(true);
-				stars.set(
-					withSequence(
-						withTiming(STAR_PEAK, { duration: STAR_STEP_MS }),
-						withTiming(STAR_PEAK, { duration: STAR_STEP_MS }),
-						withTiming(0, { duration: STAR_STEP_MS })
-					)
-				);
 				// The place is let go (held false) when the sky is clear, not when it begins to open.
 				playTimer.current = setTimeout(
 					() => setHeld(false),
@@ -205,16 +183,14 @@ export function useScreenFade(): {
 				clearTimeout(holdTimer.current);
 				clearTimeout(playTimer.current);
 				clearTimeout(goTimer.current);
-				cancelAnimation(stars);
 				if (active === leave) {
 					active = null;
 				}
 			};
-		}, [calm, leave, opacity, stars])
+		}, [calm, leave, opacity])
 	);
 
 	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
-	const starStyle = useAnimatedStyle(() => ({ opacity: stars.get() }));
 	const veil = (
 		<Animated.View
 			pointerEvents="none"
@@ -225,22 +201,6 @@ export function useScreenFade(): {
 				locations={skyPalettes.night.locations}
 				style={StyleSheet.absoluteFill}
 			/>
-			<Animated.View style={[StyleSheet.absoluteFill, starStyle]}>
-				{STARS.map(([left, top, size]) => (
-					<View
-						key={`${left}-${top}`}
-						style={{
-							backgroundColor: "#FFFFFF",
-							borderRadius: size,
-							height: size,
-							left,
-							position: "absolute",
-							top,
-							width: size,
-						}}
-					/>
-				))}
-			</Animated.View>
 		</Animated.View>
 	);
 	return { held, leave, veil };
