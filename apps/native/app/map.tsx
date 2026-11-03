@@ -13,7 +13,8 @@ import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useRef } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaFrame } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { MapCastButton } from "@/src/cast/map-cast-button";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
@@ -98,7 +99,8 @@ function SidewaysMap({
 
 /** The adventure menu, in the corner of the sideways map where the Grown-ups lock used to be. */
 function SidewaysMenu() {
-	const { height, width } = useWindowDimensions();
+	// The screen's own size: on the web preview the window is wider than the phone it shows.
+	const { height, width } = useSafeAreaFrame();
 	const { right, top } = topRightCorner(width, height);
 	return <AdventureMenu right={right} top={top} />;
 }

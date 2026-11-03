@@ -457,6 +457,20 @@ function Dip({ up }: { up: boolean }) {
 	);
 }
 
+// A video element keeps its own size when only its edges are set (on the web it was 832x480 on an
+// 844x390 screen), so the width and height are set too.
+const VIDEO_FILL = StyleSheet.create({
+	fill: {
+		bottom: 0,
+		height: "100%",
+		left: 0,
+		position: "absolute",
+		right: 0,
+		top: 0,
+		width: "100%",
+	},
+}).fill;
+
 /** One part's picture, in a layer of its own: shown when it is `on`, unseen but mounted when not. */
 function PartLayer({
 	on,
@@ -480,7 +494,7 @@ function PartLayer({
 				player={player}
 				playsInline
 				pointerEvents="none"
-				style={StyleSheet.absoluteFill}
+				style={VIDEO_FILL}
 			/>
 		</View>
 	);
