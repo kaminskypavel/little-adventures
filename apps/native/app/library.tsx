@@ -13,6 +13,8 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getHome } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { libraryStrings } from "@/src/i18n/strings/library";
 import { useScreenFade } from "@/src/screen-fade";
 
 const COLUMNS = 2;
@@ -28,6 +30,7 @@ const chunk = <T,>(list: T[], size: number): T[][] => {
 };
 
 export default function Library() {
+	const t = useT(libraryStrings);
 	const router = useRouter();
 	const { leave, veil } = useScreenFade();
 	const insets = useSafeAreaInsets();
@@ -69,7 +72,7 @@ export default function Library() {
 						style={styles.title}
 						variant="title"
 					>
-						Your stories
+						{t("title")}
 					</ClayText>
 				}
 			>
@@ -98,8 +101,11 @@ export default function Library() {
 										<StoryCover
 											caption={
 												story.finished
-													? "Finished"
-													: `${story.partsDone} of ${story.partsTotal} places`
+													? t("finished")
+													: t("places", {
+															done: story.partsDone,
+															total: story.partsTotal,
+														})
 											}
 											done={story.finished}
 											key={story.id}

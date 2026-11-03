@@ -27,6 +27,8 @@ import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useT } from "@/src/i18n";
+import { mapStrings } from "@/src/i18n/strings/map";
 import { useLandscape } from "@/src/orientation";
 import { useScreenFade } from "@/src/screen-fade";
 
@@ -118,6 +120,7 @@ function SidewaysMap({
 	title: string;
 	walkTo?: NodeId;
 }) {
+	const t = useT(mapStrings);
 	const { here, visited } = progress;
 	// Nothing walked yet: the star is not here until the intro is tapped.
 	const fresh = visited.length === 0;
@@ -151,7 +154,7 @@ function SidewaysMap({
 				<PrimaryButton
 					disabled={walkTo !== undefined}
 					icon={atGoodnight ? undefined : "play"}
-					label={atGoodnight ? "Say goodnight" : "Keep walking"}
+					label={atGoodnight ? t("sayGoodnight") : t("keepWalking")}
 					labelSize={19}
 					onPress={() => onOpen(here)}
 					size="md"
@@ -182,6 +185,7 @@ function SidewaysMenu() {
 
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
+	const t = useT(mapStrings);
 	const router = useRouter();
 	const { leave, veil } = useScreenFade();
 	const sideways = useLandscape();
@@ -294,7 +298,7 @@ export default function StoryMapScreen() {
 				}}
 				places={places}
 				progress={progress}
-				title={childName ? `${childName}'s map` : ""}
+				title={childName ? t("title", { name: childName }) : ""}
 				walkTo={walkTo}
 			/>
 		);
@@ -328,7 +332,7 @@ export default function StoryMapScreen() {
 					<PrimaryButton
 						disabled={!progress || walkTo !== undefined}
 						icon="play"
-						label="Keep walking"
+						label={t("keepWalking")}
 						onPress={() => progress && openPlace(progress.here)}
 						testID="keep-walking"
 					/>
@@ -336,11 +340,11 @@ export default function StoryMapScreen() {
 				topBar={
 					<TopBar
 						action={{
-							accessibilityLabel: "Grown-ups",
+							accessibilityLabel: t("grownUps"),
 							icon: "lock",
 							onPress: () => router.push("/gate"),
 						}}
-						title={childName ? `${childName}'s map` : ""}
+						title={childName ? t("title", { name: childName }) : ""}
 					/>
 				}
 			>
