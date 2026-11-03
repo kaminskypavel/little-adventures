@@ -11,6 +11,7 @@ import { micPermission } from "@/src/data/mic-permission";
 import { useChild, useChildren } from "@/src/data/profile-queries";
 import { prefetchAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
+import { useLanguage } from "@/src/i18n";
 
 // How many stories on the shelf are read ahead.
 const SHELF_AHEAD = 4;
@@ -24,7 +25,8 @@ export function useHomeData(first: string | undefined) {
 	const child = useChild();
 	const children = useChildren();
 	const refetchChild = child.refetch;
-	const home = useQuery(homeOptions());
+	// Each language has its own list, so the shelf is read again when it changes.
+	const home = useQuery(homeOptions(useLanguage()));
 	const refetchHome = home.refetch;
 	const ideas = useQuery(ideasOptions());
 

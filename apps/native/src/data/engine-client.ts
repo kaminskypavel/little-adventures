@@ -1,5 +1,6 @@
 // The engine's player API, as the app uses it. Objects and enums are open: unknown fields and
 // values are tolerated, so statuses are plain strings here.
+import type { Language } from "@/src/i18n";
 
 /** How an adventure is drawn. The engine defaults to clay. */
 export type Style = "animated" | "clay" | "felt" | "wood";
@@ -139,6 +140,13 @@ export class EngineError extends Error {
 	}
 }
 
+/**
+ * The read query for a language: nothing for English, so English reads stay as they were, and
+ * `language=he` for Hebrew (the engine answers its Hebrew version when it has one).
+ */
+export const languageQuery = (language: Language) =>
+	language === "en" ? "" : `?language=${language}`;
+
 export function createEngineClient(engineFetch: EngineFetch) {
 	async function call<T>(path: string, init?: RequestInit): Promise<T> {
 		const res = await engineFetch(path, init);
@@ -189,36 +197,51 @@ export function createEngineClient(engineFetch: EngineFetch) {
 							method: "POST",
 						}
 			),
-		createAdventure: (childId: string, question: string, style: Style) =>
+		createAdventure: (
+			childId: string,
+			question: string,
+			style: Style,
+			language: Language
+		) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
-				body: JSON.stringify({ childId, question, style }),
+				body: JSON.stringify({ childId, language, question, style }),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
 		/** Starts preparing an adventure for the question; `startDraft` commits it. */
-		createDraft: (childId: string, question: string) =>
+		createDraft: (childId: string, question: string, language: Language) =>
 			call<{ id: string; status: string }>("/adventures/drafts", {
-				body: JSON.stringify({ childId, question }),
+				body: JSON.stringify({ childId, language, question }),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
-		getAdventure: (id: string) =>
-			call<EngineAdventure>(`/adventures/${encodeURIComponent(id)}`),
+		getAdventure: (id: string, language: Language = "en") =>
+			call<EngineAdventure>(
+				`/adventures/${encodeURIComponent(id)}${languageQuery(language)}`
+			),
 		getMe: () => call<EngineMe>("/me"),
-		listAdventures: async () =>
-			(await call<{ items: EngineSummary[] }>("/adventures")).items,
+		listAdventures: async (language: Language = "en") =>
+			(
+				await call<{ items: EngineSummary[] }>(
+					`/adventures${languageQuery(language)}`
+				)
+			).items,
 		/** Up to 10 one-sentence fun facts about the question, for the wait. Empty when none. */
-		loaderFacts: (question: string, age?: number) =>
+		loaderFacts: (question: string, language: Language, age?: number) =>
 			call<{ facts: string[] }>("/questions/facts", {
-				body: JSON.stringify({ age, question }),
+				body: JSON.stringify({ age, language, question }),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),
 		/** Gets the child's next adventure ready ahead of time. Fire and forget. */
-		prepareChild: (childId: string) =>
+		prepareChild: (childId: string, language: Language) =>
 			call<Record<string, never>>(
 				`/children/${encodeURIComponent(childId)}/prepare`,
-				{ method: "POST" }
+				{
+					body: JSON.stringify({ language }),
+					headers: { "content-type": "application/json" },
+					method: "POST",
+				}
 			),
 		/** Admins only: sets some of the steps; the engine answers all four. */
 		setSteps: (steps: Partial<EngineSteps>) =>
@@ -231,9 +254,9 @@ export function createEngineClient(engineFetch: EngineFetch) {
 		 * One very short, clear sentence that restates the question, for the screen, and whether
 		 * the words were a question at all ("Hello, hello" is not).
 		 */
-		shortQuestion: (question: string) =>
+		shortQuestion: (question: string, language: Language) =>
 			call<{ isQuestion: boolean; short: string }>("/questions/short", {
-				body: JSON.stringify({ question }),
+				body: JSON.stringify({ language, question }),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			}),

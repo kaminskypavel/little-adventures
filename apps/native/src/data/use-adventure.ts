@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { type Language, languageNow, useLanguage } from "@/src/i18n";
 import {
 	getAdventure,
 	getProgress,
@@ -13,7 +14,9 @@ import { useReplay } from "./replay-store";
 import type { Adventure, NodeId, Progress } from "./types";
 
 // In the shared cache, which signing out clears.
-const adventureKey = (id: string) => ["adventure", id] as const;
+// The adventure is read in the chosen language, so each language has its own entry.
+const adventureKey = (id: string, language: Language) =>
+	["adventure", id, language] as const;
 const progressKey = (id: string) => ["adventure", id, "progress"] as const;
 
 const remember = (id: string, p: Progress) => {
@@ -48,11 +51,12 @@ const warm = async (source: { cacheKey?: string; uri: string }) => {
  * shelf), so opening the map paints at once. Nothing is read again when the cache already has it.
  */
 export async function prefetchAdventure(id: string) {
-	if (queryClient.getQueryData(adventureKey(id))) {
+	const language = languageNow();
+	if (queryClient.getQueryData(adventureKey(id, language))) {
 		return;
 	}
-	const a = await getAdventure(id);
-	queryClient.setQueryData(adventureKey(id), a);
+	const a = await getAdventure(id, language);
+	queryClient.setQueryData(adventureKey(id, language), a);
 	remember(id, await getProgress(id));
 	await Promise.allSettled(mapPictures(a).map(warm));
 }
@@ -71,9 +75,11 @@ const keepIfSame =
  * adventure again for fresh ones.
  */
 export function useAdventure(id: string) {
+	const language = useLanguage();
 	// The last read of this adventure paints at once (map, place and choice each open it again).
 	const [adventure, setAdventure] = useState<Adventure | null>(
-		() => queryClient.getQueryData<Adventure>(adventureKey(id)) ?? null
+		() =>
+			queryClient.getQueryData<Adventure>(adventureKey(id, language)) ?? null
 	);
 	const [progress, setProgress] = useState<Progress | null>(
 		() => queryClient.getQueryData<Progress>(progressKey(id)) ?? null
@@ -82,24 +88,29 @@ export function useAdventure(id: string) {
 	// A replay on this phone stands in for the stored progress on every screen that reads it.
 	const replay = useReplay((s) => s.byId[id]);
 
+	// The language changing (Grown-ups) reads the adventure again in the new one.
 	useEffect(() => {
 		let live = true;
+		setAdventure(
+			(prev) =>
+				queryClient.getQueryData<Adventure>(adventureKey(id, language)) ?? prev
+		);
 		pollAdventure({
 			isLive: () => live,
 			onRead: (a) => {
-				queryClient.setQueryData(adventureKey(id), a);
+				queryClient.setQueryData(adventureKey(id, language), a);
 				setAdventure(keepIfSame(a));
 				getProgress(id).then(
 					(p) => live && setProgress(keepIfSame(remember(id, p)))
 				);
 			},
-			read: () => getAdventure(id),
+			read: () => getAdventure(id, language),
 			sleep,
 		});
 		return () => {
 			live = false;
 		};
-	}, [id]);
+	}, [id, language]);
 
 	// The music bed follows the adventure on every screen that reads it; the same adventure and url
 	// again change nothing, so moving between map, place and choice never restarts it.
@@ -114,11 +125,11 @@ export function useAdventure(id: string) {
 	const onMediaError = useMemo(
 		() =>
 			makeExpiryGuard(() => {
-				reloadAdventure(id)
+				reloadAdventure(id, language)
 					.then(setAdventure)
 					.catch(() => undefined);
 			}),
-		[id]
+		[id, language]
 	);
 
 	const visit = useCallback(

@@ -76,13 +76,15 @@ describe("engine client", () => {
 		const made = await client.createAdventure(
 			"child-1",
 			"Why do whales sing?",
-			"felt"
+			"felt",
+			"he"
 		);
 		expect(made.id).toBe("a1");
 		expect(requests[0].path).toBe("/adventures");
 		expect(requests[0].init?.method).toBe("POST");
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
 			childId: "child-1",
+			language: "he",
 			question: "Why do whales sing?",
 			style: "felt",
 		});
@@ -92,11 +94,12 @@ describe("engine client", () => {
 		const { client, requests } = engine(
 			json({ id: "d1", status: "drafting" }, 201)
 		);
-		expect((await client.createDraft("child-1", "Why?")).id).toBe("d1");
+		expect((await client.createDraft("child-1", "Why?", "he")).id).toBe("d1");
 		expect(requests[0].path).toBe("/adventures/drafts");
 		expect(requests[0].init?.method).toBe("POST");
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
 			childId: "child-1",
+			language: "he",
 			question: "Why?",
 		});
 	});
@@ -114,9 +117,12 @@ describe("engine client", () => {
 
 	test("prepareChild posts to the child", async () => {
 		const { client, requests } = engine(json({}, 202));
-		await client.prepareChild("child-1");
+		await client.prepareChild("child-1", "he");
 		expect(requests[0].path).toBe("/children/child-1/prepare");
 		expect(requests[0].init?.method).toBe("POST");
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			language: "he",
+		});
 	});
 
 	test("shortQuestion posts the question and returns the short one", async () => {
@@ -124,26 +130,48 @@ describe("engine client", () => {
 			json({ isQuestion: true, short: "Why do whales sing?" })
 		);
 		const out = await client.shortQuestion(
-			"um so why do whales like sing a lot"
+			"um so why do whales like sing a lot",
+			"en"
 		);
 		expect(out).toEqual({ isQuestion: true, short: "Why do whales sing?" });
 		expect(requests[0].path).toBe("/questions/short");
 		expect(requests[0].init?.method).toBe("POST");
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			language: "en",
 			question: "um so why do whales like sing a lot",
 		});
 	});
 
 	test("loaderFacts posts the question and age and returns the facts", async () => {
 		const { client, requests } = engine(json({ facts: ["Whales hum."] }));
-		const out = await client.loaderFacts("Why do whales sing?", 6);
+		const out = await client.loaderFacts("Why do whales sing?", "he", 6);
 		expect(out.facts).toEqual(["Whales hum."]);
 		expect(requests[0].path).toBe("/questions/facts");
 		expect(requests[0].init?.method).toBe("POST");
 		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
 			age: 6,
+			language: "he",
 			question: "Why do whales sing?",
 		});
+	});
+
+	test("reads ask for the Hebrew version only in Hebrew", async () => {
+		const { client, requests } = engine(
+			json({ id: "a1", nodes: [], pollAfterSec: null }),
+			json({ id: "a1", nodes: [], pollAfterSec: null }),
+			json({ items: [] }),
+			json({ items: [] })
+		);
+		await client.getAdventure("a1", "he");
+		await client.getAdventure("a1", "en");
+		await client.listAdventures("he");
+		await client.listAdventures();
+		expect(requests.map((r) => r.path)).toEqual([
+			"/adventures/a1?language=he",
+			"/adventures/a1",
+			"/adventures?language=he",
+			"/adventures",
+		]);
 	});
 
 	test("getAdventure, listAdventures and visitNode use their routes", async () => {

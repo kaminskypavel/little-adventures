@@ -56,6 +56,17 @@ export function createDraftStore(api: DraftApi) {
 		return (await api.create(question, style)).id;
 	};
 
+	/** Once per child per app session; errors are ignored and a miss lets the next call try again. */
+	const prepareOnce = (childId = "") => {
+		if (prepared === childId) {
+			return;
+		}
+		prepared = childId;
+		api.prepare().catch(() => {
+			prepared = null;
+		});
+	};
+
 	return {
 		/** Fire the draft request now; returns at once. */
 		beginDraft(question: string) {
@@ -68,15 +79,15 @@ export function createDraftStore(api: DraftApi) {
 					.catch(() => null)
 			);
 		},
-		/** Once per child per app session; errors are ignored and a miss lets the next call try again. */
-		prepareOnce(childId = "") {
-			if (prepared === childId) {
-				return;
-			}
-			prepared = childId;
-			api.prepare().catch(() => {
-				prepared = null;
-			});
+		prepareOnce,
+		/**
+		 * The language changed: forget the drafts and the prepared child, then prepare again (the
+		 * engine reads the new language from the call).
+		 */
+		reprepare(childId = "") {
+			drafts.clear();
+			prepared = null;
+			prepareOnce(childId);
 		},
 		startDrafted({ question, style }: { question: string; style: Style }) {
 			const known = starts.get(question);

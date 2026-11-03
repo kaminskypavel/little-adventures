@@ -142,3 +142,19 @@ describe("draft store", () => {
 		expect(calls.prepare).toBe(1);
 	});
 });
+
+describe("reprepare", () => {
+	test("forgets the prepared child and the drafts, then prepares again", async () => {
+		const { calls, store } = setup();
+		store.prepareOnce("child-1");
+		store.prepareOnce("child-1");
+		expect(calls.prepare).toBe(1);
+		store.beginDraft(Q);
+		store.reprepare("child-1");
+		expect(calls.prepare).toBe(2);
+		// The old draft is gone: Start creates in the language now chosen.
+		await store.startDrafted({ question: Q, style: "clay" });
+		expect(calls.start).toEqual([]);
+		expect(calls.create).toEqual([[Q, "clay"]]);
+	});
+});

@@ -4,6 +4,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
+import { type Language, languageNow } from "@/src/i18n";
 import { currentChildReady, getCurrentChildId } from "./current-child";
 import { withDevQuestions } from "./dev-questions";
 import { createDraftStore } from "./draft-store";
@@ -98,8 +99,12 @@ const seedProgress = (id: string, raw: EngineAdventure): Progress => {
 	return known;
 };
 
-async function readEngine(client: Engine, id: string) {
-	const raw = await client.getAdventure(id);
+async function readEngine(
+	client: Engine,
+	id: string,
+	language: Language = languageNow()
+) {
+	const raw = await client.getAdventure(id, language);
 	seedProgress(id, raw);
 	return raw;
 }
@@ -110,8 +115,11 @@ async function progressFor(client: Engine, id: string) {
 	);
 }
 
-async function listEngine(client: Engine): Promise<AdventureSummary[]> {
-	const items = await client.listAdventures();
+async function listEngine(
+	client: Engine,
+	language: Language
+): Promise<AdventureSummary[]> {
+	const items = await client.listAdventures(language);
 	return items
 		.filter((item) => item.status !== "failed")
 		.map((item) => toSummary(item, knownUrls));
@@ -160,7 +168,9 @@ export const castPlace = (id: string, node: NodeId) =>
 export const castMap = (id: string, contentLength?: number) =>
 	engine ? engine.castMap(id, contentLength) : Promise.resolve(null);
 
-export const getHome = async (): Promise<{
+export const getHome = async (
+	language: Language = languageNow()
+): Promise<{
 	keepGoing: AdventureSummary[];
 	finished: AdventureSummary[];
 }> => {
@@ -170,7 +180,7 @@ export const getHome = async (): Promise<{
 	if (!engine) {
 		return wait({ finished, keepGoing });
 	}
-	const list = await listEngine(engine);
+	const list = await listEngine(engine, language);
 	return {
 		finished: list.filter((s) => s.finished),
 		keepGoing: list.filter((s) => !s.finished),
@@ -183,13 +193,13 @@ export const getIdeas = (): Promise<Idea[]> => wait(ideas);
  * Home's stories in the shared cache, so Home paints the last list at once and reads it again
  * behind it. Unfinished first, then finished. A list that cannot be read shows as none.
  */
-export const homeOptions = () =>
+export const homeOptions = (language: Language = languageNow()) =>
 	queryOptions({
 		queryFn: () =>
-			getHome()
+			getHome(language)
 				.then((home) => [...home.keepGoing, ...home.finished])
 				.catch((): AdventureSummary[] => []),
-		queryKey: ["home"],
+		queryKey: ["home", language],
 	});
 
 export const ideasOptions = () =>
@@ -225,7 +235,10 @@ export const shortQuestion = async (
 		return fallback;
 	}
 	try {
-		const { isQuestion, short } = await engine.shortQuestion(question);
+		const { isQuestion, short } = await engine.shortQuestion(
+			question,
+			languageNow()
+		);
 		// An older engine sends no flag: treat that as a question.
 		return {
 			isQuestion: isQuestion !== false,
@@ -248,6 +261,7 @@ export const loaderFacts = async (question: string): Promise<string[]> => {
 		const { profile } = await loadChild();
 		const { facts } = await engine.loaderFacts(
 			question,
+			languageNow(),
 			profile.childAge ?? undefined
 		);
 		return Array.isArray(facts) ? facts : [];
@@ -267,7 +281,12 @@ export const startAdventure = async (
 	if (!childId) {
 		throw new Error("No child is set up yet");
 	}
-	const made = await engine.createAdventure(childId, question, style);
+	const made = await engine.createAdventure(
+		childId,
+		question,
+		style,
+		languageNow()
+	);
 	return { id: made.id };
 };
 
@@ -279,14 +298,14 @@ const drafts = engine
 				if (!childId) {
 					throw new Error("No child is set up yet");
 				}
-				return engine.createDraft(childId, question);
+				return engine.createDraft(childId, question, languageNow());
 			},
 			prepare: async () => {
 				const { id: childId } = await loadChild();
 				if (!childId) {
 					throw new Error("No child is set up yet");
 				}
-				return engine.prepareChild(childId);
+				return engine.prepareChild(childId, languageNow());
 			},
 			sleep,
 			start: (id, style) => engine.startDraft(id, style),
@@ -298,6 +317,12 @@ export const beginDraft = (question: string) => drafts?.beginDraft(question);
 
 /** Gets the child's next adventure ready: once per child per app session, errors ignored. */
 export const prepareChild = (childId?: string) => drafts?.prepareOnce(childId);
+
+/**
+ * The language changed: drops the prepared next adventure and prepares it again in the new
+ * language for this child.
+ */
+export const reprepareChild = (childId?: string) => drafts?.reprepare(childId);
 
 /** Starts the adventure (the prepared one when there is one) and gives its id. */
 export const startDrafted = async (input: {
@@ -335,16 +360,24 @@ export const watchMaking = (
 	return () => clearInterval(timer);
 };
 
-export const getAdventure = async (id: string): Promise<Adventure> => {
+export const getAdventure = async (
+	id: string,
+	language: Language = languageNow()
+): Promise<Adventure> => {
 	if (!engine) {
 		return wait(mockAdventure);
 	}
-	return withDevQuestions(toAdventure(await readEngine(engine, id), knownUrls));
+	return withDevQuestions(
+		toAdventure(await readEngine(engine, id, language), knownUrls)
+	);
 };
 
-export const reloadAdventure = (id: string): Promise<Adventure> => {
+export const reloadAdventure = (
+	id: string,
+	language: Language = languageNow()
+): Promise<Adventure> => {
 	knownUrls.clear();
-	return getAdventure(id);
+	return getAdventure(id, language);
 };
 
 export const getProgress = async (id: string): Promise<Progress> => {
@@ -369,7 +402,7 @@ export const visit = (id: string, node: NodeId): Promise<Progress> => {
 };
 
 export const getAdventures = (): Promise<AdventureSummary[]> =>
-	engine ? listEngine(engine) : wait(grownUpList);
+	engine ? listEngine(engine, languageNow()) : wait(grownUpList);
 
 /** The current child, or the empty profile when there is none yet. */
 async function loadChild(): Promise<{ id?: string; profile: Profile }> {
