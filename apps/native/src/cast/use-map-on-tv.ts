@@ -10,6 +10,16 @@ const JPEG_QUALITY = 0.8;
 const IMAGE_TYPE = "image/jpeg";
 
 /**
+ * The captured picture's bytes, or null when what was read is not an image. iOS gives a bare
+ * path: without the scheme fetch resolves it against the bundle's server and reads a web page.
+ */
+async function readPicture(uri: string): Promise<Blob | null> {
+	const fileUri = uri.startsWith("file://") ? uri : `file://${uri}`;
+	const bytes = await (await fetch(fileUri)).blob();
+	return bytes.type && !bytes.type.startsWith("image/") ? null : bytes;
+}
+
+/**
  * While a TV is connected, photographs the map once it has drawn and shows that picture on the
  * TV. Photographs again when `version` changes (a place was visited or finished drawing). It runs
  * after the map is shown and ignores every error: the TV keeps what it had.
@@ -56,7 +66,10 @@ export function useMapOnTv({
 					quality: JPEG_QUALITY,
 					result: "tmpfile",
 				});
-				const bytes = await (await fetch(uri)).blob();
+				const bytes = await readPicture(uri);
+				if (!bytes) {
+					return;
+				}
 				// The engine signs the upload for exactly this many bytes.
 				const target = await castMap(adventureId, bytes.size);
 				if (!(live && target)) {
