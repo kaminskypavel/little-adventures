@@ -139,7 +139,8 @@ export function ChoiceHalf({
 						<Icon color={colors.inkNavy} name="lock" size={choice.chipFont} />
 					) : null}
 					<ClayText
-						numberOfLines={1}
+						align="center"
+						numberOfLines={2}
 						style={{ flexShrink: 1, fontSize: choice.chipFont }}
 						variant="title"
 					>
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
 		borderRadius: choice.chipRadius,
 		flexDirection: "row",
 		gap: choice.chipGap,
-		maxWidth: "84%",
+		maxWidth: "76%",
 		paddingBottom: choice.chipPadBottom,
 		paddingHorizontal: choice.chipPadX,
 		paddingTop: choice.chipPadTop,

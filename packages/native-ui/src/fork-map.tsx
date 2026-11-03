@@ -25,7 +25,7 @@ import {
 	type MapPlace,
 	type MapPlaceNode,
 } from "./story-map";
-import { colors, flat } from "./tokens";
+import { colors } from "./tokens";
 import { Walker } from "./walker";
 
 // ---------------------------------------------------------------------------------------------
@@ -40,6 +40,8 @@ const GOAL_SIZE = 96;
 const GOAL_FOOT = 245;
 /** The gap between a medallion and its name plate. */
 const PLATE_GAP = 9;
+/** Two lines stand closer, so the top lane's plates clear the title pill. */
+const LESSON_GAP = 4;
 const PLATE_BOX = 220;
 const DIMMED = 0.6;
 const MEADOW = require("../assets/map/meadow.jpg");
@@ -128,26 +130,37 @@ function Roads({
 	);
 }
 
-/** A name plate centred on `x`, its top at `top`. */
+/**
+ * A name plate centred on `x`. It hangs from `top` or stands on `bottom` (a distance from the
+ * stage's bottom edge), so a plate of one line or two keeps its gap to the medallion.
+ */
 function NamePlate({
 	icon,
 	label,
+	lesson = false,
 	tone,
-	top,
 	x,
+	...edge
 }: {
 	icon?: "lock";
 	label: string;
+	/** Two lines of small type: a question or an answer. */
+	lesson?: boolean;
 	tone: "dim" | "sand" | "sun";
-	top: number;
 	x: number;
-}) {
+} & ({ bottom: number; top?: never } | { bottom?: never; top: number })) {
 	return (
 		<View
 			pointerEvents="none"
-			style={[styles.plateBox, { left: x - PLATE_BOX / 2, top }]}
+			style={[styles.plateBox, { left: x - PLATE_BOX / 2, ...edge }]}
 		>
-			<Plate icon={icon} label={label} style={styles.plate} tone={tone} />
+			<Plate
+				icon={icon}
+				label={label}
+				style={styles.plate}
+				tone={tone}
+				variant={lesson ? "lesson" : "place"}
+			/>
 		</View>
 	);
 }
@@ -299,25 +312,28 @@ export function ForkMap({
 					{(Object.keys(places) as MapPlaceNode[]).map((node) => {
 						const place = places[node];
 						const { x, y } = SPOTS[node];
-						const above = y === TOP_LANE;
 						const half =
 							(place.state === "here" ? MEDALLION_HERE : MEDALLION) / 2;
-						const top = above
-							? y - half - PLATE_GAP - flat.plate.place.height
-							: y + half + PLATE_GAP;
 						let tone: "dim" | "sand" | "sun" = "sand";
-						if (place.state === "here") {
+						if (place.lesson?.kind === "answer" || place.state === "here") {
 							tone = "sun";
 						} else if (place.state === "default") {
 							tone = "dim";
 						}
+						// The top lane's plates stand on the medallion, the bottom lane's hang from it.
+						const gap = place.lesson ? LESSON_GAP : PLATE_GAP;
+						const edge =
+							y === TOP_LANE
+								? { bottom: STAGE.height - (y - half - gap) }
+								: { top: y + half + gap };
 						return (
 							<NamePlate
 								key={node}
-								label={place.name}
+								label={place.lesson?.text ?? place.name}
+								lesson={Boolean(place.lesson)}
 								tone={tone}
-								top={top}
 								x={x}
+								{...edge}
 							/>
 						);
 					})}

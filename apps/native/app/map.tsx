@@ -21,6 +21,7 @@ import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
 import { isOutroLocked, neighbours } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
+import { mapLabel } from "@/src/data/question-rules";
 import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
@@ -220,9 +221,15 @@ export default function StoryMapScreen() {
 				node === progress.here
 					? openPlace(node)
 					: router.setParams({ walkTo: node });
+			const said = mapLabel(
+				adventure.places[node],
+				progress.visited.includes(node)
+			);
 			return {
 				// Every place shows its name plate (the user's call, 2026-11-01).
 				label: true,
+				// A place with a question says it before the visit and answers after.
+				lesson: said.kind === "name" ? undefined : { ...said, kind: said.kind },
 				name: adventure.places[node].name,
 				onPress: reachable ? go : undefined,
 				picture: adventure.places[node].picture,

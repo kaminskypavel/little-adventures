@@ -30,6 +30,7 @@ import {
 	missingPlaces,
 } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
+import { choiceLabel } from "@/src/data/question-rules";
 import { mark, markScreen } from "@/src/data/timeline";
 import type { Adventure, NodeId, Picture, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
@@ -61,6 +62,8 @@ const THREE_CARDS_HEIGHT = 168;
 
 interface Card {
 	goal: boolean;
+	/** What the way says: the place's question, else its name. */
+	label: string;
 	name: string;
 	node: NodeId;
 	picture: Picture | null;
@@ -88,7 +91,14 @@ function cardsOf(
 		} else if (node === devDrawing || place.status === "drawing") {
 			state = "drawing";
 		}
-		return { goal, name: place.name, node, picture, state };
+		return {
+			goal,
+			label: choiceLabel(place),
+			name: place.name,
+			node,
+			picture,
+			state,
+		};
 	});
 }
 
@@ -219,7 +229,7 @@ function Halves({
 					<ChoiceHalf
 						key={card.node}
 						kind={card.goal ? "goal" : "place"}
-						name={card.name}
+						name={card.label}
 						note={
 							card.state === "locked"
 								? `${missing} more ${missing > 1 ? "places" : "place"} first`
@@ -386,7 +396,7 @@ export default function Choice() {
 							<ChoiceCard
 								key={card.node}
 								kind={card.goal ? "goal" : "place"}
-								name={card.name}
+								name={card.label}
 								onPress={
 									card.state === "drawing" ? undefined : () => pick(card.node)
 								}

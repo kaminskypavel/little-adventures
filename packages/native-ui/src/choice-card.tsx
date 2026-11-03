@@ -349,7 +349,8 @@ export function ChoiceCard({
 							}}
 						>
 							<ClayText
-								numberOfLines={1}
+								align="center"
+								numberOfLines={2}
 								style={{ flexShrink: 1, fontSize: choice.chipFont }}
 								variant="title"
 							>

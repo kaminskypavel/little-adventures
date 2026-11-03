@@ -23,6 +23,8 @@ export type MapPlaceNode = Exclude<MapNode, "outro">;
 export interface MapPlace {
 	/** The sand plate: only the current place and the next places. */
 	label: boolean;
+	/** What the plate says instead of the name: the place's question, or its answer once visited. */
+	lesson?: { kind: "answer" | "question"; text: string };
 	name: string;
 	/** Absent for places that do nothing but feel pressed (drawing, not reachable). */
 	onPress?: () => void;
@@ -356,6 +358,8 @@ function MapPlate({
 	edge,
 	icon,
 	label,
+	lesson = false,
+	tone,
 	top,
 	x,
 }: {
@@ -364,6 +368,9 @@ function MapPlate({
 	edge: "center" | "left";
 	icon?: "lock";
 	label: string;
+	/** Two lines of small type: a question or an answer. */
+	lesson?: boolean;
+	tone?: "dim" | "sand" | "sun";
 	top: number;
 	x: number;
 }) {
@@ -388,7 +395,12 @@ function MapPlate({
 					opacity: width > 0 ? 1 : 0,
 				}}
 			>
-				<Plate icon={icon} label={label} />
+				<Plate
+					icon={icon}
+					label={label}
+					tone={tone}
+					variant={lesson ? "lesson" : "place"}
+				/>
 			</View>
 		</View>
 	);
@@ -468,7 +480,9 @@ function Plates({
 	width: number;
 }) {
 	const gap = spacing.xs;
-	const { height } = flat.plate.place;
+	const { lesson, place: single } = flat.plate;
+	// Two lines of small type, with their padding.
+	const lessonHeight = 2 * lesson.size * lesson.lineHeight + 2 * lesson.padY;
 	return (
 		<>
 			{PLACE_NODES.filter((node) => places[node].label).map((node) => {
@@ -478,6 +492,7 @@ function Plates({
 				const cx = frame.x(NODES[node].x);
 				const cy = frame.y(NODES[node].y);
 				const side = PLATE_SIDE[node];
+				const height = place.lesson ? lessonHeight : single.height;
 				let top = cy + size / 2 + gap;
 				if (side === "above") {
 					top = cy - size / 2 - gap - height;
@@ -489,7 +504,9 @@ function Plates({
 						boxWidth={width}
 						edge={side === "right" ? "left" : "center"}
 						key={node}
-						label={place.name}
+						label={place.lesson?.text ?? place.name}
+						lesson={Boolean(place.lesson)}
+						tone={place.lesson?.kind === "answer" ? "sun" : undefined}
 						top={top}
 						x={side === "right" ? cx + size / 2 + gap : cx}
 					/>

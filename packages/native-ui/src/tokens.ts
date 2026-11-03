@@ -310,6 +310,15 @@ export const flat = {
 		big: { height: 44, padX: 25, radius: 22, size: 25 },
 		icon: 17,
 		iconGap: 6,
+		/** A place's question or answer on the map: two lines of small type. */
+		lesson: {
+			lineHeight: 1.12,
+			maxWidth: 176,
+			padX: 12,
+			padY: 6,
+			radius: 17,
+			size: 14,
+		},
 		place: { height: 33, padX: 15, radius: 17, size: 18 },
 		question: {
 			lineHeight: 1.15,
