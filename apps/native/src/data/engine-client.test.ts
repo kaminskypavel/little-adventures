@@ -42,8 +42,9 @@ describe("engine client", () => {
 			json({ error: "not-ready" }, 409),
 			json({ code: "NOT_FOUND", message: "no" }, 404)
 		);
-		expect(await client.cast("a1", "p1")).toBeNull();
-		await expect(client.cast("a1", "zz")).rejects.toBeInstanceOf(EngineError);
+		expect(await client.cast("a1", "p1")).toBe(null);
+		const failure = await client.cast("a1", "zz").catch((error) => error);
+		expect(failure instanceof EngineError).toBe(true);
 	});
 
 	test("createAdventure posts the child and the question", async () => {
