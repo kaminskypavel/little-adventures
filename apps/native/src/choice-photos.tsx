@@ -97,7 +97,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way.mp3"),
-			he: require("../assets/voice/which-way.mp3"),
+			he: require("../assets/voice/which-way-he.mp3"),
 		},
 		long: "ask1Long",
 		short: "ask1Short",
@@ -105,7 +105,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way-2.mp3"),
-			he: require("../assets/voice/which-way-2.mp3"),
+			he: require("../assets/voice/which-way-he-2.mp3"),
 		},
 		long: "ask2Long",
 		short: "ask2Short",
@@ -113,7 +113,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way-3.mp3"),
-			he: require("../assets/voice/which-way-3.mp3"),
+			he: require("../assets/voice/which-way-he-3.mp3"),
 		},
 		long: "ask3Long",
 		short: "ask3Short",
@@ -121,7 +121,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way-4.mp3"),
-			he: require("../assets/voice/which-way-4.mp3"),
+			he: require("../assets/voice/which-way-he-4.mp3"),
 		},
 		long: "ask4Long",
 		short: "ask4Short",
@@ -129,7 +129,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way-5.mp3"),
-			he: require("../assets/voice/which-way-5.mp3"),
+			he: require("../assets/voice/which-way-he-5.mp3"),
 		},
 		long: "ask5Long",
 		short: "ask5Short",
@@ -137,7 +137,7 @@ const ASKS = [
 	{
 		audio: {
 			en: require("../assets/voice/which-way-6.mp3"),
-			he: require("../assets/voice/which-way-6.mp3"),
+			he: require("../assets/voice/which-way-he-6.mp3"),
 		},
 		long: "ask6Long",
 		short: "ask6Short",

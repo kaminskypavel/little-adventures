@@ -1,0 +1,24 @@
+{
+  "words": [
+    {
+      "endSec": 0.18,
+      "startSec": 0,
+      "word": "מה"
+    },
+    {
+      "endSec": 0.48,
+      "startSec": 0.24,
+      "word": "נגלה"
+    },
+    {
+      "endSec": 0.88,
+      "startSec": 0.56,
+      "word": "אחר"
+    },
+    {
+      "endSec": 1.6,
+      "startSec": 0.96,
+      "word": "כך?"
+    }
+  ]
+}
