@@ -1,0 +1,33 @@
+{
+  "note": "Wall time in milliseconds of one full 7-question check of a story plan, warm (GPU already awake, 2 warm-up checks discarded), measured once for each system on the same 20 story-plan states, one after another. Tuned Glimmer: 7 parallel answer-token requests. Muse Spark and Base Glimmer: one request for all questions. Hybrid: the tuned model's 5 requests plus one Muse Spark Open request for the two fact checks, in parallel. The headline speed is the median of the 20. Per-row timings were not recorded, so this file is the only timing data. GPU wake-up and the idle tail are not included.",
+  "ms": {
+    "hybridV1": [
+      3287, 6376, 2137, 2434, 2044, 2787, 1792, 1754, 2095, 2127, 1858, 2170,
+      1955, 1936, 1697, 2200, 1912, 1496, 1895, 3093
+    ],
+    "hybridV2": [
+      2582, 2116, 1838, 1867, 1788, 2312, 2202, 2630, 1706, 2485, 1704, 1647,
+      2821, 1594, 1834, 1824, 2003, 1695, 2602, 1668
+    ],
+    "tunedV2": [
+      721, 792, 1009, 1001, 1053, 1053, 780, 1258, 1331, 1195, 812, 911, 1273,
+      1155, 1046, 1059, 1040, 1193, 1090, 917
+    ],
+    "tunedV1": [
+      741, 731, 782, 910, 1114, 1040, 791, 792, 726, 1042, 731, 936, 785, 1150,
+      1106, 1072, 727, 1197, 779, 978
+    ],
+    "spark13": [
+      5640, 5174, 4114, 4286, 4068, 5725, 6093, 4621, 4599, 6107, 4517, 4534,
+      3919, 3492, 4680, 3768, 3698, 3846, 4466, 4266
+    ],
+    "sparkOpen": [
+      2646, 3220, 2758, 3865, 3041, 4200, 4871, 3040, 3135, 2884, 3446, 3111,
+      3047, 2650, 2771, 2714, 2752, 2404, 2514, 3350
+    ],
+    "glimmer": [
+      10011, 8834, 5993, 7626, 8308, 9923, 8713, 9636, 8028, 8897, 8474, 15409,
+      8581, 9519, 8310, 9025, 8948, 9382, 9432, 17322
+    ]
+  }
+}
