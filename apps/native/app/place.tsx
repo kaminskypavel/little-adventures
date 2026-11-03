@@ -2,6 +2,7 @@ import { ClayPressable } from "@little-adventures/native-ui/clay-pressable";
 import { FallbackImage } from "@little-adventures/native-ui/fallback-image";
 import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { Icon } from "@little-adventures/native-ui/icons";
+import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { NarrationBar } from "@little-adventures/native-ui/narration-bar";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
@@ -93,7 +94,7 @@ import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
-import { useLeaveVoices, useScreenFade } from "@/src/screen-fade";
+import { rampVoiceIn, useLeaveVoices, useScreenFade } from "@/src/screen-fade";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
 const PLACE_MS = 8000;
@@ -687,6 +688,20 @@ function MediaPlayer({
 	);
 	// The machine says the narration speaks or pauses: it plays from the start of the half, or stops.
 	// (Own audio plays from an effect, once the player for the part's audio exists.)
+	// The place's first words come up from silence (not with reduced motion), later ones do not.
+	const calm = useCalm();
+	const firstWords = useRef<boolean>(true);
+	const softStart = useCallback(
+		(player: { volume: number }) => {
+			if (firstWords.current) {
+				firstWords.current = false;
+				if (!calm) {
+					rampVoiceIn(player);
+				}
+			}
+		},
+		[calm]
+	);
 	const voice = useCallback(
 		(now: PlayState) => {
 			if (now.own) {
@@ -698,6 +713,7 @@ function MediaPlayer({
 			}
 			const play = () => {
 				if (playingRef.current) {
+					softStart(audioPlayer);
 					audioPlayer.play();
 				}
 			};
@@ -708,7 +724,7 @@ function MediaPlayer({
 				play();
 			}
 		},
-		[audioPlayer]
+		[audioPlayer, softStart]
 	);
 	const send = useCallback(
 		(event: PlayEvent) => {
@@ -748,9 +764,11 @@ function MediaPlayer({
 	const voiceUrl = own ? voiceUrls(view)[voiceSlot(view.half)] : null;
 	useEffect(() => {
 		if (voiceUrl && speaking && playingRef.current) {
-			voiceOf(machine.current).play();
+			const player = voiceOf(machine.current);
+			softStart(player);
+			player.play();
 		}
-	}, [speaking, voiceOf, voiceUrl]);
+	}, [softStart, speaking, voiceOf, voiceUrl]);
 	// The picture goes when a part shows its first frame; each part's mark is the first time only.
 	const showFrame = useCallback(
 		(index: number) => {

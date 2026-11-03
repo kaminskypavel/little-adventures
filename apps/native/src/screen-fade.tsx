@@ -35,6 +35,14 @@ export const PAGE_HOLD_MS = 450;
 export const PAGE_IN_MS = 1000;
 const PAGE_IN_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
+/**
+ * The place plays only once the sky is clear again: this long after the sky starts to open (the
+ * whole fade-in), the picture stands still on the cover until then. One line to tune.
+ */
+export const PLAY_AFTER_OPEN_MS = PAGE_IN_MS;
+/** The narration comes up from silence over this long when it first speaks (ease-out). */
+export const NARRATION_RAMP_MS = 500;
+
 /** How long after a screen began to leave a new one still counts as its neighbour. */
 const HANDOVER_MS = 3000;
 // Until when the screen that comes next opens from the sky: set when a screen begins to leave
@@ -71,6 +79,23 @@ export function useLeaveVoices(players: Volume[]) {
 	});
 }
 
+/** Starts a narration player from silence and brings it up to full over `NARRATION_RAMP_MS`. */
+export function rampVoiceIn(voice: Volume) {
+	const began = Date.now();
+	voice.volume = 0;
+	const timer = setInterval(() => {
+		const t = Math.min(1, (Date.now() - began) / NARRATION_RAMP_MS);
+		try {
+			voice.volume = 1 - (1 - t) ** 2;
+		} catch {
+			clearInterval(timer);
+		}
+		if (t >= 1) {
+			clearInterval(timer);
+		}
+	}, 50);
+}
+
 function fadeVoices(ms: number) {
 	for (const voice of voices) {
 		const from = voice.volume;
@@ -99,8 +124,8 @@ export const leaveActive: LeaveFn = (go) => (active ? active(go) : go());
 /**
  * The sky of a screen. `veil` goes last in the screen (it covers everything); `leave(go)` closes
  * the screen, then calls `go` (the navigation). The screen opens from the sky when the screen
- * before it left through `leave`, and `held` is true until the sky starts to open: the place waits
- * on it, so its narration never starts under a closed sky. With reduced motion there is no sky:
+ * before it left through `leave`, and `held` is true until the sky is clear again: the place waits
+ * on it, so nothing plays (and no narration speaks) under a closing or opening sky. With reduced motion there is no sky:
  * `leave` goes at once.
  */
 export function useScreenFade(): {
@@ -116,6 +141,7 @@ export function useScreenFade(): {
 	const leaving = useRef<boolean>(false);
 	const goTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const holdTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const playTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	const leave = useCallback<LeaveFn>(
 		(go) => {
@@ -163,8 +189,12 @@ export function useScreenFade(): {
 						withTiming(0, { duration: STAR_STEP_MS })
 					)
 				);
+				// The place is let go (held false) when the sky is clear, not when it begins to open.
+				playTimer.current = setTimeout(
+					() => setHeld(false),
+					PAGE_HOLD_MS + PLAY_AFTER_OPEN_MS
+				);
 				holdTimer.current = setTimeout(() => {
-					setHeld(false);
 					music.setFaded(false, PAGE_IN_MS);
 					opacity.set(
 						withTiming(0, { duration: PAGE_IN_MS, easing: PAGE_IN_EASING })
@@ -173,6 +203,7 @@ export function useScreenFade(): {
 			}
 			return () => {
 				clearTimeout(holdTimer.current);
+				clearTimeout(playTimer.current);
 				clearTimeout(goTimer.current);
 				cancelAnimation(stars);
 				if (active === leave) {
