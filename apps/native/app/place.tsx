@@ -1028,18 +1028,22 @@ function MediaPlayer({
 		view.slot,
 	]);
 	// A part whose video landed late was given its file after play() was called: play again once
-	// the file is loaded (a part already playing is not touched).
+	// the file is loaded (a part already playing is not touched). Only a part that has been
+	// started: before that (the sky still opening, a question card up) the picture stands still,
+	// or the video runs ahead of its words and they spill past its end.
 	const slotPlayer = view.slot === 0 ? player0 : player1;
 	useEffect(() => {
 		if (
 			playing &&
 			view.phase === "playing" &&
 			slotStatus === "readyToPlay" &&
+			started.current &&
+			begun.current === view.at &&
 			!inPart.current
 		) {
 			slotPlayer.play();
 		}
-	}, [playing, slotPlayer, slotStatus, view.phase]);
+	}, [playing, slotPlayer, slotStatus, view.at, view.phase]);
 
 	const toggle = () => {
 		playingRef.current = !playing;
