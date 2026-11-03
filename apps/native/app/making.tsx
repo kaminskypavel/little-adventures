@@ -54,6 +54,7 @@ import { toStyle } from "@/src/data/styles";
 import { mark } from "@/src/data/timeline";
 import type { Adventure } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
+import { useScreenFade } from "@/src/screen-fade";
 
 const LOADER = require("../assets/story/loader.mp4");
 
@@ -282,6 +283,7 @@ function useRidgePeople(): {
 /** 10a Making your adventure, then 10b Ready in place. */
 export default function Making() {
 	const router = useRouter();
+	const { leave, veil } = useScreenFade();
 	const calm = useCalm();
 	const narrow = useWindowDimensions().width < NARROW_WIDTH;
 	const headline = {
@@ -448,10 +450,12 @@ export default function Making() {
 							icon="play"
 							label="Start"
 							onPress={() =>
-								router.replace({
-									params: { id: adventureId },
-									pathname: "/map",
-								})
+								leave(() =>
+									router.replace({
+										params: { id: adventureId },
+										pathname: "/map",
+									})
+								)
 							}
 							testID="ready-start"
 						/>
@@ -524,6 +528,7 @@ export default function Making() {
 					) : null}
 				</View>
 			</Screen>
+			{veil}
 		</View>
 	);
 }

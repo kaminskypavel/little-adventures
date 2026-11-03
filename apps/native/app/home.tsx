@@ -39,6 +39,7 @@ import { IdeasShelf, YoursShelf } from "@/src/home/shelves";
 import { useGreeting } from "@/src/home/use-greeting";
 import { useFocusRun, useHomeData, useMicOff } from "@/src/home/use-home";
 import { useMorph } from "@/src/home/use-morph";
+import { useScreenFade } from "@/src/screen-fade";
 import { lineFor, takeFor, titleFor } from "@/src/voice/ask-copy";
 import { useAsk } from "@/src/voice/use-ask";
 import { useMissedTilt } from "@/src/voice/use-tilt";
@@ -388,6 +389,7 @@ function ListenIdeas({
 export default function Home() {
 	useScreenAdminTools("Home", PRESET_TOOLS);
 	const router = useRouter();
+	const { leave, veil } = useScreenFade();
 	const insets = useSafeAreaInsets();
 	// The screen the app is drawn in: the window on a phone, the preview phone on web.
 	const { height, width } = useSafeAreaFrame();
@@ -442,59 +444,69 @@ export default function Home() {
 	const ready = data.name !== null;
 
 	return (
-		<Screen>
-			<View style={styles.root}>
-				<RestLayer
-					data={data}
-					listening={listening}
-					micOff={mic.off}
-					onGate={() => router.push("/gate")}
-					onOpen={(adventure) =>
-						router.push(
-							adventure.finished
-								? `/end?id=${adventure.id}`
-								: `/map?id=${adventure.id}`
-						)
-					}
-					onWho={data.childCount > 1 ? () => router.push("/who") : undefined}
-					rest={rest}
-					run={run}
-					stage={stage}
-				/>
-				<HomeStar ask={ask} listening={listening} run={run} stage={stage} />
-				<MorphPill
-					icon="plus"
-					label="New adventure"
-					listening={listening}
-					mic={{ cx: width / 2, cy: stage.listen.micCy }}
-					off={mic.off || !ready}
-					onPress={open}
-					progress={progress}
-					rest={{ cx: width / 2, cy: stage.rest.buttonCy }}
-					restWidth={Math.min(PILL_WIDTH, width - 2 * layout.sideMargin)}
-					size={MIC}
-				/>
-				<HaloSpot ask={ask} landed={landed} progress={progress} stage={stage} />
-				<ListenWords
-					ask={ask}
-					listening={listening}
-					progress={progress}
-					stage={stage}
-				/>
-				<ListenIdeas
-					ask={ask}
-					ideas={data.ideas}
-					listening={listening}
-					onAsk={(question) => {
-						beginDraft(question);
-						router.push({ params: { question }, pathname: "/style" });
-					}}
-					progress={progress}
-					stage={stage}
-				/>
-				<BackSpot listening={listening} onBack={close} rest={rest} />
-			</View>
-		</Screen>
+		<>
+			<Screen>
+				<View style={styles.root}>
+					<RestLayer
+						data={data}
+						listening={listening}
+						micOff={mic.off}
+						onGate={() => router.push("/gate")}
+						onOpen={(adventure) =>
+							leave(() =>
+								router.push(
+									adventure.finished
+										? `/end?id=${adventure.id}`
+										: `/map?id=${adventure.id}`
+								)
+							)
+						}
+						onWho={data.childCount > 1 ? () => router.push("/who") : undefined}
+						rest={rest}
+						run={run}
+						stage={stage}
+					/>
+					<HomeStar ask={ask} listening={listening} run={run} stage={stage} />
+					<MorphPill
+						icon="plus"
+						label="New adventure"
+						listening={listening}
+						mic={{ cx: width / 2, cy: stage.listen.micCy }}
+						off={mic.off || !ready}
+						onPress={open}
+						progress={progress}
+						rest={{ cx: width / 2, cy: stage.rest.buttonCy }}
+						restWidth={Math.min(PILL_WIDTH, width - 2 * layout.sideMargin)}
+						size={MIC}
+					/>
+					<HaloSpot
+						ask={ask}
+						landed={landed}
+						progress={progress}
+						stage={stage}
+					/>
+					<ListenWords
+						ask={ask}
+						listening={listening}
+						progress={progress}
+						stage={stage}
+					/>
+					<ListenIdeas
+						ask={ask}
+						ideas={data.ideas}
+						listening={listening}
+						onAsk={(question) => {
+							beginDraft(question);
+							router.push({ params: { question }, pathname: "/style" });
+						}}
+						progress={progress}
+						stage={stage}
+					/>
+					<BackSpot listening={listening} onBack={close} rest={rest} />
+				</View>
+			</Screen>
+			{veil}
+		</>
 	);
 }
 

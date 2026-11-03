@@ -22,6 +22,7 @@ import { useFadeMusicOutAfter } from "@/src/data/music-store";
 import { useChildName } from "@/src/data/profile-queries";
 import { useAdventure } from "@/src/data/use-adventure";
 import { useLandscape } from "@/src/orientation";
+import { useScreenFade } from "@/src/screen-fade";
 
 // Round 7 (px / 0.72): the map is 12 px above the panel, which reads 17 pt.
 const PANEL_GAP = 17;
@@ -34,17 +35,19 @@ const LIT_ROADS = litRoads(WALKED_ALL);
 /** 16 The end: the whole map walked, the moon open, and what we found out. */
 export default function End() {
 	const router = useRouter();
+	const { leave, veil } = useScreenFade();
 	const calm = useCalm();
 	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const { adventure } = useAdventure(id);
 	const childName = useChildName() ?? "";
 	const sideways = useLandscape();
 	useFadeMusicOutAfter(END_FADE_AFTER_MS);
+	const goHome = () => leave(() => router.replace("/home"));
 
 	// Sideways, the whole road is walked: every place done, the star at the open goodnight.
 	if (sideways) {
 		if (!(adventure && childName)) {
-			return null;
+			return <>{veil}</>;
 		}
 		const places = Object.fromEntries(
 			["intro", ...PLACES].map((node) => [
@@ -58,67 +61,71 @@ export default function End() {
 			])
 		) as Record<MapPlaceNode, MapPlace>;
 		return (
-			<ForkMap
-				button={
-					<PrimaryButton
-						label="Home"
-						labelSize={21}
-						onPress={() => router.replace("/home")}
-						size="md"
-						style={styles.sidewaysButton}
-					/>
-				}
-				dots={NO_ROADS}
-				goodnight={{
-					image: adventure.endGoal.open,
-					locked: false,
-					name: adventure.places.outro.name,
-				}}
-				here="outro"
-				lit={LIT_ROADS}
-				places={places}
-				route={["outro"]}
-				title="Goodnight!"
-			/>
+			<>
+				<ForkMap
+					button={
+						<PrimaryButton
+							label="Home"
+							labelSize={21}
+							onPress={goHome}
+							size="md"
+							style={styles.sidewaysButton}
+						/>
+					}
+					dots={NO_ROADS}
+					goodnight={{
+						image: adventure.endGoal.open,
+						locked: false,
+						name: adventure.places.outro.name,
+					}}
+					here="outro"
+					lit={LIT_ROADS}
+					places={places}
+					route={["outro"]}
+					title="Goodnight!"
+				/>
+				{veil}
+			</>
 		);
 	}
 
 	return (
-		<Screen
-			compactTitle
-			dock={
-				<PrimaryButton label="Home" onPress={() => router.replace("/home")} />
-			}
-			scrolls
-			// A blank line keeps the headline's room while the name loads.
-			title="Goodnight!"
-		>
-			{adventure && childName ? (
-				<Animated.View
-					entering={FadeIn.duration(
-						calm ? motion.reducedReveal : motion.enter
-					).reduceMotion(ReduceMotion.Never)}
-					style={{ flex: 1, marginTop: spacing.sm }}
-				>
-					{/* Bounded by the body, so the panel never runs under the Home button: it scrolls instead. */}
-					<ScrollView
-						contentContainerStyle={{
-							paddingBottom: BODY_SCROLL_END,
-							paddingTop: BODY_SCROLL_START,
-						}}
-						showsVerticalScrollIndicator={false}
+		<>
+			<Screen
+				compactTitle
+				dock={<PrimaryButton label="Home" onPress={goHome} />}
+				scrolls
+				// A blank line keeps the headline's room while the name loads.
+				title="Goodnight!"
+			>
+				{adventure && childName ? (
+					<Animated.View
+						entering={FadeIn.duration(
+							calm ? motion.reducedReveal : motion.enter
+						).reduceMotion(ReduceMotion.Never)}
+						style={{ flex: 1, marginTop: spacing.sm }}
 					>
-						<EndMap goal={adventure.endGoal.open} places={adventure.places} />
-						<FoundPanel
-							items={PLACES.map((node) => adventure.places[node].fact).filter(
-								Boolean
-							)}
-							style={{ marginTop: PANEL_GAP }}
-						/>
-					</ScrollView>
-				</Animated.View>
-			) : null}
-		</Screen>
+						{/* Bounded by the body, so the panel never runs under the Home button: it scrolls instead. */}
+						<ScrollView
+							contentContainerStyle={{
+								paddingBottom: BODY_SCROLL_END,
+								paddingTop: BODY_SCROLL_START,
+							}}
+							showsVerticalScrollIndicator={false}
+						>
+							<EndMap goal={adventure.endGoal.open} places={adventure.places} />
+							<FoundPanel
+								items={PLACES.map((node) => adventure.places[node].fact).filter(
+									Boolean
+								)}
+								style={{ marginTop: PANEL_GAP }}
+							/>
+						</ScrollView>
+					</Animated.View>
+				) : null}
+			</Screen>
+			{veil}
+		</>
 	);
 }
 

@@ -13,6 +13,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getHome } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
+import { useScreenFade } from "@/src/screen-fade";
 
 const COLUMNS = 2;
 const SKELETON_FADE = 0.15;
@@ -28,6 +29,7 @@ const chunk = <T,>(list: T[], size: number): T[][] => {
 
 export default function Library() {
 	const router = useRouter();
+	const { leave, veil } = useScreenFade();
 	const insets = useSafeAreaInsets();
 	const [stories, setStories] = useState<AdventureSummary[] | null>(null);
 
@@ -49,65 +51,72 @@ export default function Library() {
 	);
 
 	const open = (story: AdventureSummary) =>
-		router.push(story.finished ? `/end?id=${story.id}` : `/map?id=${story.id}`);
+		leave(() =>
+			router.push(
+				story.finished ? `/end?id=${story.id}` : `/map?id=${story.id}`
+			)
+		);
 
 	return (
-		<Screen
-			scrolls
-			topBar={
-				<ClayText
-					accessibilityRole="header"
-					color={colors.cream}
-					numberOfLines={1}
-					style={styles.title}
-					variant="title"
-				>
-					Your stories
-				</ClayText>
-			}
-		>
-			<ScrollView
-				contentContainerStyle={{
-					gap: layout.gap,
-					paddingBottom: insets.bottom + layout.dockBottom,
-					paddingTop: BODY_SCROLL_START,
-				}}
-				showsVerticalScrollIndicator={false}
+		<>
+			<Screen
+				scrolls
+				topBar={
+					<ClayText
+						accessibilityRole="header"
+						color={colors.cream}
+						numberOfLines={1}
+						style={styles.title}
+						variant="title"
+					>
+						Your stories
+					</ClayText>
+				}
 			>
-				{stories === null
-					? chunk(
-							Array.from({ length: SKELETON_COUNT }, (_, n) => n),
-							COLUMNS
-						).map((row) => (
-							<View key={row.join("-")} style={styles.row}>
-								{row.map((n) => (
-									<View key={n} style={styles.skeleton} />
-								))}
-							</View>
-						))
-					: chunk(stories, COLUMNS).map((row) => (
-							<View key={row.map((s) => s.id).join("-")} style={styles.row}>
-								{row.map((story) => (
-									<StoryCover
-										caption={
-											story.finished
-												? "Finished"
-												: `${story.partsDone} of ${story.partsTotal} places`
-										}
-										done={story.finished}
-										key={story.id}
-										onPress={() => open(story)}
-										picture={story.picture}
-										size="grid"
-										style={styles.cell}
-										title={story.title}
-									/>
-								))}
-								{row.length < COLUMNS ? <View style={styles.cell} /> : null}
-							</View>
-						))}
-			</ScrollView>
-		</Screen>
+				<ScrollView
+					contentContainerStyle={{
+						gap: layout.gap,
+						paddingBottom: insets.bottom + layout.dockBottom,
+						paddingTop: BODY_SCROLL_START,
+					}}
+					showsVerticalScrollIndicator={false}
+				>
+					{stories === null
+						? chunk(
+								Array.from({ length: SKELETON_COUNT }, (_, n) => n),
+								COLUMNS
+							).map((row) => (
+								<View key={row.join("-")} style={styles.row}>
+									{row.map((n) => (
+										<View key={n} style={styles.skeleton} />
+									))}
+								</View>
+							))
+						: chunk(stories, COLUMNS).map((row) => (
+								<View key={row.map((s) => s.id).join("-")} style={styles.row}>
+									{row.map((story) => (
+										<StoryCover
+											caption={
+												story.finished
+													? "Finished"
+													: `${story.partsDone} of ${story.partsTotal} places`
+											}
+											done={story.finished}
+											key={story.id}
+											onPress={() => open(story)}
+											picture={story.picture}
+											size="grid"
+											style={styles.cell}
+											title={story.title}
+										/>
+									))}
+									{row.length < COLUMNS ? <View style={styles.cell} /> : null}
+								</View>
+							))}
+				</ScrollView>
+			</Screen>
+			{veil}
+		</>
 	);
 }
 

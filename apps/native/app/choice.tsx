@@ -300,7 +300,7 @@ export default function Choice() {
 	});
 
 	if (!(adventure && visited) || childName === undefined) {
-		return null;
+		return <>{veil}</>;
 	}
 
 	const walkTo = (node: NodeId) =>
