@@ -27,6 +27,25 @@ function engine(...replies: Response[]) {
 }
 
 describe("engine client", () => {
+	test("cast posts to the node and answers the video url", async () => {
+		const { client, requests } = engine(json({ durationSec: 42, url: "u" }));
+		expect(await client.cast("a 1", "p1")).toEqual({
+			durationSec: 42,
+			url: "u",
+		});
+		expect(requests[0].path).toBe("/adventures/a%201/nodes/p1/cast");
+		expect(requests[0].init?.method).toBe("POST");
+	});
+
+	test("cast answers null on 409 and throws on other errors", async () => {
+		const { client } = engine(
+			json({ error: "not-ready" }, 409),
+			json({ code: "NOT_FOUND", message: "no" }, 404)
+		);
+		expect(await client.cast("a1", "p1")).toBeNull();
+		await expect(client.cast("a1", "zz")).rejects.toBeInstanceOf(EngineError);
+	});
+
 	test("createAdventure posts the child and the question", async () => {
 		const { client, requests } = engine(
 			json({ id: "a1", source: "recorded", status: "ready" })

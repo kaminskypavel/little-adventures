@@ -78,6 +78,11 @@ export interface EngineMe {
 	name?: string;
 	steps: EngineSteps;
 }
+/** The place as one video for the TV: a presigned read url and how long it plays. */
+export interface CastMedia {
+	durationSec: number;
+	url: string;
+}
 export interface VisitResult {
 	outroLocked: boolean;
 	placesDone: number;
@@ -120,6 +125,23 @@ export function createEngineClient(engineFetch: EngineFetch) {
 	}
 
 	return {
+		/**
+		 * The place as one video for the TV. May take up to 30 s the first time. Null on 409: the
+		 * place has no video or narration yet (or a part is still being made), so play it here.
+		 */
+		cast: async (id: string, node: string): Promise<CastMedia | null> => {
+			try {
+				return await call<CastMedia>(
+					`/adventures/${encodeURIComponent(id)}/nodes/${encodeURIComponent(node)}/cast`,
+					{ method: "POST" }
+				);
+			} catch (error) {
+				if (error instanceof EngineError && error.status === 409) {
+					return null;
+				}
+				throw error;
+			}
+		},
 		createAdventure: (childId: string, question: string, style: Style) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
 				body: JSON.stringify({ childId, question, style }),

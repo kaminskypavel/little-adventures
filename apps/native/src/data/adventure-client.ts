@@ -148,6 +148,13 @@ async function visitEngine(client: Engine, id: string, node: NodeId) {
 	return { ...p, visited: [...p.visited] };
 }
 
+/**
+ * The place as one video for the TV. Null when there is none to send: the bundled adventure, or
+ * a place that is not ready yet.
+ */
+export const castPlace = (id: string, node: NodeId) =>
+	engine ? engine.cast(id, node) : Promise.resolve(null);
+
 export const getHome = async (): Promise<{
 	keepGoing: AdventureSummary[];
 	finished: AdventureSummary[];
