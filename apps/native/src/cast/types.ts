@@ -1,3 +1,5 @@
+import { LANGUAGES, type Language, languageNow } from "@/src/i18n";
+
 /** The place as one video for the TV, with what the TV screen shows while it plays. */
 export interface TvMedia {
 	durationSec: number;
@@ -32,13 +34,20 @@ export interface TvRemote {
 	toggle: () => void;
 }
 
-/** The one subtitle track on the TV (id 1, English WebVTT). */
+/**
+ * The one subtitle track on the TV (id 1, WebVTT). Its language is the app's: the adventure is read
+ * in it, so the words on the TV are too. The getters read it each time a video is loaded.
+ */
 export const SUBTITLE_TRACK = {
 	contentType: "text/vtt",
 	id: 1,
-	language: "en",
-	name: "English",
-} as const;
+	get language(): Language {
+		return languageNow();
+	},
+	get name() {
+		return LANGUAGES.find((l) => l.code === languageNow())?.name ?? "English";
+	},
+};
 
 /** Words a child can read from the sofa: white on a dark translucent box, big. Colors are #RRGGBBAA. */
 export const SUBTITLE_STYLE = {

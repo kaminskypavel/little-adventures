@@ -14,6 +14,7 @@ const bar = flat.narration;
 export function NarrationBar({
 	current,
 	progress,
+	rtl = false,
 	style,
 	words,
 }: {
@@ -21,6 +22,8 @@ export function NarrationBar({
 	current: number;
 	/** 0 to 1. A shared value is read on the UI thread. */
 	progress: number | SharedValue<number>;
+	/** Hebrew: the first word sits at the right and the line wraps from there. The layout stays as is. */
+	rtl?: boolean;
 	style?: StyleProp<ViewStyle>;
 	words: string[];
 }) {
@@ -48,7 +51,7 @@ export function NarrationBar({
 				accessible
 				style={{
 					columnGap: bar.wordGap,
-					flexDirection: "row",
+					flexDirection: rtl ? "row-reverse" : "row",
 					flexWrap: "wrap",
 				}}
 			>
