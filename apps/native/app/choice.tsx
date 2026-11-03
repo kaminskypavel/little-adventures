@@ -22,6 +22,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import {
 	choicesFrom,
 	isOutroLocked,
@@ -230,6 +231,10 @@ function Halves({
 }
 
 /** 13 Choice, 13b goodnight locked, 14 goodnight open, E2 place still drawing. */
+/** The screen has what it draws: the adventure, the walked places and the child's name. */
+const hasEverything = (...parts: unknown[]) =>
+	parts.every((part) => part !== null && part !== undefined);
+
 export default function Choice() {
 	const router = useRouter();
 	const params = useLocalSearchParams<{
@@ -278,6 +283,14 @@ export default function Choice() {
 		}
 	}, [goodnightOpen]);
 
+	// A connected TV shows a picture of the ways to pick, taken again when a card changes.
+	const choiceOnTv = useMapOnTv({
+		adventureId: id,
+		ready: hasEverything(adventure, visited, childName),
+		title: "Pick a way",
+		version: cards.map((c) => `${c.node}:${c.state}`).join(","),
+	});
+
 	if (!(adventure && visited) || childName === undefined) {
 		return null;
 	}
@@ -292,99 +305,106 @@ export default function Choice() {
 
 	if (sideways) {
 		return (
-			<Halves
-				cards={cards}
-				missing={missing}
-				onPick={pick}
-				picked={picked}
-				starTake={starTake}
-				title={sidewaysTitle({ goodnightOpen, peek, waiting })}
-			/>
+			<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
+				<Halves
+					cards={cards}
+					missing={missing}
+					onPick={pick}
+					picked={picked}
+					starTake={starTake}
+					title={sidewaysTitle({ goodnightOpen, peek, waiting })}
+				/>
+			</View>
 		);
 	}
 
 	return (
-		<Screen
-			bodyStyle={{ paddingTop: goodnightOpen ? spacing.sm : CARDS_BELOW_TITLE }}
-			dock={
-				peek ? (
-					<PrimaryButton
-						label={`Peek at ${peek.name}`}
-						onPress={() => walkTo(peek.node)}
+		<View collapsable={false} ref={choiceOnTv} style={styles.capture}>
+			<Screen
+				bodyStyle={{
+					paddingTop: goodnightOpen ? spacing.sm : CARDS_BELOW_TITLE,
+				}}
+				dock={
+					peek ? (
+						<PrimaryButton
+							label={`Peek at ${peek.name}`}
+							onPress={() => walkTo(peek.node)}
+						/>
+					) : undefined
+				}
+				title="Pick a way"
+			>
+				{goodnightOpen ? (
+					<ClayText
+						align="center"
+						color={colors.cream}
+						style={[LINE, styles.done]}
+						variant="label"
+					>
+						All 4 places done!
+					</ClayText>
+				) : null}
+				<View style={styles.cards}>
+					{cards.map((card, index) => (
+						<ChoiceCard
+							key={card.node}
+							kind={card.goal ? "goal" : "place"}
+							name={card.name}
+							onPress={
+								card.state === "drawing" ? undefined : () => pick(card.node)
+							}
+							picture={card.picture}
+							pulseDelay={
+								card.state === "drawing" ? null : index * motion.pulseOffset
+							}
+							selected={picked === card.node}
+							state={card.state}
+							style={
+								goodnightLocked || drawing
+									? { height: choice.heightTight }
+									: undefined
+							}
+							testID={`choice-${card.node}`}
+						/>
+					))}
+				</View>
+				{goodnightLocked ? (
+					<Plate
+						icon="lock"
+						label={`${missing} more ${missing > 1 ? "places" : "place"} first`}
+						style={styles.plate}
+						variant="big"
 					/>
-				) : undefined
-			}
-			title="Pick a way"
-		>
-			{goodnightOpen ? (
-				<ClayText
-					align="center"
-					color={colors.cream}
-					style={[LINE, styles.done]}
-					variant="label"
-				>
-					All 4 places done!
-				</ClayText>
-			) : null}
-			<View style={styles.cards}>
-				{cards.map((card, index) => (
-					<ChoiceCard
-						key={card.node}
-						kind={card.goal ? "goal" : "place"}
-						name={card.name}
-						onPress={
-							card.state === "drawing" ? undefined : () => pick(card.node)
-						}
-						picture={card.picture}
-						pulseDelay={
-							card.state === "drawing" ? null : index * motion.pulseOffset
-						}
-						selected={picked === card.node}
-						state={card.state}
-						style={
-							goodnightLocked || drawing
-								? { height: choice.heightTight }
-								: undefined
-						}
-						testID={`choice-${card.node}`}
-					/>
-				))}
-			</View>
-			{goodnightLocked ? (
-				<Plate
-					icon="lock"
-					label={`${missing} more ${missing > 1 ? "places" : "place"} first`}
-					style={styles.plate}
-					variant="big"
-				/>
-			) : null}
-			{peek ? (
-				<ClayText
-					align="center"
-					color={colors.cream}
-					style={[LINE, styles.message]}
-					variant="label"
-				>
-					{`That one is almost ready. Peek at ${peek.name} first?`}
-				</ClayText>
-			) : null}
-			{waiting ? (
-				<ClayText
-					align="center"
-					color={colors.cream}
-					style={[LINE, styles.message]}
-					variant="label"
-				>
-					{WAITING_LINE}
-				</ClayText>
-			) : null}
-			{starTake ? <Star take={starTake} /> : null}
-		</Screen>
+				) : null}
+				{peek ? (
+					<ClayText
+						align="center"
+						color={colors.cream}
+						style={[LINE, styles.message]}
+						variant="label"
+					>
+						{`That one is almost ready. Peek at ${peek.name} first?`}
+					</ClayText>
+				) : null}
+				{waiting ? (
+					<ClayText
+						align="center"
+						color={colors.cream}
+						style={[LINE, styles.message]}
+						variant="label"
+					>
+						{WAITING_LINE}
+					</ClayText>
+				) : null}
+				{starTake ? <Star take={starTake} /> : null}
+			</Screen>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create({
 	backRow: { position: "absolute" },
+	capture: { flex: 1 },
 	cards: { gap: layout.gap },
 	done: { marginBottom: layout.gap },
 	halves: {
