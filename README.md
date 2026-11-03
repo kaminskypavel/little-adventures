@@ -35,7 +35,7 @@ Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement
 | Pillar | Where to look |
 | --- | --- |
 | Impact (30%) | [PRODUCT.md](PRODUCT.md) (who it is for), [A child's data](#a-childs-data), [Limits](#limits) |
-| Use of Meta AI tooling (25%) | [How an adventure is made](#how-an-adventure-is-made), [Meta models](#meta-models), [Open weights](#open-weights), [benchmarks/checker](benchmarks/checker) |
+| Use of Meta AI tooling (25%) | [How an adventure is made](#how-an-adventure-is-made), [Meta models](#meta-models), [Open weights](#open-weights), [TRAINING.md](TRAINING.md), [benchmarks/checker](benchmarks/checker) |
 | Technical depth (20%) | [ARCHITECTURE.md](ARCHITECTURE.md), [packages/decision](packages/decision), [.github/workflows](.github/workflows) |
 | Demo (25%) | The demo video line above, [Run it](#run-it), the browser smoke test [apps/native/e2e/smoke.spec.ts](apps/native/e2e/smoke.spec.ts) |
 
@@ -72,6 +72,8 @@ Every model call, Meta or not, is recorded with its model, operation, time and c
 Not used: Muse Wonder, Muse Code.
 
 ## Open weights
+
+How we trained it and how the app uses it, with diagrams: [TRAINING.md](TRAINING.md).
 
 The LoRA on Muse Glimmer 30B answers the yes/no checks on a story plan. It was trained with LoRA rank 16, alpha 32, bf16, for one epoch, on synthetic story plans written by Muse Spark models. Each row's label was set by how the row was built. No data from real children was used.
 
@@ -212,5 +214,6 @@ little-adventures/
 │   ├── ui/             # Shared shadcn/ui components and styles
 │   └── validation/     # Shared zod schemas
 ├── ARCHITECTURE.md     # The public and private split, for judges
-└── PRODUCT.md          # Who it is for and what it must do
+├── PRODUCT.md          # Who it is for and what it must do
+└── TRAINING.md         # The tuned Muse Glimmer checker: training, use, results
 ```
