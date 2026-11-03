@@ -151,11 +151,21 @@ export function createEngineClient(engineFetch: EngineFetch) {
 				throw error;
 			}
 		},
-		/** A fresh place to upload the map picture for the TV. */
-		castMap: (id: string) =>
-			call<CastMapTarget>(`/adventures/${encodeURIComponent(id)}/cast-map`, {
-				method: "POST",
-			}),
+		/**
+		 * A fresh place to upload the map picture for the TV. With the picture's size in bytes
+		 * (up to 5 MB) the upload url is signed for exactly that length.
+		 */
+		castMap: (id: string, contentLength?: number) =>
+			call<CastMapTarget>(
+				`/adventures/${encodeURIComponent(id)}/cast-map`,
+				contentLength === undefined
+					? { method: "POST" }
+					: {
+							body: JSON.stringify({ contentLength }),
+							headers: { "content-type": "application/json" },
+							method: "POST",
+						}
+			),
 		createAdventure: (childId: string, question: string, style: Style) =>
 			call<{ id: string; source: string; status: string }>("/adventures", {
 				body: JSON.stringify({ childId, question, style }),

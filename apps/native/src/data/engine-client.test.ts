@@ -55,6 +55,18 @@ describe("engine client", () => {
 		expect(await client.castMap("a 1")).toEqual({ putUrl: "p", url: "g" });
 		expect(requests[0].path).toBe("/adventures/a%201/cast-map");
 		expect(requests[0].init?.method).toBe("POST");
+		expect(requests[0].init?.body).toBeUndefined();
+	});
+
+	test("castMap sends the picture size when it is known", async () => {
+		const { client, requests } = engine(json({ putUrl: "p", url: "g" }));
+		await client.castMap("a1", 1234);
+		expect(JSON.parse(String(requests[0].init?.body))).toEqual({
+			contentLength: 1234,
+		});
+		expect(requests[0].init?.headers).toEqual({
+			"content-type": "application/json",
+		});
 	});
 
 	test("createAdventure posts the child and the question", async () => {

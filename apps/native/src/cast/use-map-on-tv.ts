@@ -45,9 +45,8 @@ export function useMapOnTv({
 		let live = true;
 		const run = async () => {
 			try {
-				const target = await castMap(adventureId);
 				const view = ref.current;
-				if (!(live && target && view)) {
+				if (!view) {
 					return;
 				}
 				// Loaded on demand: a build without the native module just fails here, quietly.
@@ -58,6 +57,11 @@ export function useMapOnTv({
 					result: "tmpfile",
 				});
 				const bytes = await (await fetch(uri)).blob();
+				// The engine signs the upload for exactly this many bytes.
+				const target = await castMap(adventureId, bytes.size);
+				if (!(live && target)) {
+					return;
+				}
 				const put = await fetch(target.putUrl, {
 					body: bytes,
 					headers: { "content-type": IMAGE_TYPE },
