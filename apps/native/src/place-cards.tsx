@@ -1,10 +1,14 @@
-// The two cards a place can open with. The question card sits over the first picture while the
+// The cards a place shows over its picture: the question it opens with, the lesson it ends with,
+// and the goodnight's "What we learned". The two cards a place can open with. The question card sits over the first picture while the
 // star asks the child's question (the words light up as they are said); the "What we learned"
 // card lists every place's question with its answer before the goodnight scene. Both hold the
 // place's player through `question-gate`: it starts when the card lets go.
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
-import { StarTake } from "@little-adventures/native-ui/star-take";
+import {
+	StarTake,
+	type StarTakeName,
+} from "@little-adventures/native-ui/star-take";
 import {
 	colors,
 	fonts,
@@ -13,7 +17,14 @@ import {
 } from "@little-adventures/native-ui/tokens";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
-import { Fragment, type ReactNode, useCallback, useEffect } from "react";
+import {
+	Fragment,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+} from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	Easing,
@@ -28,7 +39,7 @@ import {
 import { useMusic } from "@/src/data/music-store";
 import { wordIndexAt } from "@/src/data/playback";
 import { useGate } from "@/src/data/question-gate";
-import type { Learned } from "@/src/data/question-rules";
+import type { Learned, LessonLine } from "@/src/data/question-rules";
 import type { NarrationAudio } from "@/src/data/types";
 
 /** The card shows this long when there is no audio to wait for. */
@@ -39,6 +50,8 @@ export const AFTER_AUDIO_MS = 400;
 const LOAD_GIVE_UP_MS = 5000;
 /** An audio that loaded but never reports its end lets go this long after it should have ended. */
 const END_SLACK_MS = 1500;
+/** The lesson's sentence counts as said this close to its last word's end (the ticks are 100 ms). */
+const END_EARLY_SEC = 0.05;
 const AUDIO_TICK_MS = 100;
 const FADE_MS = motion.enter;
 
@@ -132,8 +145,6 @@ export function QuestionCard({
 	question: string;
 }) {
 	const calm = useCalm();
-	const insets = useSafeAreaInsets();
-	const frame = useSafeAreaFrame();
 	const fading = useGate((s) => s.key === gateKey && s.phase === "fading");
 	const style = useFade(fading, ASK_FADE_MS);
 	const player = useAudioPlayer(audio?.url ?? null, {
@@ -183,8 +194,39 @@ export function QuestionCard({
 	const current = timed
 		? wordIndexAt(timed, currentTime, duration)
 		: words.length;
+	return (
+		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
+			<StarBalloon
+				by={by}
+				current={current}
+				take="think"
+				testID="question-card"
+				words={words}
+			/>
+		</Animated.View>
+	);
+}
 
-	// The star hops up into place as the card opens.
+/**
+ * The star at the lower left with a speech balloon beside it, over a veil on the picture: the
+ * question card at a place's start, the lesson card at its end. The star hops up as it opens.
+ */
+function StarBalloon({
+	by,
+	current,
+	take,
+	testID,
+	words,
+}: {
+	by?: string;
+	current: number;
+	take: StarTakeName;
+	testID: string;
+	words: string[];
+}) {
+	const calm = useCalm();
+	const insets = useSafeAreaInsets();
+	const frame = useSafeAreaFrame();
 	const rise = useSharedValue(calm ? 1 : 0);
 	const show = useSharedValue(calm ? 1 : 0);
 	useEffect(() => {
@@ -205,7 +247,7 @@ export function QuestionCard({
 	const compact =
 		frame.width - askLeft - insets.right - layout.sideMargin < COMPACT_ROOM;
 	return (
-		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
+		<>
 			<LinearGradient
 				colors={VEIL}
 				end={{ x: 1, y: 0.5 }}
@@ -215,7 +257,7 @@ export function QuestionCard({
 			/>
 			<View pointerEvents="none" style={StyleSheet.absoluteFill}>
 				<Animated.View style={[styles.star, { bottom, left }, hop]}>
-					<StarTake size={STAR} take="think" />
+					<StarTake size={STAR} take={take} />
 				</Animated.View>
 				{/* The balloon's row spans to the right edge, so the words always have a definite width
 				    to wrap in: a long question takes more lines, never runs out of the balloon. */}
@@ -229,7 +271,7 @@ export function QuestionCard({
 						},
 					]}
 				>
-					<Animated.View style={[styles.ask, appear]} testID="question-card">
+					<Animated.View style={[styles.ask, appear]} testID={testID}>
 						<View style={styles.tail} />
 						<Words compact={compact} current={current} words={words} />
 						{by ? (
@@ -240,6 +282,95 @@ export function QuestionCard({
 					</Animated.View>
 				</View>
 			</View>
+		</>
+	);
+}
+
+/**
+ * A place's lesson as it ends, before Pick a way: the star points while the narrator says the
+ * fact again (their own sentence, cut from the place's audio; the words light up as said), and
+ * ~400 ms after it `onDone` goes on. Without that sentence the fact shows for 2.5 s. The chrome
+ * hides and the bed ducks meanwhile.
+ */
+export function LessonCard({
+	line,
+	onDone,
+}: {
+	line: LessonLine;
+	onDone: () => void;
+}) {
+	const style = useFade(false);
+	const { audio } = line;
+	const player = useAudioPlayer(audio?.url ?? null, {
+		updateInterval: AUDIO_TICK_MS,
+	});
+	const { currentTime, isLoaded } = useAudioPlayerStatus(player);
+	const started = useRef(false);
+	const ended = useRef(false);
+	const finish = useCallback(() => {
+		if (ended.current) {
+			return;
+		}
+		ended.current = true;
+		player.pause();
+		setTimeout(onDone, AFTER_AUDIO_MS);
+	}, [onDone, player]);
+
+	useLayoutEffect(() => {
+		useGate.setState({ asking: true });
+		useMusic.getState().setSpeaking(true);
+		return () => {
+			useGate.setState({ asking: false });
+			useMusic.getState().setSpeaking(false);
+		};
+	}, []);
+	// The sentence plays from where it is said, once the audio is loaded.
+	useEffect(() => {
+		if (audio && isLoaded && !started.current) {
+			started.current = true;
+			player
+				.seekTo(audio.fromSec)
+				.then(() => player.play())
+				.catch(finish);
+		}
+	}, [audio, finish, isLoaded, player]);
+	// It stops at the end of the sentence (the file goes on with the rest of the narration).
+	useEffect(() => {
+		if (
+			audio &&
+			started.current &&
+			currentTime >= audio.toSec - END_EARLY_SEC
+		) {
+			finish();
+		}
+	}, [audio, currentTime, finish]);
+	// The way out when the sentence never ends: none to play, none that loads, or none that reports.
+	useEffect(() => {
+		let ms = NO_AUDIO_MS;
+		if (audio) {
+			ms = isLoaded
+				? (audio.toSec - audio.fromSec) * 1000 + END_SLACK_MS
+				: LOAD_GIVE_UP_MS;
+		}
+		const timer = setTimeout(finish, ms);
+		return () => clearTimeout(timer);
+	}, [audio, finish, isLoaded]);
+
+	const words = audio ? audio.words.map((w) => w.text) : line.fact.split(" ");
+	const said = audio ? currentTime - audio.fromSec : -1;
+	const current =
+		audio && started.current && said > -END_EARLY_SEC
+			? wordIndexAt(audio.words, said, audio.toSec - audio.fromSec)
+			: -1;
+	return (
+		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
+			<StarBalloon
+				by="What we learned"
+				current={current}
+				take="point"
+				testID="lesson-card"
+				words={words}
+			/>
 		</Animated.View>
 	);
 }

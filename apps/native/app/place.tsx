@@ -80,7 +80,12 @@ import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { useGate, useGatePhase } from "@/src/data/question-gate";
-import { learnedRows, openingOf } from "@/src/data/question-rules";
+import {
+	type LessonLine,
+	learnedRows,
+	lessonOf,
+	openingOf,
+} from "@/src/data/question-rules";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
 import type {
@@ -94,7 +99,12 @@ import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
-import { ChromeFade, QuestionCard, RecapCard } from "@/src/place-cards";
+import {
+	ChromeFade,
+	LessonCard,
+	QuestionCard,
+	RecapCard,
+} from "@/src/place-cards";
 import { rampVoiceIn, useLeaveVoices, useScreenFade } from "@/src/screen-fade";
 
 // Bundled narration length: how long the line takes to read before the screen moves on.
@@ -1412,25 +1422,42 @@ function PlaceScreen({
 	const onTvUnavailable = useCallback(() => setTvOff(true), []);
 
 	// The goodnight scene plays first; when it ends, "What we learned" sums up the places and its
-	// Goodnight button leaves for the end. Any other place goes straight on to pick-a-way.
+	// Goodnight button leaves for the end. Any other place says its lesson again (the lesson card),
+	// then dips quickly into pick-a-way.
 	const [learned, setLearned] = useState(false);
+	const [lesson, setLesson] = useState<LessonLine | null>(null);
 	const leaveFor = useCallback(
 		() =>
-			leave(() =>
-				router.replace(
-					goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
-				)
+			leave(
+				() =>
+					router.replace(
+						goodnight ? `/end?id=${id}` : `/choice?id=${id}&from=${node}`
+					),
+				!goodnight
 			),
 		[goodnight, id, leave, node, router]
 	);
+	// The visit is saved while the lesson plays (it takes about a second); pick-a-way needs it.
+	const visited = useRef<Promise<unknown>>(Promise.resolve());
 	const onEnd = useCallback(async () => {
-		await visit(node);
+		// A failed save must not hold the child here: pick-a-way reads what it can.
+		visited.current = visit(node).catch(() => undefined);
+		const line = adventure ? lessonOf(adventure.places[node]) : null;
+		if (line && !goodnight) {
+			setLesson(line);
+			return;
+		}
+		await visited.current;
 		if (goodnight && adventure && learnedRows(adventure).length > 0) {
 			setLearned(true);
 			return;
 		}
 		leaveFor();
 	}, [adventure, goodnight, leaveFor, node, visit]);
+	const afterLesson = useCallback(async () => {
+		await visited.current;
+		leaveFor();
+	}, [leaveFor]);
 
 	const onBack = useCallback(
 		() => leave(() => router.replace(`/map?id=${id}`)),
@@ -1476,6 +1503,7 @@ function PlaceScreen({
 			{learned && adventure ? (
 				<RecapCard onDone={leaveFor} rows={learnedRows(adventure)} />
 			) : null}
+			{lesson ? <LessonCard line={lesson} onDone={afterLesson} /> : null}
 		</>
 	);
 	if (audio === null && !hasParts(place.parts)) {
