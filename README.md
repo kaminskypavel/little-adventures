@@ -17,7 +17,7 @@ Website: [littleadventures.app](https://littleadventures.app) · Licence: evalua
 Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement: **Build for Your World**.
 
 - **Provenance:** this repo was started on Oct 30, 2026, inside the building period (Oct 27 to Nov 4). Everything in it was written then. The private engine runs on Kodio Ltd's pre-existing technology; [ARCHITECTURE.md](ARCHITECTURE.md) shows the split.
-- **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures) (access on request). Results: [benchmarks/checker](benchmarks/checker).
+- **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks, and beats Muse Spark 1.3 and two frontier models from another lab at their high reasoning effort. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures) (access on request). Results: [benchmarks/checker](benchmarks/checker).
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
 - **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the private engine; the public part is [packages/decision](packages/decision).
 - Demo video (3 min): added on submission day
@@ -78,6 +78,8 @@ Results on the full held-out set of 1,498 rows, as mean balanced accuracy:
 | Muse Spark 1.3 | 89.8% | 4.49 s |
 | Base Muse Glimmer | 81.6% | 8.92 s |
 | Glimmer v1, with Muse Spark Open on the two fact checks | 96.8% | 2.07 s |
+
+**Against frontier models.** We also ran two frontier models from another lab, at high reasoning effort, on 609 of the held-out rows (101 story plans never seen in training). The tuned Glimmer v2 beat both: 95.4% mean balanced accuracy with no false alarms, against 90.7% and 4.2% false alarms for the stronger of the two. Muse Spark 1.3 scored 92.0% on the same rows, and our hybrid 98.9%. The full table, with every model named, is on the [model card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures#benchmarks).
 
 On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 times, and the reverse happens 8 times (exact McNemar test, p = 2.7e-8). The last row is optimistic: its routing was picked after seeing test results. Model card: [Hugging Face](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Method and data: [benchmarks/checker](benchmarks/checker). `bun run eval:checker` replays the results offline, with no key.
 
