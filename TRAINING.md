@@ -4,7 +4,7 @@
 
 Every story a child hears passes a set of yes/no checks first. We trained a LoRA on Muse Glimmer 30B, one of Meta's open-weight models, to answer them. On our held-out set it is more accurate than Muse Spark 1.3 and about four times faster.
 
-- Model card on Hugging Face (access on request): [kaminskypavel/glimmer-decision-little-adventures](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
+- **Model card on Hugging Face: [kaminskypavel/glimmer-decision-little-adventures](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)** (access on request)
 - Per-row results and the offline replay: [benchmarks/checker](benchmarks/checker)
 
 ## Where the checker sits
@@ -45,7 +45,11 @@ Mean balanced accuracy on all 1,498 held-out rows:
 | Base Muse Glimmer | 81.6% | 8.92 s |
 | Glimmer v1, with Muse Spark Open on the two fact checks | 96.8% | 2.07 s |
 
-**Against frontier models.** We also ran two frontier models from another lab, at high reasoning effort, on 609 of the held-out rows (101 story plans never seen in training). The tuned Glimmer v2 beat both: 95.4% mean balanced accuracy with no false alarms, against 90.7% and 4.2% false alarms for the stronger of the two. Muse Spark 1.3 scored 92.0% on the same rows. The full table, with every model named, is on the [model card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures#benchmarks).
+**Against frontier models.** We also ran two frontier models from another lab, at high reasoning effort, on 609 of the held-out rows (101 story plans never seen in training). The tuned Glimmer v2 beat both: 95.4% mean balanced accuracy with no false alarms, against 90.7% and 4.2% false alarms for the stronger of the two. Muse Spark 1.3 scored 92.0% on the same rows. The table from the model card, per check:
+
+<p align="center"><img src=".github/readme/checker-table.webp" alt="Benchmark table on 609 held-out rows from 101 story states: mean balanced accuracy and every check for the tuned Glimmer v1 with Muse Spark Open (98.9%), the tuned Glimmer v2 (95.4%), two frontier models at high effort (90.7% and 88.4%), Muse Spark 1.3 (92.0%), Muse Spark Open (89.0%), the tuned Glimmer v1 alone (88.9%) and the base Muse Glimmer (84.7%), with false alarms on the last row." width="100%"></p>
+
+The same table, with every model named, is on the **[model card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures#benchmarks)**.
 
 **Paired test.** On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 times, and the reverse happens 8 times (exact McNemar test, p = 2.7e-8).
 
