@@ -67,7 +67,19 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 
 	return (
 		<Screen
-			dock={<PrimaryButton label={t("done")} onPress={done} />}
+			dock={
+				// The delete sits in the dock, always in sight above Done: below the fields it ended up
+				// hidden behind the dock on an iPhone 12. It is still behind the grown-up hold and a confirm.
+				<View style={styles.dock}>
+					<View style={styles.deleteRow}>
+						<QuietLink
+							label={t("delete", { name: child.profile.childName })}
+							onPress={confirmDelete}
+						/>
+					</View>
+					<PrimaryButton label={t("done")} onPress={done} />
+				</View>
+			}
 			scrolls
 			topBar={<TopBar title={child.profile.childName} />}
 		>
@@ -93,12 +105,6 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 					</Portrait>
 				</View>
 				<ChildFields control={control} />
-				<View style={styles.delete}>
-					<QuietLink
-						label={t("delete", { name: child.profile.childName })}
-						onPress={confirmDelete}
-					/>
-				</View>
 			</ScrollView>
 		</Screen>
 	);
@@ -112,6 +118,7 @@ export default function ChildEdit() {
 }
 
 const styles = StyleSheet.create({
-	delete: { marginTop: spacing.lg },
+	deleteRow: { alignItems: "center" },
+	dock: { gap: spacing.sm },
 	portrait: { alignItems: "center", marginBottom: spacing.lg },
 });
