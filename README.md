@@ -14,7 +14,7 @@ Website: [littleadventures.app](https://littleadventures.app) · Licence: evalua
 
 ### Launch film (45 s)
 
-<p align="center"><a href="https://x.com/KaminskyPavel/status/2117210112993755191"><img src=".github/readme/launch-film.webp" alt="Launch film: two children and the star watch a phone light up. Click to watch it on X." width="80%"></a></p>
+<p align="center"><a href="https://x.com/KaminskyPavel/status/2117210112993755191"><img src=".github/readme/launch-film.webp" alt="Little Adventures launch film: two children and the star look at a glowing phone. Click to watch the 45-second film." width="80%"></a></p>
 
 ## Hackathon submission
 
