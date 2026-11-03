@@ -69,18 +69,7 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 
 	return (
 		<Screen
-			dock={
-				// The delete is a red button in the dock under Done, always in sight (below the fields it hid
-				// behind the dock on an iPhone 12). It is behind the grown-up hold and a confirm.
-				<View style={styles.dock}>
-					<PrimaryButton label={t("done")} onPress={done} />
-					<SecondaryButton
-						label={t("delete", { name: child.profile.childName })}
-						onPress={confirmDelete}
-						tone="danger"
-					/>
-				</View>
-			}
+			dock={<PrimaryButton label={t("done")} onPress={done} />}
 			scrolls
 			topBar={<TopBar title={child.profile.childName} />}
 		>
@@ -106,6 +95,15 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 					</Portrait>
 				</View>
 				<ChildFields control={control} />
+				{/* At the end of the page, a small red button: behind the grown-up hold and a confirm. */}
+				<View style={styles.delete}>
+					<SecondaryButton
+						label={t("delete", { name: child.profile.childName })}
+						onPress={confirmDelete}
+						size="sm"
+						tone="danger"
+					/>
+				</View>
 			</ScrollView>
 		</Screen>
 	);
@@ -119,6 +117,6 @@ export default function ChildEdit() {
 }
 
 const styles = StyleSheet.create({
-	dock: { gap: spacing.sm },
+	delete: { alignItems: "center", marginTop: spacing.xl },
 	portrait: { alignItems: "center", marginBottom: spacing.lg },
 });
