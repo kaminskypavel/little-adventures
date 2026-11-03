@@ -153,6 +153,7 @@ export const shadows = {
 	fieldWell:
 		"inset 0px 3px 7px rgba(18,37,74,0.3), inset 0px -2px 0px rgba(255,255,255,0.55)",
 	medallion: "0px 6px 8px -3px rgba(0,0,0,0.5)",
+	sheet: "0px -10px 40px 0px rgba(0,0,0,0.4)",
 	stone: "0px 3px 2px 0px rgba(10,25,45,0.5)",
 	walker: "0px 8px 7px 0px rgba(0,0,0,0.4)",
 } as const;
