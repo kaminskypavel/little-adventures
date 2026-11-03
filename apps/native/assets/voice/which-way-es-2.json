@@ -1,0 +1,24 @@
+{
+  "words": [
+    {
+      "endSec": 0.08,
+      "startSec": 0,
+      "word": "¿A"
+    },
+    {
+      "endSec": 0.373,
+      "startSec": 0.16,
+      "word": "dónde"
+    },
+    {
+      "endSec": 0.8,
+      "startSec": 0.4,
+      "word": "vamos"
+    },
+    {
+      "endSec": 1.52,
+      "startSec": 0.88,
+      "word": "ahora?"
+    }
+  ]
+}

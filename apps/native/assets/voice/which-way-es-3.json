@@ -1,0 +1,24 @@
+{
+  "words": [
+    {
+      "endSec": 0.16,
+      "startSec": 0,
+      "word": "¿Qué"
+    },
+    {
+      "endSec": 0.56,
+      "startSec": 0.28,
+      "word": "camino"
+    },
+    {
+      "endSec": 1.04,
+      "startSec": 0.64,
+      "word": "parece"
+    },
+    {
+      "endSec": 2,
+      "startSec": 1.12,
+      "word": "divertido?"
+    }
+  ]
+}

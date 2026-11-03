@@ -1,0 +1,29 @@
+{
+  "words": [
+    {
+      "endSec": 0.347,
+      "startSec": 0,
+      "word": "¡Elige"
+    },
+    {
+      "endSec": 0.52,
+      "startSec": 0.4,
+      "word": "un"
+    },
+    {
+      "endSec": 1.04,
+      "startSec": 0.56,
+      "word": "camino"
+    },
+    {
+      "endSec": 1.2,
+      "startSec": 1.12,
+      "word": "y"
+    },
+    {
+      "endSec": 2,
+      "startSec": 1.28,
+      "word": "vamos!"
+    }
+  ]
+}
