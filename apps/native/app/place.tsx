@@ -83,7 +83,7 @@ import { placeProgress } from "@/src/data/place-progress";
 import { wordIndexAt } from "@/src/data/playback";
 import { useChildName } from "@/src/data/profile-queries";
 import { useGate, useGatePhase } from "@/src/data/question-gate";
-import { learnedRows } from "@/src/data/question-rules";
+import { learnedRows, openingOf } from "@/src/data/question-rules";
 import { readWindow } from "@/src/data/read-window";
 import { mark } from "@/src/data/timeline";
 import type {
@@ -1276,16 +1276,6 @@ function useHideChrome(asking: boolean) {
 	}, [asking]);
 }
 
-/** The intro opens silently on the child's big question; the other places ask their own. */
-function openingQuestion(adventure: Adventure | null, node: NodeId) {
-	if (node === "outro") {
-		return null;
-	}
-	return node === "intro"
-		? adventure?.question
-		: adventure?.places[node].question;
-}
-
 /**
  * The card that may hold a place until it lets go: the child's question at an opening, the recap
  * before goodnight. It shows once the sky is clear; `holding` keeps the player waiting meanwhile.
@@ -1307,7 +1297,7 @@ function useOpeningCard({
 	const gate = useGatePhase(gateKey);
 	const place = adventure?.places[node];
 	const intro = node === "intro";
-	const question = openingQuestion(adventure, node);
+	const { audio, question } = openingOf(adventure, node);
 	const asking = Boolean(question) && gate === "card";
 	useHideChrome(asking);
 	if (!(adventure && place)) {
@@ -1319,7 +1309,7 @@ function useOpeningCard({
 	if (carded && !held && gate !== "done") {
 		card = question ? (
 			<QuestionCard
-				audio={intro ? null : (place.questionAudio ?? null)}
+				audio={audio}
 				by={intro && childName ? `${childName} asked` : undefined}
 				gateKey={gateKey}
 				question={question}

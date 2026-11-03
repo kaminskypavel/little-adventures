@@ -2,7 +2,7 @@
 // what each screen says. Without a question (older adventures, intro, goodnight) the place keeps
 // its name, as before.
 import { PLACES } from "./map-rules";
-import type { Adventure, NodeId, Place } from "./types";
+import type { Adventure, NarrationAudio, NodeId, Place } from "./types";
 
 type Lesson = Pick<Place, "fact" | "name" | "question">;
 
@@ -40,6 +40,29 @@ export const learnedRows = (adventure: Adventure): Learned[] =>
 		const { fact, question } = adventure.places[node];
 		return question && fact ? [{ answer: fact, node, question }] : [];
 	});
+
+/**
+ * What a place opens with. A place asks its own question with its narrator audio; the intro asks
+ * its own question when the engine gives one (with its audio), else the adventure's big question,
+ * silent. The goodnight scene asks nothing.
+ */
+export function openingOf(
+	adventure: Adventure | null,
+	node: NodeId
+): { audio: NarrationAudio | null; question: string | null } {
+	if (!adventure || node === "outro") {
+		return { audio: null, question: null };
+	}
+	const place = adventure.places[node];
+	const own = place.question?.trim();
+	if (own) {
+		return { audio: place.questionAudio ?? null, question: own };
+	}
+	return {
+		audio: null,
+		question: node === "intro" ? adventure.question : null,
+	};
+}
 
 const LETTER_PX = 14.5;
 const GAP_PX = 15;

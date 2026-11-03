@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { balanceLines, choiceLabel, mapLabel } from "./question-rules";
+import {
+	balanceLines,
+	choiceLabel,
+	mapLabel,
+	openingOf,
+} from "./question-rules";
+import type { Adventure, Place } from "./types";
 
 const lesson = {
 	fact: "The sun shines light on the moon.",
@@ -46,5 +52,47 @@ describe("balanceLines", () => {
 		expect(balanceLines("Why does the moon change shape?".split(" "))).toEqual([
 			0, 4,
 		]);
+	});
+});
+
+describe("openingOf", () => {
+	const voice = { url: "https://files.test/q.mp3", words: [] };
+	const place = (extra: Partial<Place> = {}): Place => ({
+		fact: "",
+		id: "p1",
+		name: "",
+		narration: [],
+		parts: [],
+		picture: null,
+		status: "ready",
+		...extra,
+	});
+	const adventure = (intro: Partial<Place>, p1: Partial<Place> = {}) =>
+		({
+			places: { intro: place(intro), outro: place(), p1: place(p1) },
+			question: "How do you get to the moon?",
+		}) as unknown as Adventure;
+
+	test("the intro speaks its own question with its audio", () => {
+		const a = adventure({
+			question: "How do we get to the moon?",
+			questionAudio: voice,
+		});
+		expect(openingOf(a, "intro")).toEqual({
+			audio: voice,
+			question: "How do we get to the moon?",
+		});
+	});
+	test("an intro without one falls back to the adventure question, silent", () => {
+		expect(openingOf(adventure({}), "intro")).toEqual({
+			audio: null,
+			question: "How do you get to the moon?",
+		});
+	});
+	test("a place keeps its own question and audio; goodnight asks nothing", () => {
+		const a = adventure({}, { question: "Why?", questionAudio: voice });
+		expect(openingOf(a, "p1")).toEqual({ audio: voice, question: "Why?" });
+		expect(openingOf(a, "outro").question).toBe(null);
+		expect(openingOf(adventure({}), "p1").question).toBe(null);
 	});
 });
