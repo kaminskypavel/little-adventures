@@ -43,6 +43,12 @@ export const LEAD_ZOOM_TO = 1.06;
 export const LEAD_ZOOM_MS = 15_000;
 /** How long the picture takes to fade once the first part has its first frame. */
 export const LEAD_FADE_MS = 400;
+/** The next part starts this many seconds before the part on screen ends, and fades in over it. */
+export const DISSOLVE_LEAD_SEC = 0.6;
+/** How long the next part takes to fade in: the whole lead, so it is whole when the last part ends. */
+export const DISSOLVE_MS = DISSOLVE_LEAD_SEC * 1000;
+/** The same fade for a person who wants calm: quick, and still ending with the last part. */
+export const DISSOLVE_REDUCED_MS = 150;
 
 /**
  * The picture and narration lead while the first part is still being made. `since` is the
@@ -72,6 +78,8 @@ export interface PlayState {
 	heard: number;
 	/** Set once the narration has started over the picture alone; null when it never did. */
 	lead: Lead | null;
+	/** Index of the part fading out under the one on screen, still playing on the other player. */
+	leaving: number | null;
 	/** How long the narration is, in seconds; 0 until it is known. */
 	length: number;
 	/** True from the start when there is no narration to wait for. */
@@ -93,6 +101,8 @@ export interface PlayState {
 
 export type PlayEvent =
 	| { type: "bad"; id: string }
+	/** The part fading out has played its last frame; the dissolve is over. */
+	| { type: "dissolved" }
 	| { type: "ended" }
 	| { type: "grace" }
 	| { type: "lead-timeout" }
@@ -107,6 +117,8 @@ export type PlayEvent =
 	| {
 			/** The part on screen is `sec` in; `duration` is how long it plays, 0 when not known. */
 			duration: number;
+			/** The player holding the next part has it loaded, so a dissolve into it may start. */
+			nextReady?: boolean;
 			sec: number;
 			type: "part-time";
 	  }
@@ -175,6 +187,7 @@ export const begin = (
 		hasPicture,
 		heard: 0,
 		lead: null,
+		leaving: null,
 		length: 0,
 		narrationEnded: !hasNarration,
 		own: ownVoices(parts),
@@ -277,14 +290,15 @@ export function upcoming(s: PlayState): Part | null {
 	return part && isPlayable(part) ? part : null;
 }
 
-/** The part each player should hold: the one on screen, and the next one as soon as it is playable. */
+/** The part each player should hold: the one on screen, and the next one as soon as it is playable (while one fades out, that one). */
 export function slotParts(s: PlayState): [Part | null, Part | null] {
 	const held: [Part | null, Part | null] = [null, null];
 	const here = s.parts[s.at];
 	if (here && !isFailed(s, here)) {
 		held[s.slot] = here;
 	}
-	held[other(s.slot)] = upcoming(s);
+	held[other(s.slot)] =
+		s.leaving === null ? upcoming(s) : (s.parts[s.leaving] ?? null);
 	return held;
 }
 
@@ -394,6 +408,43 @@ function play(s: PlayState, index: number, now: number): Step {
 			slot: other(s.slot),
 			stall: null,
 		},
+	};
+}
+
+/**
+ * The part on screen is within `DISSOLVE_LEAD_SEC` of its end, the next part is due and loaded:
+ * it starts now, on the other player, and fades in over the last moments of this one.
+ */
+function dissolveInto(
+	s: PlayState,
+	event: Extract<PlayEvent, { type: "part-time" }>,
+	now: number
+): Step {
+	if (
+		!event.nextReady ||
+		s.phase !== "playing" ||
+		s.leaving !== null ||
+		event.duration <= 0 ||
+		event.sec < event.duration - DISSOLVE_LEAD_SEC
+	) {
+		return unchanged(s);
+	}
+	const index = dueIndex(s);
+	if (index === -1 || !isPlayable(s.parts[index])) {
+		return unchanged(s);
+	}
+	const next = play(s, index, now);
+	return { ...next, state: { ...next.state, leaving: s.at } };
+}
+
+/** The part that faded out has ended: its player is free again. */
+function dissolved(s: PlayState): Step {
+	if (s.leaving === null) {
+		return unchanged(s);
+	}
+	return {
+		marks: [{ name: "part-end", part: s.leaving + 1 }],
+		state: { ...s, leaving: null },
 	};
 }
 
@@ -515,7 +566,11 @@ function ended(s: PlayState, now: number): Step {
 	if (s.phase !== "playing") {
 		return unchanged(s);
 	}
-	const next = settle({ ...s, phase: "waiting" }, "last-part", now);
+	const next = settle(
+		{ ...s, leaving: null, phase: "waiting" },
+		"last-part",
+		now
+	);
 	return {
 		...next,
 		marks: [{ name: "part-end", part: s.at + 1 }, ...next.marks],
@@ -527,7 +582,11 @@ function bad(s: PlayState, id: string, now: number): Step {
 	if (!part || part.url === null || s.bad[id] === part.url) {
 		return unchanged(s);
 	}
-	const marked = { ...s, bad: { ...s.bad, [id]: part.url } };
+	const marked = {
+		...s,
+		bad: { ...s.bad, [id]: part.url },
+		leaving: s.parts[s.leaving ?? -1]?.id === id ? null : s.leaving,
+	};
 	const onScreen = s.phase === "playing" && s.parts[s.at]?.id === id;
 	return settle(
 		onScreen ? { ...marked, phase: "waiting" } : marked,
@@ -615,8 +674,9 @@ function halfDue(s: PlayState, sec: number, duration: number) {
 }
 
 /** Starts the half of the words that is due, after any event. */
-function withVoice(next: Step, event: PlayEvent): Step {
-	const timed = event.type === "part-time";
+function withVoice(next: Step, event: PlayEvent, at: number): Step {
+	// A tick that starts a dissolve is the old part's time, not the new part's.
+	const timed = event.type === "part-time" && next.state.at === at;
 	if (
 		!halfDue(next.state, timed ? event.sec : -1, timed ? event.duration : 0)
 	) {
@@ -664,7 +724,11 @@ export function step(
 	event: PlayEvent,
 	now: number = Date.now()
 ): Step {
-	return holdMarks(s, withVoice(reap(advance(s, event, now), now), event), now);
+	return holdMarks(
+		s,
+		withVoice(reap(advance(s, event, now), now), event, s.at),
+		now
+	);
 }
 
 /** Own audio: after any event, passes over the halves with nothing to say, which may end the place. */
@@ -688,6 +752,8 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 	switch (event.type) {
 		case "bad":
 			return bad(s, event.id, now);
+		case "dissolved":
+			return dissolved(s);
 		case "ended":
 			return ended(s, now);
 		case "grace":
@@ -711,7 +777,7 @@ function advance(s: PlayState, event: PlayEvent, now: number): Step {
 				now
 			);
 		case "part-time":
-			return unchanged(s);
+			return dissolveInto(s, event, now);
 		case "started":
 			return s.started ? unchanged(s) : startLead({ ...s, started: true }, now);
 		case "voice-ended":

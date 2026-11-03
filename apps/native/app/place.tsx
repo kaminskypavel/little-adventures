@@ -34,6 +34,7 @@ import Animated, {
 	useAnimatedStyle,
 	useReducedMotion,
 	useSharedValue,
+	withDelay,
 	withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,6 +43,8 @@ import { speakingAt } from "@/src/data/music-rules";
 import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
+	DISSOLVE_MS,
+	DISSOLVE_REDUCED_MS,
 	type EndCause,
 	GRACE_MS,
 	graceDue,
@@ -349,9 +352,12 @@ const setupPlayer = (created: VideoPlayer) => {
 };
 
 /** A narration tick only repaints the screen when it moved the parts. */
+const other = (slot: Slot): Slot => (slot === 0 ? 1 : 0);
+
 const moved = (a: PlayState, b: PlayState) =>
 	a.at !== b.at ||
 	a.half !== b.half ||
+	a.leaving !== b.leaving ||
 	a.phase !== b.phase ||
 	a.speaking !== b.speaking ||
 	a.stall !== b.stall ||
@@ -430,27 +436,64 @@ function Cover({
 	);
 }
 
-/** One part's picture. The part buffering for next, on the web, stays mounted but unseen. */
-function PartVideo({
-	hidden,
+/**
+ * One part's picture, in a layer of its own. The part on screen is `top`; the layer of the part
+ * that is fading out stays `on` under it. A layer that is `fading` in rises from 0 over
+ * `DISSOLVE_MS` (a quick fade when the person wants calm, still ending with the old part); any
+ * other layer shows or hides at once. A layer that is not `on` stays mounted but unseen.
+ */
+function PartLayer({
+	fading,
+	on,
 	onFirstFrame,
 	player,
+	top,
 }: {
-	hidden: boolean;
+	fading: boolean;
+	on: boolean;
 	onFirstFrame: () => void;
 	player: VideoPlayer;
+	top: boolean;
 }) {
+	const opacity = useSharedValue(0);
+	const fadeMs = useReducedMotion() ? DISSOLVE_REDUCED_MS : DISSOLVE_MS;
+	// Read when the layer comes on, not when the dissolve ends: the fade keeps going.
+	const fadingRef = useRef(fading);
+	useLayoutEffect(() => {
+		fadingRef.current = fading;
+	}, [fading]);
+	useEffect(() => {
+		if (!(on && fadingRef.current)) {
+			opacity.set(on ? 1 : 0);
+			return;
+		}
+		opacity.set(
+			withDelay(
+				DISSOLVE_MS - fadeMs,
+				withTiming(1, {
+					duration: fadeMs,
+					easing: Easing.inOut(Easing.ease),
+				})
+			)
+		);
+	}, [fadeMs, on, opacity]);
+	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 	return (
-		<VideoView
-			allowsPictureInPicture={false}
-			contentFit="cover"
-			nativeControls={false}
-			onFirstFrameRender={onFirstFrame}
-			player={player}
-			playsInline
+		<Animated.View
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, hidden ? styles.unseen : null]}
-		/>
+			style={[StyleSheet.absoluteFill, { zIndex: top ? 1 : 0 }, style]}
+		>
+			<VideoView
+				allowsPictureInPicture={false}
+				contentFit="cover"
+				nativeControls={false}
+				onFirstFrameRender={onFirstFrame}
+				player={player}
+				playsInline
+				pointerEvents="none"
+				style={StyleSheet.absoluteFill}
+			/>
+		</Animated.View>
 	);
 }
 
@@ -719,17 +762,34 @@ function MediaPlayer({
 			showFrame(index);
 			send({
 				duration: duration || 0,
+				nextReady:
+					players[other(machine.current.slot)].status === "readyToPlay",
 				sec: currentTime,
 				type: "part-time",
 			});
 		}
 	};
 
+	// A tick of the part fading out: it plays to its last frame, then is let go.
+	const tickLeaving = (index: number, slot: Slot, currentTime: number) => {
+		const duration = playableSec(
+			machine.current.parts[index],
+			players[slot].duration
+		);
+		if (reachedEnd(currentTime, duration)) {
+			players[slot].pause();
+			send({ type: "dissolved" });
+		}
+	};
+
 	const eventsOf = (slot: Slot): SlotEvents => ({
 		// Only the player showing the part counts: a late event from the one before is not its end.
 		onEnd: () => {
-			if (machine.current.slot === slot) {
+			const now = machine.current;
+			if (now.slot === slot) {
 				send({ type: "ended" });
+			} else if (now.leaving !== null) {
+				send({ type: "dissolved" });
 			}
 		},
 		onStatus: (status) => {
@@ -743,6 +803,10 @@ function MediaPlayer({
 		onTime: (currentTime) => {
 			const now = machine.current;
 			if (now.slot !== slot) {
+				if (now.leaving !== null) {
+					tickLeaving(now.leaving, slot, currentTime);
+					return;
+				}
 				if (IS_WEB && currentTime > 0) {
 					parkAtFirstFrame(players[slot]);
 				}
@@ -913,26 +977,21 @@ function MediaPlayer({
 	});
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
-			{IS_WEB ? (
-				<>
-					<PartVideo
-						hidden={view.slot !== 0}
-						onFirstFrame={firstFrameOf(0)}
-						player={player0}
+			{([0, 1] as const).map((slot) => {
+				const outgoing = view.leaving !== null && view.slot !== slot;
+				const on = view.slot === slot || outgoing;
+				// The web keeps both players mounted; elsewhere the second view is there only for a dissolve.
+				return IS_WEB || on ? (
+					<PartLayer
+						fading={view.leaving !== null && view.slot === slot}
+						key={slot}
+						on={on}
+						onFirstFrame={firstFrameOf(slot)}
+						player={players[slot]}
+						top={view.slot === slot}
 					/>
-					<PartVideo
-						hidden={view.slot !== 1}
-						onFirstFrame={firstFrameOf(1)}
-						player={player1}
-					/>
-				</>
-			) : (
-				<PartVideo
-					hidden={false}
-					onFirstFrame={firstFrameOf(view.slot)}
-					player={players[view.slot]}
-				/>
-			)}
+				) : null;
+			})}
 			{showCover ? (
 				<Cover fadeMs={led ? LEAD_FADE_MS : 0} gone={framed} zoom={zoom}>
 					{cover}
@@ -1137,5 +1196,4 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: layout.sideMargin,
 	},
-	unseen: { opacity: 0 },
 });
