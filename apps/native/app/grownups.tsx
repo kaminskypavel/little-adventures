@@ -25,8 +25,9 @@ import {
 	useGrownUpPhoto,
 	useSetCalled,
 } from "@/src/data/profile-queries";
-import { LANGUAGES, type Language, useT } from "@/src/i18n";
+import { isRtl, LANGUAGES, type Language, useLanguage, useT } from "@/src/i18n";
 import { grownupsStrings } from "@/src/i18n/strings/grownups";
+import { LanguagePicker } from "@/src/language-picker";
 import { askText, showMenu } from "@/src/menu/show-menu";
 import { photoMenu } from "@/src/photo/photo-menu";
 import type { Source } from "@/src/photo/photo-step";
@@ -61,7 +62,9 @@ export default function Grownups() {
 	const deleteOwnPhoto = useDeleteGrownUpPhoto();
 	const setCalled = useSetCalled();
 	const t = useT(grownupsStrings);
-	const language = usePlayerPrefs((s) => s.language);
+	const language = useLanguage();
+	// Hebrew reads right to left on this screen; the layout stays left to right elsewhere.
+	const rtl = isRtl(language);
 
 	const calledName = (called: Called) =>
 		called.relation === "other" ? called.name : t(PRESET_KEYS[called.relation]);
@@ -74,14 +77,6 @@ export default function Grownups() {
 		usePlayerPrefs.getState().setLanguage(next);
 		reprepareChild(child?.id);
 	};
-	const languageMenu = () =>
-		showMenu(
-			t("language"),
-			LANGUAGES.map(({ code, name: label }) => ({
-				label,
-				onPress: () => changeLanguage(code),
-			}))
-		);
 	const languageName =
 		LANGUAGES.find((l) => l.code === language)?.name ?? language;
 
@@ -186,31 +181,24 @@ export default function Grownups() {
 						<PlanCard
 							items={[t("planOne"), t("planTwo")]}
 							note={t("planNote")}
+							rtl={rtl}
 							style={styles.plan}
 							tag={t("planTag")}
 							title={t("planTitle")}
 						/>
-						<View style={styles.language}>
-							<ClayText
-								color={colors.cream}
-								numberOfLines={1}
-								style={styles.languageLabel}
-								variant="body"
-							>
-								{t("language")}
-							</ClayText>
-							<SecondaryButton
-								accessibilityLabel={t("languageLabel", {
-									language: languageName,
-								})}
-								label={languageName}
-								onPress={languageMenu}
-								size="sm"
-								style={styles.pill}
-							/>
-						</View>
+						<LanguagePicker
+							chooseLabel={t("chooseLanguage")}
+							closeLabel={t("closeSheet")}
+							current={language}
+							label={t("language")}
+							onPick={changeLanguage}
+							rowLabel={t("languageLabel", { language: languageName })}
+							rtl={rtl}
+							style={styles.language}
+						/>
 						<View style={styles.foot}>
 							<ClayText
+								align={rtl ? "right" : undefined}
 								color={colors.cream}
 								numberOfLines={1}
 								style={styles.signed}
@@ -218,7 +206,7 @@ export default function Grownups() {
 							>
 								{who ? t("signedInAs", { who }) : t("signedIn")}
 							</ClayText>
-							<View style={styles.link}>
+							<View style={[styles.link, rtl ? styles.linkRtl : null]}>
 								<QuietLink label={t("signOut")} onPress={signOut} />
 							</View>
 						</View>
@@ -231,15 +219,9 @@ export default function Grownups() {
 
 const styles = StyleSheet.create({
 	foot: { marginTop: FOOT_GAP, paddingHorizontal: 30 },
-	language: {
-		alignItems: "center",
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginTop: LANGUAGE_GAP,
-		paddingHorizontal: 30,
-	},
-	languageLabel: { fontSize: 17, lineHeight: 22 },
+	language: { marginTop: LANGUAGE_GAP },
 	link: { alignItems: "flex-start", marginTop: -2 },
+	linkRtl: { alignItems: "flex-end" },
 	name: { fontSize: 26, lineHeight: 30, marginTop: NAME_GAP },
 	pill: { alignSelf: "center", paddingHorizontal: 20 },
 	pillSlot: { height: PILL_HEIGHT, marginTop: PILL_GAP },
