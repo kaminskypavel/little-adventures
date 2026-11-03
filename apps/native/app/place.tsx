@@ -823,13 +823,15 @@ function TvPlayer({
 	useLayoutEffect(() => {
 		endRef.current = onEnd;
 	}, [onEnd]);
+	// Only after this place's video is loaded: an end left from the last place must not end this one.
+	const loadedHere = length > 0;
 	useEffect(() => {
-		if (tv.ended && !ended.current) {
+		if (loadedHere && tv.ended && !ended.current) {
 			ended.current = true;
 			mark("place-end", { detail: { cause: "tv" }, place: node });
 			endRef.current();
 		}
-	}, [node, tv.ended]);
+	}, [loadedHere, node, tv.ended]);
 
 	const ready = length > 0;
 	const label = ready
