@@ -52,7 +52,7 @@ Results on the full held-out set of 1,498 rows, as mean balanced accuracy:
 | Base Muse Glimmer | 81.6% | 8.92 s |
 | Glimmer v1, with Muse Spark Open on the two fact checks | 96.8% | 2.07 s |
 
-The last row is optimistic: its routing was picked after seeing test results. Model card: [Hugging Face](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Method and data: [benchmarks/checker](benchmarks/checker). `bun run eval:checker` replays the results offline, with no key.
+On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 times, and the reverse happens 8 times (exact McNemar test, p = 2.7e-8). The last row is optimistic: its routing was picked after seeing test results. Model card: [Hugging Face](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Method and data: [benchmarks/checker](benchmarks/checker). `bun run eval:checker` replays the results offline, with no key.
 
 ## A child's data
 
