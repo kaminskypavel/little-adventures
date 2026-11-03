@@ -9,23 +9,60 @@ import {
 } from "../../../../packages/native-ui/src/fork-spots";
 
 const NODES = ["intro", "p1", "p2", "p1a", "p2a", "outro"] as const;
+const PLACES = NODES.filter((node) => node !== "outro");
 const centreOf = (node: (typeof NODES)[number]) => ({
 	x: standAt(node).x + STAR / 2 - SPOTS[node].x,
 	y: standAt(node).y + STAR / 2 - SPOTS[node].y,
 });
 
 describe("standAt", () => {
-	test("the star rests at the same offset from every place, the goodnight too", () => {
-		const [first, ...rest] = NODES.map(centreOf);
+	test("the star rests at the same offset from every place", () => {
+		const [first, ...rest] = PLACES.map(centreOf);
 		for (const offset of rest) {
 			expect(offset).toEqual(first as { x: number; y: number });
 		}
+		expect(first).toEqual({ x: 33, y: -14 });
+	});
+
+	test("the goodnight's gate is bigger, so the star stands higher and out", () => {
+		expect(centreOf("outro")).toEqual({ x: 34, y: -36 });
 	});
 
 	test("the star rests on the medallion's shoulder, not out on the road", () => {
 		const { x, y } = centreOf("p1");
 		// Within one medallion width of the centre (the here medallion is 72 across).
 		expect(Math.hypot(x, y) < 72).toBe(true);
+	});
+});
+
+describe("the lanes", () => {
+	test("places stand where the approved map draws them", () => {
+		expect(SPOTS).toEqual({
+			intro: { x: 119, y: 206 },
+			outro: { x: 716, y: 206 },
+			p1: { x: 312, y: 150 },
+			p1a: { x: 505, y: 150 },
+			p2: { x: 312, y: 262 },
+			p2a: { x: 505, y: 262 },
+		});
+	});
+
+	test("every road starts and ends at a medallion's edge", () => {
+		const numbers = (id: string) =>
+			(ROAD_PATHS[id] ?? "").match(/-?\d+(?:\.\d+)?/gu)?.map(Number) ?? [];
+		for (const id of Object.keys(ROAD_PATHS)) {
+			const [a, b] = id.split("-") as [
+				(typeof NODES)[number],
+				(typeof NODES)[number],
+			];
+			const [x0, y0, ...rest] = numbers(id);
+			const [x1, y1] = rest.slice(-2);
+			const near = (node: (typeof NODES)[number], x?: number, y?: number) =>
+				Math.hypot((x ?? 0) - SPOTS[node].x, (y ?? 0) - SPOTS[node].y);
+			// 32 pt radius plus the gap the road leaves; the goodnight gate is wider.
+			expect(near(a, x0, y0) >= 32 && near(a, x0, y0) <= 40).toBe(true);
+			expect(near(b, x1, y1) >= 32 && near(b, x1, y1) <= 52).toBe(true);
+		}
 	});
 });
 

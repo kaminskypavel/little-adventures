@@ -281,6 +281,8 @@ export const flat = {
 		track: "rgba(244,236,216,0.22)",
 	},
 	namePill: { padBottom: 6, padTop: 4, padX: 19, radius: 28 },
+	/** The map's title in its top bar, beside the back button. */
+	namePillSmall: { height: 36, padX: 14, radius: 18, size: 17 },
 	narration: {
 		chipPadX: 7,
 		chipRadius: 11,
@@ -481,6 +483,25 @@ export const mapMedallion = {
 	ringActive: 5.5,
 	size: 86,
 	sizeHere: 97,
+} as const;
+
+/** A sealed place on the sideways map: a flat dark disc with a drawn question mark, no clay. */
+export const mapSeal = {
+	fade: 450,
+	icon: 26,
+	iconInk: "rgba(244,236,216,0.72)",
+	popDelay: 350,
+	/** The opening pop: a medallion grows from this scale, overshoots, settles. */
+	popFrom: 0.55,
+	popPeak: 1.08,
+	popPeakAt: 630,
+	popSettle: 270,
+	ring: "rgba(232,213,160,0.4)",
+	ringWidth: 3,
+	riseDelay: 1050,
+	riseDrop: 6,
+	sealedScale: 0.6,
+	size: 56,
 } as const;
 
 /** Map stepping stone: a pebble cut-out with a shape-following shadow, and the one glow in the design system. */

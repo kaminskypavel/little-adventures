@@ -5,6 +5,7 @@ import {
 	isOutroLocked,
 	missingPlaces,
 	neighbours,
+	newlyOpened,
 } from "./map-rules";
 import type { NodeId } from "./types";
 
@@ -70,5 +71,19 @@ describe("choicesFrom", () => {
 			{ locked: false, node: "p1a" },
 			{ locked: false, node: "outro" },
 		]);
+	});
+});
+
+describe("newlyOpened", () => {
+	test("a ready place not shown open before opens now", () => {
+		expect(newlyOpened([], ["p1", "p2"])).toEqual(["p1", "p2"]);
+	});
+
+	test("a place shown open before does not open again", () => {
+		expect(newlyOpened(["p1"], ["p1", "p2"])).toEqual(["p2"]);
+	});
+
+	test("the intro is never sealed, so it never opens", () => {
+		expect(newlyOpened([], ["intro"])).toEqual([]);
 	});
 });

@@ -1,6 +1,12 @@
 import { Image } from "expo-image";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import {
+	type LayoutChangeEvent,
+	StyleSheet,
+	View,
+	type ViewStyle,
+} from "react-native";
+import { EaseView } from "react-native-ease";
 import Svg, { Path } from "react-native-svg";
 import { BackButton, useBackAction } from "./back-button";
 import {
@@ -15,8 +21,10 @@ import {
 	walkPoints,
 } from "./fork-spots";
 import { Medallion } from "./medallion";
+import { useCalm } from "./motion-provider";
 import { NamePill } from "./name-pill";
 import { Plate } from "./plate";
+import { SealedDisc } from "./sealed-disc";
 import {
 	Goal,
 	goalShadow,
@@ -25,7 +33,7 @@ import {
 	type MapPlace,
 	type MapPlaceNode,
 } from "./story-map";
-import { colors } from "./tokens";
+import { colors, mapSeal, motion } from "./tokens";
 import { Walker } from "./walker";
 
 // ---------------------------------------------------------------------------------------------
@@ -37,19 +45,23 @@ import { Walker } from "./walker";
 const MEDALLION = 64;
 const MEDALLION_HERE = 72;
 const GOAL_SIZE = 96;
-const GOAL_FOOT = 245;
-/** The gap between a medallion and its name plate. */
-const PLATE_GAP = 9;
-/** Two lines stand closer, so the top lane's plates clear the title pill. */
-const LESSON_GAP = 4;
+const GOAL_FOOT = 254;
+/** The gap between a medallion and its plate. */
+const PLATE_GAP = 8;
 const PLATE_BOX = 220;
-const DIMMED = 0.6;
+/** A place plate: at most two lines, 168 wide, a little rounder than the kit's lesson pill. */
+const PLATE_LOOK = { borderRadius: 13, maxWidth: 168, paddingHorizontal: 11 };
 const MEADOW = require("../assets/map/meadow.jpg");
 const MEADOW_TOP = -137;
 const MEADOW_RATIO = 1688 / 780;
 const SCRIM = "rgba(10,22,44,0.36)";
-const SAFE_BOTTOM = 21;
-const TITLE_TOP = 24;
+const SAFE_BOTTOM = 20;
+/** The title pill sits beside the back button (64 wide), 8 pt off it, centred on it. */
+const BACK_SIZE = 64;
+const TITLE_GAP = 8;
+const TITLE_HEIGHT = 36;
+/** Roads that lead to a sealed place are drawn this faint. */
+const SEALED_ROAD = 0.28;
 
 const ROAD = {
 	dots: "#E8A81C",
@@ -61,9 +73,12 @@ const ROAD = {
 
 function Roads({
 	dots,
+	faint,
 	lit,
 }: {
 	dots: ReadonlySet<string>;
+	/** Roads that lead to a sealed place. */
+	faint: ReadonlySet<string>;
 	lit: ReadonlySet<string>;
 }) {
 	const roads = Object.entries(ROAD_PATHS);
@@ -79,6 +94,7 @@ function Roads({
 				<Path
 					d={d}
 					key={`under-${id}`}
+					opacity={faint.has(id) && !lit.has(id) ? SEALED_ROAD : 1}
 					stroke={ROAD.under}
 					strokeWidth={18}
 					{...stroke}
@@ -97,6 +113,7 @@ function Roads({
 					<Path
 						d={d}
 						key={`road-${id}`}
+						opacity={faint.has(id) && !lit.has(id) ? SEALED_ROAD : 1}
 						stroke={color}
 						strokeWidth={12}
 						{...stroke}
@@ -131,37 +148,158 @@ function Roads({
 }
 
 /**
- * A name plate centred on `x`. It hangs from `top` or stands on `bottom` (a distance from the
- * stage's bottom edge), so a plate of one line or two keeps its gap to the medallion.
+ * A plate centred on `x`. It hangs from `top` or stands on `bottom` (a distance from the stage's
+ * bottom edge), so a plate of one line or two keeps its gap to the medallion. A `rise` plate
+ * fades up into place once, after its place has opened.
  */
 function NamePlate({
 	icon,
 	label,
 	lesson = false,
+	rise = false,
 	tone,
 	x,
 	...edge
 }: {
 	icon?: "lock";
 	label: string;
-	/** Two lines of small type: a question or an answer. */
+	/** Two lines of small type: a question, an answer or a name on the map. */
 	lesson?: boolean;
+	rise?: boolean;
 	tone: "dim" | "sand" | "sun";
 	x: number;
 } & ({ bottom: number; top?: never } | { bottom?: never; top: number })) {
+	const box = [styles.plateBox, { left: x - PLATE_BOX / 2, ...edge }];
+	const plate = (
+		<Plate
+			icon={icon}
+			label={label}
+			style={lesson ? [styles.plate, PLATE_LOOK] : styles.plate}
+			tone={tone}
+			variant={lesson ? "lesson" : "place"}
+		/>
+	);
+	if (rise) {
+		return (
+			<EaseView
+				animate={{ opacity: 1, translateY: 0 }}
+				initialAnimate={{ opacity: 0, translateY: mapSeal.riseDrop }}
+				pointerEvents="none"
+				style={box}
+				transition={{
+					delay: mapSeal.riseDelay,
+					duration: motion.enter,
+					easing: "easeOut",
+					type: "timing",
+				}}
+			>
+				{plate}
+			</EaseView>
+		);
+	}
 	return (
-		<View
-			pointerEvents="none"
-			style={[styles.plateBox, { left: x - PLATE_BOX / 2, ...edge }]}
-		>
-			<Plate
-				icon={icon}
-				label={label}
-				style={styles.plate}
-				tone={tone}
-				variant={lesson ? "lesson" : "place"}
-			/>
+		<View pointerEvents="none" style={box}>
+			{plate}
 		</View>
+	);
+}
+
+/**
+ * One place on the stage. Sealed, it is a flat disc. Open, it is its medallion; a place that just
+ * opened for the first time (`reveal`) breaks its seal and pops in, unless calm motion is asked for.
+ */
+function Spot({
+	node,
+	place,
+	walking,
+}: {
+	node: MapPlaceNode;
+	place: MapPlace;
+	walking: boolean;
+}) {
+	const calm = useCalm();
+	const { x, y } = SPOTS[node];
+	const seal: ViewStyle = {
+		left: x - mapSeal.size / 2,
+		position: "absolute",
+		top: y - mapSeal.size / 2,
+	};
+	if (place.state === "default") {
+		return <SealedDisc style={seal} />;
+	}
+	const size = place.state === "here" ? MEDALLION_HERE : MEDALLION;
+	const box: ViewStyle = {
+		height: size,
+		left: x - size / 2,
+		position: "absolute",
+		top: y - size / 2,
+		width: size,
+	};
+	const medallion = (
+		<Medallion
+			accessibilityLabel={place.name}
+			onPress={walking ? undefined : place.onPress}
+			picture={place.picture}
+			size={size}
+			state={place.state}
+		/>
+	);
+	if (place.reveal && !calm) {
+		return (
+			<>
+				<Unseal style={seal} />
+				<Pop style={box}>{medallion}</Pop>
+			</>
+		);
+	}
+	return <View style={box}>{medallion}</View>;
+}
+
+/** The seal shrinks and fades. */
+function Unseal({ style }: { style: ViewStyle }) {
+	return (
+		<EaseView
+			animate={{ opacity: 0, scale: mapSeal.sealedScale }}
+			initialAnimate={{ opacity: 1, scale: 1 }}
+			pointerEvents="none"
+			style={style}
+			transition={{
+				duration: mapSeal.fade,
+				easing: "easeOut",
+				type: "timing",
+			}}
+		>
+			<SealedDisc />
+		</EaseView>
+	);
+}
+
+/** The medallion pops in: small to a little too big (after a beat), then settles at full size. */
+function Pop({ children, style }: { children: ReactNode; style: ViewStyle }) {
+	const [peaked, setPeaked] = useState(false);
+	return (
+		<EaseView
+			animate={{ opacity: 1, scale: peaked ? 1 : mapSeal.popPeak }}
+			initialAnimate={{ opacity: 0, scale: mapSeal.popFrom }}
+			onTransitionEnd={() => setPeaked(true)}
+			style={style}
+			transition={
+				peaked
+					? {
+							duration: mapSeal.popSettle,
+							easing: "easeInOut",
+							type: "timing",
+						}
+					: {
+							delay: mapSeal.popDelay,
+							duration: mapSeal.popPeakAt,
+							easing: "easeOut",
+							type: "timing",
+						}
+			}
+		>
+			{children}
+		</EaseView>
 	);
 }
 
@@ -245,6 +383,17 @@ export function ForkMap({
 		shining.add(idOf(route[index] as MapNode, stop));
 	}
 
+	const nodes = Object.keys(places) as MapPlaceNode[];
+	const calm = useCalm();
+	// A road is faint when a place at either end is sealed.
+	const faint = new Set(
+		Object.keys(ROAD_PATHS).filter((id) =>
+			id
+				.split("-")
+				.some((end) => places[end as MapPlaceNode]?.state === "default")
+		)
+	);
+
 	const scale = Math.min(box.width / STAGE.width, box.height / STAGE.height);
 	const starts = route.at(-1) === "outro" || here === "outro";
 	const goodnightPlate = (() => {
@@ -279,7 +428,7 @@ export function ForkMap({
 						},
 					]}
 				>
-					<Roads dots={dots} lit={shining} />
+					<Roads dots={dots} faint={faint} lit={shining} />
 					<Goal
 						height={GOAL_SIZE}
 						image={goodnight.image}
@@ -288,55 +437,42 @@ export function ForkMap({
 						x={SPOTS.outro.x}
 						y={GOAL_FOOT}
 					/>
-					{(Object.keys(places) as MapPlaceNode[]).map((node) => {
-						const place = places[node];
-						const size = place.state === "here" ? MEDALLION_HERE : MEDALLION;
-						const { x, y } = SPOTS[node];
-						return (
-							<Medallion
-								accessibilityLabel={place.name}
-								key={node}
-								onPress={walking ? undefined : place.onPress}
-								picture={place.picture}
-								size={size}
-								state={place.state}
-								style={{
-									left: x - size / 2,
-									opacity: place.state === "default" ? DIMMED : 1,
-									position: "absolute",
-									top: y - size / 2,
-								}}
-							/>
-						);
-					})}
-					{(Object.keys(places) as MapPlaceNode[]).map((node) => {
-						const place = places[node];
-						const { x, y } = SPOTS[node];
-						const half =
-							(place.state === "here" ? MEDALLION_HERE : MEDALLION) / 2;
-						let tone: "dim" | "sand" | "sun" = "sand";
-						if (place.lesson?.kind === "answer" || place.state === "here") {
-							tone = "sun";
-						} else if (place.state === "default") {
-							tone = "dim";
-						}
-						// The top lane's plates stand on the medallion, the bottom lane's hang from it.
-						const gap = place.lesson ? LESSON_GAP : PLATE_GAP;
-						const edge =
-							y === TOP_LANE
-								? { bottom: STAGE.height - (y - half - gap) }
-								: { top: y + half + gap };
-						return (
-							<NamePlate
-								key={node}
-								label={place.lesson?.text ?? place.name}
-								lesson={Boolean(place.lesson)}
-								tone={tone}
-								x={x}
-								{...edge}
-							/>
-						);
-					})}
+					{nodes.map((node) => (
+						<Spot
+							key={node}
+							node={node}
+							place={places[node]}
+							walking={walking}
+						/>
+					))}
+					{nodes
+						.filter((node) => places[node].label)
+						.map((node) => {
+							const place = places[node];
+							const { x, y } = SPOTS[node];
+							const half =
+								(place.state === "here" ? MEDALLION_HERE : MEDALLION) / 2;
+							const tone =
+								place.lesson?.kind === "answer" || place.state === "here"
+									? "sun"
+									: "sand";
+							// The top lane's plates stand on the medallion, the others hang from it.
+							const edge =
+								y === TOP_LANE
+									? { bottom: STAGE.height - (y - half - PLATE_GAP) }
+									: { top: y + half + PLATE_GAP };
+							return (
+								<NamePlate
+									key={node}
+									label={place.lesson?.text ?? place.name}
+									lesson
+									rise={Boolean(place.reveal) && !calm}
+									tone={tone}
+									x={x}
+									{...edge}
+								/>
+							);
+						})}
 					<NamePlate
 						icon={goodnight.locked ? "lock" : undefined}
 						label={goodnight.name}
@@ -361,12 +497,20 @@ export function ForkMap({
 							<BackButton onPress={onBack} />
 						</View>
 					) : null}
-					<View
-						pointerEvents="none"
-						style={[styles.titleRow, { top: TITLE_TOP }]}
-					>
-						<NamePill style={styles.plate} text={title} />
-					</View>
+					{title ? (
+						<View
+							pointerEvents="none"
+							style={[
+								styles.corner,
+								{
+									left: SAFE_X - 4 + BACK_SIZE + TITLE_GAP,
+									top: BAR_TOP + (BACK_SIZE - TITLE_HEIGHT) / 2,
+								},
+							]}
+						>
+							<NamePill compact text={title} />
+						</View>
+					) : null}
 					<View style={[styles.corner, { bottom: SAFE_BOTTOM, right: SAFE_X }]}>
 						{button}
 					</View>
@@ -383,5 +527,4 @@ const styles = StyleSheet.create({
 	plateBox: { alignItems: "center", position: "absolute", width: PLATE_BOX },
 	root: { flex: 1 },
 	stage: { height: STAGE.height, position: "absolute", width: STAGE.width },
-	titleRow: { alignItems: "center", left: 0, position: "absolute", right: 0 },
 });

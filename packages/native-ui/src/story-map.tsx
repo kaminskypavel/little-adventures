@@ -13,15 +13,24 @@ import { FallbackImage } from "./fallback-image";
 import { Medallion, type MedallionState } from "./medallion";
 import { useCalm } from "./motion-provider";
 import { Plate } from "./plate";
+import { SealedDisc } from "./sealed-disc";
 import { SteppingStone } from "./stepping-stone";
-import { flat, layout, mapMedallion, motion, shadows, spacing } from "./tokens";
+import {
+	flat,
+	layout,
+	mapMedallion,
+	mapSeal,
+	motion,
+	shadows,
+	spacing,
+} from "./tokens";
 import { Walker, type WalkerPoint, walkerSize } from "./walker";
 
 export type MapNode = "intro" | "p1" | "p2" | "p1a" | "p2a" | "outro";
 export type MapPlaceNode = Exclude<MapNode, "outro">;
 
 export interface MapPlace {
-	/** The sand plate: only the current place and the next places. */
+	/** The plate: only the place the star stands on and the places that can be walked to next. */
 	label: boolean;
 	/** What the plate says instead of the name: the place's question, or its answer once visited. */
 	lesson?: { kind: "answer" | "question"; text: string };
@@ -29,6 +38,8 @@ export interface MapPlace {
 	/** Absent for places that do nothing but feel pressed (drawing, not reachable). */
 	onPress?: () => void;
 	picture: ImageSource | number | null;
+	/** The place just opened from its seal for the first time: it pops in once. */
+	reveal?: boolean;
 	state: MedallionState;
 }
 
@@ -448,6 +459,19 @@ function Places({
 		const place = places[node];
 		const size =
 			place.state === "here" ? mapMedallion.sizeHere : mapMedallion.size;
+		// Not reachable yet: the same sealed disc as the sideways map.
+		if (place.state === "default") {
+			return (
+				<SealedDisc
+					key={node}
+					style={{
+						left: frame.x(NODES[node].x) - mapSeal.size / 2,
+						position: "absolute",
+						top: frame.y(NODES[node].y) - mapSeal.size / 2,
+					}}
+				/>
+			);
+		}
 		return (
 			<Medallion
 				accessibilityLabel={`${place.name}${stateHint[place.state]}`}

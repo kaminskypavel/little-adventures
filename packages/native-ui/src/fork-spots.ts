@@ -9,10 +9,10 @@ export interface Point {
 
 export const STAGE = { height: 393, width: 852 } as const;
 export const STAR = 46;
-/** The tall lanes: the top lane carries its names above, the bottom lane below. */
+/** The tall lanes: the top lane carries its plates above, the bottom lane below. */
 export const TOP_LANE = 150;
-export const BOTTOM_LANE = 246;
-export const MID_LANE = 198;
+export const BOTTOM_LANE = 262;
+export const MID_LANE = 206;
 export const SAFE_X = 59;
 export const BAR_TOP = 14;
 
@@ -20,10 +20,10 @@ export const BAR_TOP = 14;
 export const SPOTS: Record<MapNode, Point> = {
 	intro: { x: 119, y: MID_LANE },
 	outro: { x: 716, y: MID_LANE },
-	p1: { x: 318, y: TOP_LANE },
-	p1a: { x: 517, y: TOP_LANE },
-	p2: { x: 318, y: BOTTOM_LANE },
-	p2a: { x: 517, y: BOTTOM_LANE },
+	p1: { x: 312, y: TOP_LANE },
+	p1a: { x: 505, y: TOP_LANE },
+	p2: { x: 312, y: BOTTOM_LANE },
+	p2a: { x: 505, y: BOTTOM_LANE },
 };
 
 /**
@@ -31,14 +31,14 @@ export const SPOTS: Record<MapNode, Point> = {
  * (`M x,y C x,y x,y x,y`). The app owns which roads exist and which are lit.
  */
 export const ROAD_PATHS: Record<string, string> = {
-	"intro-p1": "M155,198 C215,198 222,150 282,150",
-	"intro-p2": "M155,198 C215,198 222,246 282,246",
-	"p1-p1a": "M354,150 L481,150",
-	"p1-p2": "M318,186 L318,210",
-	"p1a-outro": "M553,150 C610,150 604,198 664,198",
-	"p1a-p2a": "M517,186 L517,210",
-	"p2-p2a": "M354,246 L481,246",
-	"p2a-outro": "M553,246 C610,246 604,198 664,198",
+	"intro-p1": "M155,206 C213,206 216,150 276,150",
+	"intro-p2": "M155,206 C213,206 216,262 276,262",
+	"p1-p1a": "M348,150 L469,150",
+	"p1-p2": "M312,184 L312,228",
+	"p1a-outro": "M541,150 C600,150 604,206 664,206",
+	"p1a-p2a": "M505,184 L505,228",
+	"p2-p2a": "M348,262 L469,262",
+	"p2a-outro": "M541,262 C600,262 604,206 664,206",
 };
 
 /** The id of the road between two nodes, whichever way round they are given. */
@@ -49,18 +49,24 @@ export const idOf = (a: MapNode, b: MapNode) => {
 
 /**
  * Where the star's centre rests, from the centre of the place it is at: on the medallion's upper
- * right shoulder. The same at every stop, the goodnight included.
+ * right shoulder. The same at every place; the goodnight's gate is bigger, so the star stands
+ * higher and a little further out.
  */
-const STAND = { x: 30, y: -22 };
+const STAND: Point = { x: 33, y: -14 };
+const STAND_GOODNIGHT: Point = { x: 34, y: -36 };
+
+const standOf = (node: MapNode): Point =>
+	node === "outro" ? STAND_GOODNIGHT : STAND;
 
 /** The top-left corner of the star when its centre is at `centre` + the resting offset. */
-const cornerFor = (centre: Point): Point => ({
-	x: centre.x + STAND.x - STAR / 2,
-	y: centre.y + STAND.y - STAR / 2,
+const cornerFor = (centre: Point, stand: Point): Point => ({
+	x: centre.x + stand.x - STAR / 2,
+	y: centre.y + stand.y - STAR / 2,
 });
 
 /** The top-left corner of the star resting at a place. */
-export const standAt = (node: MapNode): Point => cornerFor(SPOTS[node]);
+export const standAt = (node: MapNode): Point =>
+	cornerFor(SPOTS[node], standOf(node));
 
 const NUMBER = /-?\d+(?:\.\d+)?/gu;
 const ROAD_SAMPLES = 24;
@@ -138,7 +144,17 @@ export function walkPoints(route: readonly MapNode[]): {
 	for (const [index, to] of route.slice(1).entries()) {
 		const from = route[index] as MapNode;
 		const run = [SPOTS[from], ...roadPoints(from, to), SPOTS[to]];
-		points.push(...hopsAlong(run).map(cornerFor), standAt(to));
+		// The resting offset eases from the one place's to the other's along the walk.
+		const hops = hopsAlong(run);
+		points.push(
+			...hops.map((p, i) =>
+				cornerFor(
+					p,
+					mix(standOf(from), standOf(to), (i + 1) / (hops.length + 1))
+				)
+			),
+			standAt(to)
+		);
 		stops.push(points.length - 1);
 	}
 	return { points, stops };

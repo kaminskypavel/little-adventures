@@ -12,14 +12,15 @@ import {
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaFrame } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { MapCastButton } from "@/src/cast/map-cast-button";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
 import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
-import { isOutroLocked, neighbours } from "@/src/data/map-rules";
+import { useMapReveals } from "@/src/data/map-reveals";
+import { isOutroLocked, neighbours, newlyOpened } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
 import { mapLabel } from "@/src/data/question-rules";
 import { markScreen } from "@/src/data/timeline";
@@ -95,6 +96,7 @@ function placeState({
 
 /** Sideways: the fork road. The star walks the roads, so its route is every stop on the way. */
 function SidewaysMap({
+	adventureId,
 	goodnight,
 	goodnightOpen,
 	next,
@@ -105,6 +107,7 @@ function SidewaysMap({
 	title,
 	walkTo,
 }: {
+	adventureId: string;
 	goodnight: MapGoodnight;
 	goodnightOpen: boolean;
 	next: readonly NodeId[];
@@ -125,6 +128,23 @@ function SidewaysMap({
 		ready.push("outro");
 	}
 	const atGoodnight = here === "outro";
+
+	// A place that is ready and was never shown open before breaks its seal once, now. Decided on
+	// the first drawing of the map, so the pop is not cut short when the place is marked as shown.
+	const seen = useMapReveals((s) => s.seen[adventureId]);
+	const show = useMapReveals((s) => s.show);
+	const [pops] = useState(() => newlyOpened(seen ?? [], ready));
+	const open = PLACE_IDS.filter((node) => places[node].state !== "default");
+	const openKey = open.join(",");
+	useEffect(() => {
+		show(adventureId, openKey ? (openKey.split(",") as NodeId[]) : []);
+	}, [adventureId, openKey, show]);
+	const shown = Object.fromEntries(
+		PLACE_IDS.map((node) => [
+			node,
+			{ ...places[node], reveal: pops.includes(node) },
+		])
+	) as Record<MapPlaceNode, MapPlace>;
 	return (
 		<ForkMap
 			button={
@@ -132,7 +152,7 @@ function SidewaysMap({
 					disabled={walkTo !== undefined}
 					icon={atGoodnight ? undefined : "play"}
 					label={atGoodnight ? "Say goodnight" : "Keep walking"}
-					labelSize={21}
+					labelSize={19}
 					onPress={() => onOpen(here)}
 					size="md"
 					style={styles.sidewaysButton}
@@ -144,7 +164,7 @@ function SidewaysMap({
 			here={here}
 			lit={litRoads(visited)}
 			onWalked={onWalked}
-			places={places}
+			places={shown}
 			route={routeOf({ fresh, here, visited, walkTo })}
 			title={title}
 			walkTo={walkTo}
@@ -173,6 +193,8 @@ export default function StoryMapScreen() {
 	const id = params.id ?? "box";
 	const walkTo = isNode(params.walkTo) ? params.walkTo : undefined;
 	const { adventure, progress: stored } = useAdventure(id);
+	// Which places the map showed open before is read back from the phone first (a moment).
+	const revealsKnown = useMapReveals((s) => s.hydrated);
 	// From the shared cache, so the title is there on the first frame.
 	const childName = useChildName() ?? "";
 	// The last drawing count marked, so a screen is marked once per count (not on every render).
@@ -201,7 +223,7 @@ export default function StoryMapScreen() {
 
 	let content: ReactNode = null;
 	let fork: ReactNode = null;
-	if (adventure && progress) {
+	if (adventure && progress && revealsKnown) {
 		// Nothing walked yet: everything is locked but the intro, and the star is not out.
 		const fresh = progress.visited.length === 0;
 		const next = nextFrom(progress);
@@ -225,9 +247,14 @@ export default function StoryMapScreen() {
 				adventure.places[node],
 				progress.visited.includes(node)
 			);
+			// Only the place the star stands on and the places to walk to next carry a plate; a
+			// walked place is its picture and a check (the user's call, 2026-11-03).
+			const label =
+				state === "here" ||
+				state === "ready" ||
+				(state === "drawing" && next.includes(node));
 			return {
-				// Every place shows its name plate (the user's call, 2026-11-01).
-				label: true,
+				label,
 				// A place with a question says it before the visit and answers after.
 				lesson: said.kind === "name" ? undefined : { ...said, kind: said.kind },
 				name: adventure.places[node].name,
@@ -254,6 +281,7 @@ export default function StoryMapScreen() {
 		};
 		fork = (
 			<SidewaysMap
+				adventureId={id}
 				goodnight={goodnight}
 				goodnightOpen={goodnightOpen}
 				next={next}
@@ -338,5 +366,6 @@ export default function StoryMapScreen() {
 
 const styles = StyleSheet.create({
 	capture: { flex: 1 },
-	sidewaysButton: { height: 60, paddingHorizontal: 24 },
+	// Compact, so it keeps clear of the lowest plate beside it.
+	sidewaysButton: { height: 50, paddingHorizontal: 20 },
 });

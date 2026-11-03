@@ -35,3 +35,12 @@ export const choicesFrom = (
 		locked: n === "outro" && !isGoodnightOpen(visited),
 		node: n,
 	}));
+
+/**
+ * The places that open from their seal now, for the first time: ready to walk to, and not shown
+ * open on the map before (`seen`). The intro is never sealed, so it never opens this way.
+ */
+export const newlyOpened = (
+	seen: readonly NodeId[],
+	ready: readonly NodeId[]
+): NodeId[] => ready.filter((node) => node !== "intro" && !seen.includes(node));
