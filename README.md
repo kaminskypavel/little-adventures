@@ -60,6 +60,8 @@ Every model call, Meta or not, is recorded with its model, operation, time and c
 
 ## Meta models
 
+<p align="center"><img src=".github/readme/meta-models.webp" alt="Six Meta models in every story: an exploded view with the Little Adventures app on top; below it Meta open weights, our tuned Muse Glimmer 30B with its LoRA (checks every story, 94.5% vs 89.8%) and Muse Spark Open (its backup); at the base the Meta Model API with Muse Voice Transcribe 1.0, Muse Spark 1.3, Muse Image 1.0 and SAM 3.1, each with its job." width="100%"></p>
+
 | Model | Job | Code | Runs |
 | --- | --- | --- | --- |
 | Muse Spark 1.3 | Structured output (`llm`) and yes/no checks (`decision`). The engine uses both to write and check the map. | [packages/llm](packages/llm), [packages/decision](packages/decision) | Meta Model API |
