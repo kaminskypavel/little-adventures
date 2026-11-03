@@ -63,29 +63,3 @@ export function openingOf(
 		question: node === "intro" ? adventure.question : null,
 	};
 }
-
-const LETTER_PX = 14.5;
-const GAP_PX = 15;
-/** About how wide a line of the question balloon may run (30 pt Nunito 900). */
-const LINE_PX = 420;
-
-/**
- * Where each line of a question starts, so the lines come out about equal (React Native has no
- * balanced wrapping). Widths are estimated from letter counts: close, not exact. A tie breaks toward the longer first line.
- */
-export function balanceLines(words: string[]): number[] {
-	const widths = words.map((w) => w.length * LETTER_PX + GAP_PX);
-	const total = widths.reduce((sum, w) => sum + w, 0) - GAP_PX;
-	const lines = Math.max(1, Math.ceil(total / LINE_PX));
-	const target = total / lines;
-	const starts = [0];
-	let run = 0;
-	for (const [index, width] of widths.entries()) {
-		if (index > 0 && starts.length < lines && run + width * 0.4 > target) {
-			starts.push(index);
-			run = 0;
-		}
-		run += width;
-	}
-	return starts;
-}

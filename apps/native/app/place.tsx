@@ -1262,16 +1262,14 @@ export default function Place() {
 }
 
 /**
- * The chrome stays hidden from the moment a question is due until its card lets go. Raised during
- * render (idempotent) so the chrome mounts already hidden; lowered in an effect.
+ * The chrome stays hidden from the moment a question is due until its card lets go. Set in a layout
+ * effect, before the first paint, so the chrome never shows for a frame; never during render (React
+ * forbids updating the chrome while another component renders).
  */
 function useHideChrome(asking: boolean) {
-	if (asking && !useGate.getState().asking) {
-		useGate.setState({ asking: true });
-	}
-	useEffect(() => {
-		if (!asking) {
-			useGate.setState({ asking: false });
+	useLayoutEffect(() => {
+		if (useGate.getState().asking !== asking) {
+			useGate.setState({ asking });
 		}
 	}, [asking]);
 }

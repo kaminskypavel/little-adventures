@@ -13,7 +13,7 @@ import {
 } from "@little-adventures/native-ui/tokens";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
-import { type ReactNode, useCallback, useEffect } from "react";
+import { Fragment, type ReactNode, useCallback, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	Easing,
@@ -28,7 +28,7 @@ import {
 import { useMusic } from "@/src/data/music-store";
 import { wordIndexAt } from "@/src/data/playback";
 import { useGate } from "@/src/data/question-gate";
-import { balanceLines, type Learned } from "@/src/data/question-rules";
+import type { Learned } from "@/src/data/question-rules";
 import type { NarrationAudio } from "@/src/data/types";
 
 /** The card shows this long when there is no audio to wait for. */
@@ -83,7 +83,11 @@ function Scrim({ strength }: { strength: number }) {
 	);
 }
 
-/** A question with its words timed: the one being said sits on a sun chip, the rest stay full ink. */
+/**
+ * A question with its words timed: one native text, so the phone wraps and measures it itself, the
+ * word being said lit on the sun (nested spans; per-word boxes mis-measured on iOS and ran out of
+ * the balloon). The rest stay full ink.
+ */
 function Words({
 	compact,
 	current,
@@ -93,34 +97,20 @@ function Words({
 	current: number;
 	words: string[];
 }) {
-	const starts = balanceLines(words);
 	return (
-		<View accessibilityLabel={words.join(" ")} accessible>
-			{starts.map((start, line) => (
-				<View key={start} style={styles.words}>
-					{words.slice(start, starts[line + 1]).map((word, offset) => {
-						const index = start + offset;
-						return (
-							<View
-								key={`${index}-${word}`}
-								style={[styles.word, index === current && styles.now]}
-							>
-								<Text
-									allowFontScaling={false}
-									style={[
-										styles.question,
-										compact && styles.questionCompact,
-										index === current && styles.nowInk,
-									]}
-								>
-									{word}
-								</Text>
-							</View>
-						);
-					})}
-				</View>
+		<Text
+			accessibilityLabel={words.join(" ")}
+			allowFontScaling={false}
+			style={[styles.question, compact && styles.questionCompact]}
+		>
+			{words.map((word, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: the same word can repeat, the position is the identity
+				<Fragment key={`${index}-${word}`}>
+					{index > 0 ? " " : ""}
+					<Text style={index === current ? styles.now : undefined}>{word}</Text>
+				</Fragment>
 			))}
-		</View>
+		</Text>
 	);
 }
 
@@ -358,8 +348,11 @@ const styles = StyleSheet.create({
 		marginTop: 12,
 		paddingHorizontal: 40,
 	},
-	now: { backgroundColor: colors.sun },
-	nowInk: { color: colors.nowWordInk },
+	now: {
+		backgroundColor: colors.sun,
+		borderRadius: 8,
+		color: colors.nowWordInk,
+	},
 	question: {
 		color: colors.inkNavy,
 		fontFamily: fonts.heavy,
@@ -406,6 +399,4 @@ const styles = StyleSheet.create({
 		paddingBottom: 4,
 		textAlign: "center",
 	},
-	word: { borderRadius: 11, marginHorizontal: -2, paddingHorizontal: 6 },
-	words: { columnGap: 3, flexDirection: "row", flexWrap: "wrap" },
 });
