@@ -1,0 +1,39 @@
+{
+  "words": [
+    {
+      "endSec": 0.24,
+      "startSec": 0,
+      "word": "Pick"
+    },
+    {
+      "endSec": 0.32,
+      "startSec": 0.28,
+      "word": "a"
+    },
+    {
+      "endSec": 0.88,
+      "startSec": 0.4,
+      "word": "way,"
+    },
+    {
+      "endSec": 1.12,
+      "startSec": 1,
+      "word": "and"
+    },
+    {
+      "endSec": 1.44,
+      "startSec": 1.28,
+      "word": "off"
+    },
+    {
+      "endSec": 1.6,
+      "startSec": 1.52,
+      "word": "we"
+    },
+    {
+      "endSec": 2.32,
+      "startSec": 1.68,
+      "word": "go!"
+    }
+  ]
+}

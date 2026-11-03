@@ -1,0 +1,29 @@
+{
+  "words": [
+    {
+      "endSec": 0.24,
+      "startSec": 0,
+      "word": "Where"
+    },
+    {
+      "endSec": 0.48,
+      "startSec": 0.32,
+      "word": "shall"
+    },
+    {
+      "endSec": 0.56,
+      "startSec": 0.52,
+      "word": "we"
+    },
+    {
+      "endSec": 0.72,
+      "startSec": 0.64,
+      "word": "go"
+    },
+    {
+      "endSec": 1.6,
+      "startSec": 0.8,
+      "word": "next?"
+    }
+  ]
+}

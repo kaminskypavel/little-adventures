@@ -90,9 +90,50 @@ export const enterMs = (count: number) =>
 
 // The star's spoken line (bundled, so it plays offline), and the words the balloon shows: the whole
 // line when it fits in the room between the photos, else the short one.
-const WHICH_WAY = require("../assets/voice/which-way.mp3");
-const SHORT_LINE = "Which way?";
-const LONG_LINE = "Which way shall we go?";
+/** What the star asks, spoken and written (the balloon shows `long` only when it fits). */
+const ASKS = [
+	{
+		audio: require("../assets/voice/which-way.mp3"),
+		long: "Which way shall we go?",
+		short: "Which way?",
+	},
+	{
+		audio: require("../assets/voice/which-way-2.mp3"),
+		long: "Where shall we go next?",
+		short: "Where next?",
+	},
+	{
+		audio: require("../assets/voice/which-way-3.mp3"),
+		long: "Which path looks fun?",
+		short: "Which path?",
+	},
+	{
+		audio: require("../assets/voice/which-way-4.mp3"),
+		long: "Hmm, which way now?",
+		short: "Which way now?",
+	},
+	{
+		audio: require("../assets/voice/which-way-5.mp3"),
+		long: "What shall we find next?",
+		short: "What next?",
+	},
+	{
+		audio: require("../assets/voice/which-way-6.mp3"),
+		long: "Pick a way, and off we go!",
+		short: "Pick a way!",
+	},
+] as const;
+type Ask = (typeof ASKS)[number];
+// The last ask, so the next visit picks a different one.
+let lastAsk = -1;
+function nextAsk(): Ask {
+	let index = Math.floor(Math.random() * (ASKS.length - 1));
+	if (index >= lastAsk && lastAsk >= 0) {
+		index += 1;
+	}
+	lastAsk = index;
+	return ASKS[index];
+}
 const BALLOON_FONT = 20;
 const BALLOON_PAD_X = 14;
 /** A rough width of a line of balloon words, per character, as a share of the font size. */
@@ -330,11 +371,11 @@ function Photo({
 }
 
 /**
- * Says "Which way shall we go?" once, as the balloon pops: the music bed ducks under the voice,
- * as under any voice. Not again on a repaint; with reduced motion it is still spoken.
+ * Says the star's question once, as the balloon pops: the music bed ducks under the voice, as
+ * under any voice. Not again on a repaint; with reduced motion it is still spoken.
  */
-function useAskAloud(atMs: number) {
-	const player = useAudioPlayer(WHICH_WAY);
+function useAskAloud(atMs: number, audio: Ask["audio"]) {
+	const player = useAudioPlayer(audio);
 	const { didJustFinish, isLoaded } = useAudioPlayerStatus(player);
 	const spoken = useRef<boolean>(false);
 	const [due, setDue] = useState(false);
@@ -371,6 +412,8 @@ function StarAndBalloon({
 	take: "jump" | "point";
 }) {
 	const calm = useCalm();
+	// A different question each visit (never the same twice in a row).
+	const [ask] = useState(nextAsk);
 	const rise = useArrival({
 		delay,
 		from: STAR_FROM,
@@ -383,10 +426,10 @@ function StarAndBalloon({
 		ms: BALLOON_MS,
 		spring: true,
 	});
-	useAskAloud(calm ? delay : delay + STAR_MS);
+	useAskAloud(calm ? delay : delay + STAR_MS, ask.audio);
 	const longWidth =
-		LONG_LINE.length * BALLOON_FONT * CHAR_WIDTH + 2 * BALLOON_PAD_X;
-	const line = room >= longWidth ? LONG_LINE : SHORT_LINE;
+		ask.long.length * BALLOON_FONT * CHAR_WIDTH + 2 * BALLOON_PAD_X;
+	const line = room >= longWidth ? ask.long : ask.short;
 	const starStyle = useAnimatedStyle(() => ({
 		opacity: rise.opacity.get(),
 		// Rises from below: the spring's scale (0.7 to 1) says how far it has come.

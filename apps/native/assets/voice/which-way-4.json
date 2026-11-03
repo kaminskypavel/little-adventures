@@ -1,0 +1,24 @@
+{
+  "words": [
+    {
+      "endSec": 0.8,
+      "startSec": 0,
+      "word": "Hmm,"
+    },
+    {
+      "endSec": 1.12,
+      "startSec": 0.88,
+      "word": "which"
+    },
+    {
+      "endSec": 1.36,
+      "startSec": 1.2,
+      "word": "way"
+    },
+    {
+      "endSec": 2.16,
+      "startSec": 1.44,
+      "word": "now?"
+    }
+  ]
+}

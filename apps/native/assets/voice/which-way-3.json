@@ -1,0 +1,24 @@
+{
+  "words": [
+    {
+      "endSec": 0.32,
+      "startSec": 0,
+      "word": "Which"
+    },
+    {
+      "endSec": 0.64,
+      "startSec": 0.4,
+      "word": "path"
+    },
+    {
+      "endSec": 0.96,
+      "startSec": 0.72,
+      "word": "looks"
+    },
+    {
+      "endSec": 1.68,
+      "startSec": 1.04,
+      "word": "fun?"
+    }
+  ]
+}
