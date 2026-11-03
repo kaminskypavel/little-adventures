@@ -6,7 +6,7 @@ A story app for children aged 2 to 16 that doubles as a learning platform. The c
 
 Website: [littleadventures.app](https://littleadventures.app) · Licence: evaluation only, see [LICENSE](LICENSE)
 
-[![Live app](https://img.shields.io/badge/Live%20app-littleadventures.app%2Fweb-1d2b4f)](https://www.littleadventures.app/web) [![Launch film on X](https://img.shields.io/badge/Launch%20film-on%20X-000000)](https://x.com/KaminskyPavel/status/2117210112993755191) [![Open weights on Hugging Face](https://img.shields.io/badge/Hugging%20Face-glimmer--decision--little--adventures-FFD21E)](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
+[![Live app](https://img.shields.io/badge/Live%20app-littleadventures.app%2Fweb-1d2b4f)](https://www.littleadventures.app/web) [![Launch film on YouTube](https://img.shields.io/badge/Launch%20film-YouTube-c4302b)](https://www.youtube.com/watch?v=ofxkeGxQeOU) [![Launch film on X](https://img.shields.io/badge/Launch%20film-on%20X-000000)](https://x.com/KaminskyPavel/status/2117210112993755191) [![Open weights on Hugging Face](https://img.shields.io/badge/Hugging%20Face-glimmer--decision--little--adventures-FFD21E)](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
 
 ## What it looks like
 
@@ -16,7 +16,7 @@ Every screen belongs to one clay world we built for this app: our own design sys
 
 ### Launch film (45 s)
 
-<p align="center"><a href="https://x.com/KaminskyPavel/status/2117210112993755191"><img src=".github/readme/launch-film.webp" alt="Little Adventures launch film: two children and the star look at a glowing phone. Click to watch the 45-second film." width="80%"></a></p>
+<p align="center"><a href="https://www.youtube.com/watch?v=ofxkeGxQeOU"><img src=".github/readme/launch-film.webp" alt="Little Adventures launch film: two children and the star look at a glowing phone. Click to watch the 45-second film." width="80%"></a></p>
 
 ## Hackathon submission
 
@@ -27,7 +27,7 @@ Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
 - **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the Kodio engine; the public part is [packages/decision](packages/decision).
 - Demo video (3 min): added on submission day
-- Launch film (45 s): [on X](https://x.com/KaminskyPavel/status/2117210112993755191)
+- Launch film (45 s): [on YouTube](https://www.youtube.com/watch?v=ofxkeGxQeOU), [on X](https://x.com/KaminskyPavel/status/2117210112993755191)
 - **Try it:** the live app at [littleadventures.app/web](https://www.littleadventures.app/web) is a private beta; judges find the invite code in our submission form. Or run it locally with no keys: `bun install`, `bun run dev:native`, press `w`. It plays one bundled sample adventure.
 
 ## For judges
