@@ -36,6 +36,8 @@ import { wordIndexAt } from "@/src/data/playback";
 import { useGate } from "@/src/data/question-gate";
 import type { Learned } from "@/src/data/question-rules";
 import type { NarrationAudio } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { placeStrings } from "@/src/i18n/strings/place";
 
 /** The card shows this long when there is no audio to wait for. */
 export const NO_AUDIO_MS = 2500;
@@ -285,6 +287,7 @@ export function LessonCard({
 	fact: string;
 	onDone: () => void;
 }) {
+	const t = useT(placeStrings);
 	useLayoutEffect(() => {
 		useGate.setState({ asking: true });
 		return () => useGate.setState({ asking: false });
@@ -294,14 +297,14 @@ export function LessonCard({
 			<Scrim strength={SCRIM_RECAP} />
 			<View style={styles.recap} testID="lesson-card">
 				<Text allowFontScaling={false} style={styles.lessonLabel}>
-					What we learned
+					{t("learned")}
 				</Text>
 				<Text allowFontScaling={false} style={styles.lessonFact}>
 					{fact}
 				</Text>
 			</View>
 			<PrimaryButton
-				label="Got it!"
+				label={t("gotIt")}
 				labelSize={21}
 				onPress={onDone}
 				size="md"
@@ -320,13 +323,14 @@ export function RecapCard({
 	onDone: () => void;
 	rows: Learned[];
 }) {
+	const t = useT(placeStrings);
 	const style = useFade(false);
 	return (
 		<Animated.View pointerEvents="box-none" style={[styles.root, style]}>
 			<Scrim strength={SCRIM_RECAP} />
 			<View style={styles.recap} testID="recap-card">
 				<Text allowFontScaling={false} style={styles.title}>
-					What we learned
+					{t("learned")}
 				</Text>
 				{rows.map((row) => (
 					<View key={row.node} style={styles.row}>
@@ -340,7 +344,7 @@ export function RecapCard({
 				))}
 			</View>
 			<PrimaryButton
-				label="Goodnight"
+				label={t("goodnight")}
 				labelSize={21}
 				onPress={onDone}
 				size="md"

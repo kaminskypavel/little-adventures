@@ -92,6 +92,8 @@ import type {
 } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
 import { keepWarm } from "@/src/data/warm-parts";
+import { isRtl, useLanguage, useT } from "@/src/i18n";
+import { placeStrings } from "@/src/i18n/strings/place";
 import { LandscapeChrome } from "@/src/landscape-chrome";
 import { useLandscape } from "@/src/orientation";
 import {
@@ -172,6 +174,8 @@ function PlayerChrome({
 	progress: number | SharedValue<number>;
 	words: string[];
 }) {
+	const t = useT(placeStrings);
+	const language = useLanguage();
 	const insets = useSafeAreaInsets();
 	const sideways = useLandscape();
 	const { end, start } = useMemo(
@@ -216,7 +220,7 @@ function PlayerChrome({
 					]}
 				>
 					<IconButton
-						accessibilityLabel="Back to the map"
+						accessibilityLabel={t("backToMap")}
 						icon="map"
 						onPress={onBack}
 					/>
@@ -229,6 +233,7 @@ function PlayerChrome({
 				<NarrationBar
 					current={current - start}
 					progress={progress}
+					rtl={isRtl(language)}
 					style={[
 						styles.narration,
 						{ bottom: bottom + layout.primaryHeight + layout.gap },
@@ -237,7 +242,7 @@ function PlayerChrome({
 				/>
 				<View pointerEvents="box-none" style={[styles.control, { bottom }]}>
 					<ClayPressable
-						accessibilityLabel={playing ? "Pause" : "Play"}
+						accessibilityLabel={playing ? t("pause") : t("play")}
 						onPress={onToggle}
 						radius={radii.full}
 						style={styles.pause}
@@ -1164,6 +1169,7 @@ function TvPlayer({
 	posterUrl: string | null;
 	words: string[];
 }) {
+	const t = useT(placeStrings);
 	const tv = useTvRemote();
 	const [length, setLength] = useState(0);
 	const loaded = useRef<boolean>(false);
@@ -1234,9 +1240,12 @@ function TvPlayer({
 	}, [loadedHere, node, tv.ended]);
 
 	const ready = length > 0;
-	const label = ready
-		? `Playing on ${tv.deviceName ?? "the TV"}`
-		: "Getting ready for the TV";
+	let label = t("tvGettingReady");
+	if (ready) {
+		label = tv.deviceName
+			? t("playingOn", { device: tv.deviceName })
+			: t("playingOnTv");
+	}
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
 			{cover}
@@ -1356,6 +1365,7 @@ function useOpeningCard({
 	id: string;
 	node: NodeId;
 }): { card: ReactNode; holding: boolean } {
+	const t = useT(placeStrings);
 	const gateKey = `${id}:${node}`;
 	const gate = useGatePhase(gateKey);
 	const place = adventure?.places[node];
@@ -1372,7 +1382,7 @@ function useOpeningCard({
 		card = (
 			<QuestionCard
 				audio={audio}
-				by={intro && childName ? `${childName} asked` : undefined}
+				by={intro && childName ? t("asked", { name: childName }) : undefined}
 				gateKey={gateKey}
 				question={question}
 			/>
@@ -1389,6 +1399,7 @@ function PlaceScreen({
 	held: boolean;
 	leave: ReturnType<typeof useScreenFade>["leave"];
 }) {
+	const t = useT(placeStrings);
 	const router = useRouter();
 	const params = useLocalSearchParams<{ id?: string; node?: string }>();
 	const id = params.id ?? "box";
@@ -1483,7 +1494,7 @@ function PlaceScreen({
 	const audio = place.audio ?? null;
 	const fixedLine = goodnight && audio === null;
 	const words = fixedLine
-		? `And the moon said goodnight, ${childName}.`.split(" ")
+		? t("moonGoodnight", { name: childName }).split(" ")
 		: place.narration;
 	const cover =
 		goodnight && place.picture === null ? (
