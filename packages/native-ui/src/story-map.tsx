@@ -13,7 +13,6 @@ import { FallbackImage } from "./fallback-image";
 import { Medallion, type MedallionState } from "./medallion";
 import { useCalm } from "./motion-provider";
 import { Plate } from "./plate";
-import { SealedDisc } from "./sealed-disc";
 import { SteppingStone } from "./stepping-stone";
 import { flat, layout, mapMedallion, motion, shadows, spacing } from "./tokens";
 import { Walker, type WalkerPoint, walkerSize } from "./walker";
@@ -153,7 +152,6 @@ const stateHint: Record<MedallionState, string> = {
 	drawing: ", not drawn yet",
 	here: ", you are here",
 	ready: "",
-	sealed: ", not reached yet",
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -452,21 +450,6 @@ function Places({
 		const place = places[node];
 		const size =
 			place.state === "here" ? mapMedallion.sizeHere : mapMedallion.size;
-		// Not reachable yet: the same blurred medallion as the sideways map.
-		if (place.state === "default") {
-			return (
-				<SealedDisc
-					key={node}
-					picture={place.picture}
-					size={size}
-					style={{
-						left: frame.x(NODES[node].x) - size / 2,
-						position: "absolute",
-						top: frame.y(NODES[node].y) - size / 2,
-					}}
-				/>
-			);
-		}
 		return (
 			<Medallion
 				accessibilityLabel={`${place.name}${stateHint[place.state]}`}

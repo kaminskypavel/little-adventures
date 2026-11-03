@@ -24,7 +24,6 @@ import { Medallion } from "./medallion";
 import { useCalm } from "./motion-provider";
 import { NamePill } from "./name-pill";
 import { Plate } from "./plate";
-import { SealedDisc } from "./sealed-disc";
 import {
 	Goal,
 	goalShadow,
@@ -43,6 +42,8 @@ import { Walker } from "./walker";
 // ---------------------------------------------------------------------------------------------
 
 const MEDALLION = 64;
+/** A place the road has not reached yet is dimmed. */
+const DIMMED = 0.6;
 const MEDALLION_HERE = 72;
 const GOAL_SIZE = 96;
 const GOAL_FOOT = 254;
@@ -60,7 +61,7 @@ const SAFE_BOTTOM = 20;
 const BACK_SIZE = 64;
 const TITLE_GAP = 8;
 const TITLE_HEIGHT = 36;
-/** Roads that lead to a sealed place are drawn this faint. */
+/** Roads that lead to a place the road has not reached are drawn this faint. */
 const SEALED_ROAD = 0.28;
 
 const ROAD = {
@@ -77,7 +78,7 @@ function Roads({
 	lit,
 }: {
 	dots: ReadonlySet<string>;
-	/** Roads that lead to a sealed place. */
+	/** Roads that lead to a place not reached yet. */
 	faint: ReadonlySet<string>;
 	lit: ReadonlySet<string>;
 }) {
@@ -205,9 +206,8 @@ function NamePlate({
 }
 
 /**
- * One place on the stage. Sealed, it is its medallion with the picture blurred out. Open, it is its
- * medallion; a place that just opened for the first time (`reveal`) clears and pops in, unless calm
- * motion is asked for.
+ * One place on the stage: its medallion, dimmed while the road has not reached it. A place that
+ * just opened for the first time (`reveal`) pops in, unless calm motion is asked for.
  */
 function Spot({
 	node,
@@ -220,14 +220,6 @@ function Spot({
 }) {
 	const calm = useCalm();
 	const { x, y } = SPOTS[node];
-	const seal: ViewStyle = {
-		left: x - MEDALLION / 2,
-		position: "absolute",
-		top: y - MEDALLION / 2,
-	};
-	if (place.state === "default") {
-		return <SealedDisc picture={place.picture} size={MEDALLION} style={seal} />;
-	}
 	const size = place.state === "here" ? MEDALLION_HERE : MEDALLION;
 	const box: ViewStyle = {
 		height: size,
@@ -235,6 +227,7 @@ function Spot({
 		position: "absolute",
 		top: y - size / 2,
 		width: size,
+		...(place.state === "default" ? { opacity: DIMMED } : null),
 	};
 	const medallion = (
 		<Medallion
@@ -246,39 +239,9 @@ function Spot({
 		/>
 	);
 	if (place.reveal && !calm) {
-		return (
-			<>
-				<Unseal picture={place.picture} style={seal} />
-				<Pop style={box}>{medallion}</Pop>
-			</>
-		);
+		return <Pop style={box}>{medallion}</Pop>;
 	}
 	return <View style={box}>{medallion}</View>;
-}
-
-/** The blurred medallion fades as the clear one pops in over it. */
-function Unseal({
-	picture,
-	style,
-}: {
-	picture: MapPlace["picture"];
-	style: ViewStyle;
-}) {
-	return (
-		<EaseView
-			animate={{ opacity: 0, scale: mapSeal.sealedScale }}
-			initialAnimate={{ opacity: 1, scale: 1 }}
-			pointerEvents="none"
-			style={style}
-			transition={{
-				duration: mapSeal.fade,
-				easing: "easeOut",
-				type: "timing",
-			}}
-		>
-			<SealedDisc picture={picture} size={MEDALLION} />
-		</EaseView>
-	);
 }
 
 /** The medallion pops in: small to a little too big (after a beat), then settles at full size. */
@@ -392,7 +355,7 @@ export function ForkMap({
 
 	const nodes = Object.keys(places) as MapPlaceNode[];
 	const calm = useCalm();
-	// A road is faint when a place at either end is sealed.
+	// A road is faint when a place at either end is not reached yet.
 	const faint = new Set(
 		Object.keys(ROAD_PATHS).filter((id) =>
 			id

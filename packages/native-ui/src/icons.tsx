@@ -4,7 +4,6 @@ import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import { colors, iconSizes } from "./tokens";
 
 export type IconName =
-	| "ask"
 	| "back"
 	| "camera"
 	| "check"
@@ -37,7 +36,6 @@ export const iconNames: readonly IconName[] = [
 	"plus",
 	"back",
 	"sliders",
-	"ask",
 ];
 
 // One family: 24 grid, round caps and joins. Stroke widths follow round 7.
@@ -55,15 +53,6 @@ const micBody = (
 );
 
 const shapes: Record<IconName, (color: string) => ReactNode> = {
-	// The question mark of a sealed place: a hook and a dot, drawn, never a text glyph.
-	ask: (c) => (
-		<Path
-			d="M8.6 8.4a3.6 3.6 0 1 1 5.2 3.2c-1.1.6-1.8 1.4-1.8 2.7v.4M12 19.2h.01"
-			stroke={c}
-			strokeWidth={3.4}
-			{...line}
-		/>
-	),
 	back: (c) => (
 		<Path d="M14.5 5.5L8 12l6.5 6.5" stroke={c} strokeWidth={3} {...line} />
 	),

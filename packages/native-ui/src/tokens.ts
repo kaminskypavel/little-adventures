@@ -481,30 +481,20 @@ export const mapMedallion = {
 	iconRatio: 0.35,
 	ring: 4,
 	ringActive: 5.5,
-	/** Sealed state (a place the road has not reached): its own picture, blurred out under a navy veil. */
-	sealedBlur: 5,
-	sealedVeil: "rgba(18,37,74,0.12)",
 	size: 86,
 	sizeHere: 97,
 } as const;
 
-/** A sealed place on the sideways map: a flat dark disc with a drawn question mark, no clay. */
+/** A place the road has just reached on the sideways map: it pops in once, then its plate rises. */
 export const mapSeal = {
-	fade: 450,
-	icon: 26,
-	iconInk: "rgba(244,236,216,0.72)",
 	popDelay: 350,
 	/** The opening pop: a medallion grows from this scale, overshoots, settles. */
 	popFrom: 0.55,
 	popPeak: 1.08,
 	popPeakAt: 630,
 	popSettle: 270,
-	ring: "rgba(232,213,160,0.4)",
-	ringWidth: 3,
 	riseDelay: 1050,
 	riseDrop: 6,
-	sealedScale: 1,
-	size: 56,
 } as const;
 
 /** Map stepping stone: a pebble cut-out with a shape-following shadow, and the one glow in the design system. */
