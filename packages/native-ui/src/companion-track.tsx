@@ -20,6 +20,20 @@ const overshoot = cubicBezier(...motion.overshoot);
 /** One choice of exactly one of two: who comes along. */
 export type Companion = "puppy" | "you";
 
+/** The words on the track; the app passes them in its language, these are the English. */
+export interface CompanionLabels {
+	group: string;
+	puppy: string;
+	puppySubtitle: string;
+	you: string;
+}
+export const COMPANION_LABELS: CompanionLabels = {
+	group: "Who's coming",
+	puppy: "Puppy",
+	puppySubtitle: "Best friend",
+	you: "You",
+};
+
 const PUPPY_FILE = require("../assets/characters/puppy.png");
 const PUPPY_RATIO = 480 / 463;
 const PUPPY_WIDTH = 0.92;
@@ -174,12 +188,14 @@ function Seat({
  */
 export function CompanionTrack({
 	compact = false,
+	labels = COMPANION_LABELS,
 	onChange,
 	photoUri,
 	value,
 	youSubtitle,
 }: {
 	compact?: boolean;
+	labels?: CompanionLabels;
 	onChange: (next: Companion) => void;
 	photoUri: string | null;
 	value: Companion | null;
@@ -205,7 +221,7 @@ export function CompanionTrack({
 
 	return (
 		<View
-			accessibilityLabel="Who's coming"
+			accessibilityLabel={labels.group}
 			accessibilityRole="radiogroup"
 			onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
 			style={[styles.track, { height }]}
@@ -221,7 +237,7 @@ export function CompanionTrack({
 				on={value === "you"}
 				onPress={() => onChange("you")}
 				subtitle={youSubtitle}
-				title="You"
+				title={labels.you}
 			>
 				<YouFace size={face} uri={photoUri} />
 			</Seat>
@@ -229,8 +245,8 @@ export function CompanionTrack({
 				name="puppy"
 				on={value === "puppy"}
 				onPress={() => onChange("puppy")}
-				subtitle="Best friend"
-				title="Puppy"
+				subtitle={labels.puppySubtitle}
+				title={labels.puppy}
 			>
 				<PuppyFace size={face} />
 			</Seat>

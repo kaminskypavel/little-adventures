@@ -30,6 +30,7 @@ import { LIVE_STYLES } from "@/src/data/styles";
 import { mark } from "@/src/data/timeline";
 import type { Profile } from "@/src/data/types";
 import { useT } from "@/src/i18n";
+import { useCompanionLabels } from "@/src/i18n/strings/companion";
 import { styleStrings } from "@/src/i18n/strings/style";
 
 const looks: { picture: number; style: Style }[] = [
@@ -196,6 +197,7 @@ function Companion({
 }) {
 	const router = useRouter();
 	const t = useT(styleStrings);
+	const companionLabels = useCompanionLabels();
 	const client = useQueryClient();
 	const saveProfile = useSaveProfile();
 	// A photo just replaced shows on return.
@@ -220,6 +222,7 @@ function Companion({
 	return (
 		<CompanionTrack
 			compact={compact}
+			labels={companionLabels}
 			onChange={(next) =>
 				next === "you"
 					? pickYou()

@@ -21,6 +21,7 @@ import {
 	useSetCalled,
 } from "@/src/data/profile-queries";
 import { useT } from "@/src/i18n";
+import { useCalledLabels } from "@/src/i18n/strings/called";
 import { grownUpPhotoStrings } from "@/src/i18n/strings/grownup-photo";
 import { LINE, PhotoRing, pick, type Source } from "@/src/photo/photo-step";
 
@@ -30,6 +31,7 @@ const SMALL_RING = 150;
 export default function GrownUpPhoto() {
 	const router = useRouter();
 	const t = useT(grownUpPhotoStrings);
+	const calledLabels = useCalledLabels();
 	const { replace, source: autoSource } = useLocalSearchParams<{
 		replace?: string;
 		source?: Source;
@@ -138,7 +140,11 @@ export default function GrownUpPhoto() {
 					<ClayText color={colors.cream} style={styles.ask} variant="label">
 						{t("ask", { name: childName ?? "" })}
 					</ClayText>
-					<CalledChips onChange={setCalled} value={saved?.called ?? null} />
+					<CalledChips
+						labels={calledLabels}
+						onChange={setCalled}
+						value={saved?.called ?? null}
+					/>
 					<ClayText
 						align="center"
 						color={colors.cream}

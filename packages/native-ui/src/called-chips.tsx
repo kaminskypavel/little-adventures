@@ -27,6 +27,34 @@ export const PRESETS: Called[] = [
 	{ name: "Grandpa", pronoun: "he", relation: "grandfather" },
 ];
 const PRONOUNS: Pronoun[] = ["he", "she"];
+
+/** The words on the chips; the app passes them in its language, these are the English. */
+export interface CalledLabels {
+	/** The hint on the word field. */
+	example: string;
+	/** Under the chips: `{word}` is what the grown-up typed. */
+	inStory: string;
+	other: string;
+	placeholder: string;
+	presets: Record<Exclude<Relation, "other">, string>;
+	pronouns: Record<Pronoun, string>;
+	/** What stands in for `{word}` before anything is typed. */
+	thisGrownUp: string;
+}
+export const CALLED_LABELS: CalledLabels = {
+	example: "Abba, Uncle Tom, Dana",
+	inStory: "In the story, {word} is",
+	other: "Other",
+	placeholder: "Abba",
+	presets: {
+		father: "Papa",
+		grandfather: "Grandpa",
+		grandmother: "Grandma",
+		mother: "Mama",
+	},
+	pronouns: { he: "he", she: "she" },
+	thisGrownUp: "this grown-up",
+};
 const MAX_WORD = 30;
 
 /**
@@ -35,14 +63,17 @@ const MAX_WORD = 30;
  * is tapped. `value` is the saved answer, so the chips start on it.
  */
 export function CalledChips({
+	labels = CALLED_LABELS,
 	onChange,
 	value,
 }: {
+	labels?: CalledLabels;
 	onChange: (called: Called) => void;
 	value: Called | null;
 }) {
+	// A preset is told by who it is, so the chip stays lit when the language changes.
 	const preset = PRESETS.find(
-		(p) => p.name === value?.name && p.relation === value.relation
+		(p) => p.relation === value?.relation && value.relation !== "other"
 	);
 	const [asking, setAsking] = useState(false);
 	const [word, setWord] = useState(value && !preset ? value.name : "");
@@ -63,16 +94,20 @@ export function CalledChips({
 		setAsking(false);
 		onChange(called);
 	};
-	const chip = (called: Called) => (
-		<Chip
-			key={called.name}
-			label={called.name}
-			onPress={() => choose(called)}
-			selected={!other && preset?.name === called.name}
-			size="label"
-			style={styles.flex}
-		/>
-	);
+	const chip = (called: Called) => {
+		const name =
+			labels.presets[called.relation as keyof CalledLabels["presets"]];
+		return (
+			<Chip
+				key={called.relation}
+				label={name}
+				onPress={() => choose({ ...called, name })}
+				selected={!other && preset?.relation === called.relation}
+				size="label"
+				style={styles.flex}
+			/>
+		);
+	};
 
 	return (
 		<View>
@@ -80,7 +115,7 @@ export function CalledChips({
 			<View style={[styles.row, styles.next]}>
 				{PRESETS.slice(2).map(chip)}
 				<Chip
-					label="Other"
+					label={labels.other}
 					onPress={() => setAsking(true)}
 					selected={other}
 					size="label"
@@ -91,23 +126,26 @@ export function CalledChips({
 				<>
 					<TextField
 						autoCapitalize="words"
-						label="Abba, Uncle Tom, Dana"
+						label={labels.example}
 						maxLength={MAX_WORD}
 						onBlur={() => saveOther(word, pronoun)}
 						onChangeText={setWord}
-						placeholder="Abba"
+						placeholder={labels.placeholder}
 						returnKeyType="done"
 						style={styles.next}
 						value={word}
 					/>
 					<ClayText color={colors.cream} style={styles.next} variant="label">
-						{`In the story, ${word.trim() || "this grown-up"} is`}
+						{labels.inStory.replace(
+							"{word}",
+							word.trim() || labels.thisGrownUp
+						)}
 					</ClayText>
 					<View style={[styles.row, styles.tight]}>
 						{PRONOUNS.map((who) => (
 							<Chip
 								key={who}
-								label={who}
+								label={labels.pronouns[who]}
 								onPress={() => {
 									setPronoun(who);
 									saveOther(word, who);
