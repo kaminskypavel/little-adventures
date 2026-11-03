@@ -1,17 +1,23 @@
 # Little Adventures
 
-A story app for children aged 2 to 11 that doubles as a learning platform. The child asks a question out loud ("can we fly to the moon?"), and the story is built around it: narrated, illustrated chapters that star the child's own character. At the end of each chapter the child picks what happens next, so the story follows their curiosity and teaches something real along the way. A parent sits beside them and sets things up in the app.
+<p align="center"><img src=".github/readme/hero.webp" alt="Little Adventures: a bedtime adventure built around your child's own question. Two children on a moon with Saturn behind them, beside three phones showing the app." width="100%"></p>
+
+A story app for children aged 2 to 16 that doubles as a learning platform. The child asks a question out loud ("can we fly to the moon?"), and the story is built around it: narrated, illustrated chapters that star the child's own character. At the end of each chapter the child picks what happens next, so the story follows their curiosity and teaches something real along the way. A parent sits beside them and sets things up in the app.
 
 Website: [littleadventures.app](https://littleadventures.app) · Licence: evaluation only, see [LICENSE](LICENSE)
 
-[![Open weights on Hugging Face](https://img.shields.io/badge/Hugging%20Face-glimmer--decision--little--adventures-FFD21E)](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
+[![Live app](https://img.shields.io/badge/Live%20app-littleadventures.app%2Fweb-1d2b4f)](https://www.littleadventures.app/web) [![Open weights on Hugging Face](https://img.shields.io/badge/Hugging%20Face-glimmer--decision--little--adventures-FFD21E)](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
+
+## What it looks like
+
+<p align="center"><img src=".github/readme/screens.webp" alt="Four app screens: the child's question confirmed, the adventure being made with the child's clay look on the hill, a place being read aloud word by word, and the adventure map." width="100%"></p>
 
 ## Hackathon submission
 
 Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement: **Build for Your World**.
 
 - **Provenance:** this repo was started on Oct 30, 2026, inside the building period (Oct 27 to Nov 4). Everything in it was written then. The private engine runs on Kodio Ltd's pre-existing technology; [ARCHITECTURE.md](ARCHITECTURE.md) shows the split.
-- **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Results: [benchmarks/checker](benchmarks/checker).
+- **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures) (access on request). Results: [benchmarks/checker](benchmarks/checker).
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
 - **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the private engine; the public part is [packages/decision](packages/decision).
 - Demo video (3 min): added on submission day
@@ -22,9 +28,28 @@ Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement
 | Pillar | Where to look |
 | --- | --- |
 | Impact (30%) | [PRODUCT.md](PRODUCT.md) (who it is for), [A child's data](#a-childs-data), [Limits](#limits) |
-| Use of Meta AI tooling (25%) | [Meta models](#meta-models), [Open weights](#open-weights), [benchmarks/checker](benchmarks/checker) |
+| Use of Meta AI tooling (25%) | [How an adventure is made](#how-an-adventure-is-made), [Meta models](#meta-models), [Open weights](#open-weights), [benchmarks/checker](benchmarks/checker) |
 | Technical depth (20%) | [ARCHITECTURE.md](ARCHITECTURE.md), [packages/decision](packages/decision), [.github/workflows](.github/workflows) |
 | Demo (25%) | The demo video line above, [Run it](#run-it), the browser smoke test [apps/native/e2e/smoke.spec.ts](apps/native/e2e/smoke.spec.ts) |
+
+## How an adventure is made
+
+<p align="center"><img src=".github/readme/adventure-flow.svg" alt="Flow diagram: the child asks out loud; the app server turns speech into text with Muse Voice Transcribe and the photo into looks with Muse Image and SAM 3.1; inside the Kodio engine Muse Spark 1.3 writes the map, the tuned Muse Glimmer checks it and sends it back with reasons, Muse Image and SAM 3.1 draw the cast, and the map plays in the app." width="100%"></p>
+
+### How Meta's models run inside the Kodio engine
+
+The Kodio engine is our startup's private story technology (Kodio Ltd). It existed before the hackathon; this week we rebuilt its story steps on Meta's models. It reaches every Meta model through the public packages in this repo, so each kind of call it makes is in code you can read here. What stays private is its prompts and question sets.
+
+One adventure, step by step:
+
+1. **Screen the question.** Muse Spark 1.3 (`decision`) checks that the child's question is safe and suits a bedtime story. It also shortens the question for the screen and writes the small facts the child sees while waiting (`llm`).
+2. **Write the map.** Muse Spark 1.3 (`llm`, structured output) writes the adventure as a themed map: an end goal, four places with one true fact each that answers the question, and a goodnight that recaps them.
+3. **Check and rewrite.** The checker answers yes or no to the story checks (calm for the child's age, names stay the same, one fact per place, the goodnight recaps, nothing scary, the facts are true and answer the question). It is our LoRA on Muse Glimmer 30B, served on Modal; while its GPU wakes, Muse Spark Open on Baseten answers instead. A failed check comes back with one sentence of reason, the writer rewrites with those reasons, and after two failed rounds the engine stops rather than give the child a weak story.
+4. **Draw the cast.** Muse Image draws the story's cast and the end-goal picture, starting from the looks the app server drew from the child's photo. SAM 3.1 finds the end-goal object so it can be cut out cleanly.
+5. **Pictures, clips and voice.** The place pictures, the short clips and the narration are made inside the engine by our proprietary technology and the models it runs. Muse Spark 1.3 looks at frames of every clip and sends back any clip with a visible fault before the child sees it.
+6. **Play.** The app polls the player API and plays each place as soon as it is ready.
+
+Every model call, Meta or not, is recorded with its model, operation, time and cost.
 
 ## Meta models
 
@@ -44,6 +69,8 @@ Not used: Muse Wonder, Muse Code.
 The LoRA on Muse Glimmer 30B answers the yes/no checks on a story plan. It was trained with LoRA rank 16, alpha 32, bf16, for one epoch, on synthetic story plans written by Muse Spark models. Each row's label was set by how the row was built. No data from real children was used.
 
 Results on the full held-out set of 1,498 rows, as mean balanced accuracy:
+
+<p align="center"><img src=".github/readme/checker-chart.svg" alt="Scatter chart of accuracy against time per check, split at Muse Spark 1.3: the tuned Muse Glimmer models sit in the more accurate and faster quarter." width="88%"></p>
 
 | Checker | Accuracy | Time per full check |
 | --- | --- | --- |
@@ -65,7 +92,7 @@ On the same 1,498 rows, Glimmer v2 is right where Muse Spark 1.3 is wrong 49 tim
 
 ## Limits
 
-- Voice narration and short clips come from third-party models in the private engine, because Meta's Model API has no text to speech or video generation. Without the engine, the app plays one bundled sample adventure.
+- The place pictures, short clips and narration are made in the Kodio engine by our proprietary technology and the models it runs, not by Meta models. Without the engine, the app plays one bundled sample adventure.
 - English only.
 - The iOS and Android builds are not in the stores. The app runs in the browser and in Expo.
 - The Glimmer LoRA numbers above are the team's own, on synthetic data. The 96.8% hybrid is optimistic (see Open weights).
