@@ -5,7 +5,12 @@ import { Icon } from "@little-adventures/native-ui/icons";
 import { NamePill } from "@little-adventures/native-ui/name-pill";
 import { NarrationBar } from "@little-adventures/native-ui/narration-bar";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
-import { colors, layout, radii } from "@little-adventures/native-ui/tokens";
+import {
+	colors,
+	layout,
+	radii,
+	skyPalettes,
+} from "@little-adventures/native-ui/tokens";
 import { useEventListener } from "expo";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
@@ -43,8 +48,8 @@ import { speakingAt } from "@/src/data/music-rules";
 import { usePlayerMusic } from "@/src/data/music-store";
 import {
 	begin,
-	DISSOLVE_MS,
-	DISSOLVE_REDUCED_MS,
+	DIP_HALF_MS,
+	DIP_REDUCED_MS,
 	type EndCause,
 	GRACE_MS,
 	graceDue,
@@ -352,12 +357,10 @@ const setupPlayer = (created: VideoPlayer) => {
 };
 
 /** A narration tick only repaints the screen when it moved the parts. */
-const other = (slot: Slot): Slot => (slot === 0 ? 1 : 0);
-
 const moved = (a: PlayState, b: PlayState) =>
 	a.at !== b.at ||
 	a.half !== b.half ||
-	a.leaving !== b.leaving ||
+	a.dip !== b.dip ||
 	a.phase !== b.phase ||
 	a.speaking !== b.speaking ||
 	a.stall !== b.stall ||
@@ -436,52 +439,49 @@ function Cover({
 	);
 }
 
+/** The night navy the picture dips to between a place's parts. */
+const [NIGHT] = skyPalettes.night.colors;
+
 /**
- * One part's picture, in a layer of its own. The part on screen is `top`; the layer of the part
- * that is fading out stays `on` under it. A layer that is `fading` in rises from 0 over
- * `DISSOLVE_MS` (a quick fade when the person wants calm, still ending with the old part); any
- * other layer shows or hides at once. A layer that is not `on` stays mounted but unseen.
+ * The dip to night between two parts: a navy layer above the pictures. `up` raises it over the
+ * last `DIP_HALF_MS` of the part that is ending (it is fully up as that part ends), and clears it
+ * over `DIP_HALF_MS` once the next part shows a frame. A person who wants calm gets one quick dip
+ * (`DIP_REDUCED_MS`) centred on the switch.
  */
-function PartLayer({
-	fading,
-	on,
-	onFirstFrame,
-	player,
-	top,
-}: {
-	fading: boolean;
-	on: boolean;
-	onFirstFrame: () => void;
-	player: VideoPlayer;
-	top: boolean;
-}) {
+function Dip({ up }: { up: boolean }) {
 	const opacity = useSharedValue(0);
-	const fadeMs = useReducedMotion() ? DISSOLVE_REDUCED_MS : DISSOLVE_MS;
-	// Read when the layer comes on, not when the dissolve ends: the fade keeps going.
-	const fadingRef = useRef(fading);
-	useLayoutEffect(() => {
-		fadingRef.current = fading;
-	}, [fading]);
+	const halfMs = useReducedMotion() ? DIP_REDUCED_MS / 2 : DIP_HALF_MS;
 	useEffect(() => {
-		if (!(on && fadingRef.current)) {
-			opacity.set(on ? 1 : 0);
-			return;
-		}
+		const timing = { duration: halfMs, easing: Easing.inOut(Easing.ease) };
 		opacity.set(
-			withDelay(
-				DISSOLVE_MS - fadeMs,
-				withTiming(1, {
-					duration: fadeMs,
-					easing: Easing.inOut(Easing.ease),
-				})
-			)
+			up
+				? withDelay(DIP_HALF_MS - halfMs, withTiming(1, timing))
+				: withTiming(0, timing)
 		);
-	}, [fadeMs, on, opacity]);
+	}, [halfMs, opacity, up]);
 	const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 	return (
 		<Animated.View
 			pointerEvents="none"
-			style={[StyleSheet.absoluteFill, { zIndex: top ? 1 : 0 }, style]}
+			style={[StyleSheet.absoluteFill, { backgroundColor: NIGHT }, style]}
+		/>
+	);
+}
+
+/** One part's picture, in a layer of its own: shown when it is `on`, unseen but mounted when not. */
+function PartLayer({
+	on,
+	onFirstFrame,
+	player,
+}: {
+	on: boolean;
+	onFirstFrame: () => void;
+	player: VideoPlayer;
+}) {
+	return (
+		<View
+			pointerEvents="none"
+			style={[StyleSheet.absoluteFill, { opacity: on ? 1 : 0 }]}
 		>
 			<VideoView
 				allowsPictureInPicture={false}
@@ -493,7 +493,7 @@ function PartLayer({
 				pointerEvents="none"
 				style={StyleSheet.absoluteFill}
 			/>
-		</Animated.View>
+		</View>
 	);
 }
 
@@ -762,23 +762,9 @@ function MediaPlayer({
 			showFrame(index);
 			send({
 				duration: duration || 0,
-				nextReady:
-					players[other(machine.current.slot)].status === "readyToPlay",
 				sec: currentTime,
 				type: "part-time",
 			});
-		}
-	};
-
-	// A tick of the part fading out: it plays to its last frame, then is let go.
-	const tickLeaving = (index: number, slot: Slot, currentTime: number) => {
-		const duration = playableSec(
-			machine.current.parts[index],
-			players[slot].duration
-		);
-		if (reachedEnd(currentTime, duration)) {
-			players[slot].pause();
-			send({ type: "dissolved" });
 		}
 	};
 
@@ -788,8 +774,6 @@ function MediaPlayer({
 			const now = machine.current;
 			if (now.slot === slot) {
 				send({ type: "ended" });
-			} else if (now.leaving !== null) {
-				send({ type: "dissolved" });
 			}
 		},
 		onStatus: (status) => {
@@ -803,10 +787,6 @@ function MediaPlayer({
 		onTime: (currentTime) => {
 			const now = machine.current;
 			if (now.slot !== slot) {
-				if (now.leaving !== null) {
-					tickLeaving(now.leaving, slot, currentTime);
-					return;
-				}
 				if (IS_WEB && currentTime > 0) {
 					parkAtFirstFrame(players[slot]);
 				}
@@ -977,21 +957,18 @@ function MediaPlayer({
 	});
 	const frame = (
 		<View style={StyleSheet.absoluteFill}>
-			{([0, 1] as const).map((slot) => {
-				const outgoing = view.leaving !== null && view.slot !== slot;
-				const on = view.slot === slot || outgoing;
-				// The web keeps both players mounted; elsewhere the second view is there only for a dissolve.
-				return IS_WEB || on ? (
+			{([0, 1] as const).map((slot) =>
+				// The web keeps both players mounted; elsewhere only the one on screen is.
+				IS_WEB || view.slot === slot ? (
 					<PartLayer
-						fading={view.leaving !== null && view.slot === slot}
 						key={slot}
-						on={on}
+						on={view.slot === slot}
 						onFirstFrame={firstFrameOf(slot)}
 						player={players[slot]}
-						top={view.slot === slot}
 					/>
-				) : null;
-			})}
+				) : null
+			)}
+			<Dip up={view.dip !== null} />
 			{showCover ? (
 				<Cover fadeMs={led ? LEAD_FADE_MS : 0} gone={framed} zoom={zoom}>
 					{cover}

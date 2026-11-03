@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	begin,
-	DISSOLVE_LEAD_SEC,
+	DIP_HALF_SEC,
 	END_MARGIN_SEC,
 	type EndCause,
 	GRACE_MS,
@@ -72,14 +72,6 @@ const at = (sec: number): PlayEvent => ({
 /** The part on screen is `sec` in; its video is 15 s long. */
 const tick = (sec: number, duration = 15): PlayEvent => ({
 	duration,
-	sec,
-	type: "part-time",
-});
-
-/** The part on screen is `sec` in, and the player holding the next part has it loaded. */
-const loaded = (sec: number): PlayEvent => ({
-	duration: 15,
-	nextReady: true,
 	sec,
 	type: "part-time",
 });
@@ -243,7 +235,7 @@ describe("each half of the words is centred inside its part", () => {
 	});
 });
 
-describe("a part dissolves into the next", () => {
+describe("a part dips to night into the next", () => {
 	const ready = drive(
 		begin(two, true),
 		parts(...two),
@@ -251,55 +243,52 @@ describe("a part dissolves into the next", () => {
 		tick(14),
 		at(8)
 	).state;
-	const lead = 15 - DISSOLVE_LEAD_SEC;
+	const lead = 15 - DIP_HALF_SEC;
 
-	test("the next part starts before the last one ends, which stays under it", () => {
-		const a = drive(ready, loaded(lead - 0.1));
-		expect(a.state.at).toBe(0);
-		const b = drive(a.state, loaded(lead));
-		expect(b.state.at).toBe(1);
-		expect(b.state.leaving).toBe(0);
-		expect(b.state.slot).toBe(1);
+	test("the dip starts in the last 0.4 s and the part keeps playing", () => {
+		const a = drive(ready, tick(lead - 0.1));
+		expect(a.state.dip).toBe(null);
+		const b = drive(a.state, tick(lead));
+		expect(b.state.dip).toBe(0);
+		expect(b.state.at).toBe(0);
 		expect(b.marks).toEqual([]);
-		expect(slotParts(b.state)).toEqual([two[0], two[1]]);
 	});
 
-	test("the dissolve waits for the next part to be loaded", () => {
-		expect(drive(ready, tick(lead)).state.at).toBe(0);
-	});
-
-	test("the dissolve waits for the half of the words before the next part", () => {
-		const early = drive(begin(two, true), parts(...two), started, at(0));
-		expect(drive(early.state, loaded(lead)).state.at).toBe(0);
-	});
-
-	test("the last part has nothing to dissolve into", () => {
-		const last = drive(ready, loaded(lead), ended).state;
-		expect(drive(last, loaded(lead)).state.leaving).toBe(null);
-	});
-
-	test("the old part's end clears it and marks its end once", () => {
-		const b = drive(ready, loaded(lead), { type: "dissolved" });
+	test("part 2 starts at the dip's midpoint, when part 1 ends, with the navy up", () => {
+		const dipped = drive(ready, tick(lead)).state;
+		const b = drive(dipped, ended);
+		expect(b.state.at).toBe(1);
+		expect(b.state.dip).toBe(0);
+		expect(b.state.slot).toBe(1);
 		expect(b.marks).toEqual(["part-end 1"]);
-		expect(b.state.leaving).toBe(null);
-		expect(slotParts(b.state)).toEqual([null, two[1]]);
-		expect(drive(b.state, { type: "dissolved" }).marks).toEqual([]);
+	});
+
+	test("the navy clears once part 2 shows a frame, and not before", () => {
+		const b = drive(ready, tick(lead), ended);
+		expect(b.state.dip).toBe(0);
+		expect(drive(b.state, tick(0.1)).state.dip).toBe(null);
+	});
+
+	test("the last part has nothing to dip into", () => {
+		const last = drive(ready, ended).state;
+		expect(drive(last, tick(14.9)).state.dip).toBe(null);
+		expect(drive(last, ended).state.dip).toBe(null);
+	});
+
+	test("an end with no dip yet still goes through the navy", () => {
+		const a = drive(ready, ended);
+		expect(a.state.at).toBe(1);
+		expect(a.state.dip).toBe(0);
+		expect(a.marks).toEqual(["part-end 1"]);
 	});
 
 	test("the next part's words are timed from its own start", () => {
-		const b = drive(ready, loaded(lead));
+		const b = drive(ready, tick(lead), ended);
 		expect(b.state.speaking).toBe(false);
 		expect(drive(b.state, tick(0.1)).state.speaking).toBe(false);
 		expect(drive(b.state, tick(0.1), tick(3.5)).marks).toEqual([
 			"voice-resume 2",
 		]);
-	});
-
-	test("a plain switch still works when the dissolve never started", () => {
-		const a = drive(ready, ended);
-		expect(a.state.at).toBe(1);
-		expect(a.state.leaving).toBe(null);
-		expect(a.marks).toEqual(["part-end 1"]);
 	});
 });
 
