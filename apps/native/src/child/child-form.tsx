@@ -22,6 +22,9 @@ import {
 } from "react-hook-form";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import type { Profile } from "@/src/data/types";
+import { useT } from "@/src/i18n";
+import { childFormStrings } from "@/src/i18n/strings/child-form";
+import { useErrorText } from "@/src/i18n/strings/form-errors";
 
 const ageRows = [
 	[2, 3, 4, 5, 6],
@@ -65,6 +68,8 @@ export const useChildForm = (profile: Profile): UseFormReturn<ChildValues> =>
 
 /** The three fields, spaced for a column; the screen owns the scroll view around them. */
 export function ChildFields({ control }: { control: Control<ChildValues> }) {
+	const t = useT(childFormStrings);
+	const errorText = useErrorText();
 	return (
 		<View style={styles.fields}>
 			<Controller
@@ -75,8 +80,8 @@ export function ChildFields({ control }: { control: Control<ChildValues> }) {
 						autoCapitalize="words"
 						autoComplete="off"
 						autoCorrect={false}
-						error={fieldState.error?.message}
-						label="Name"
+						error={errorText(fieldState.error?.message)}
+						label={t("name")}
 						onBlur={field.onBlur}
 						onChangeText={field.onChange}
 						returnKeyType="done"
@@ -88,16 +93,19 @@ export function ChildFields({ control }: { control: Control<ChildValues> }) {
 				control={control}
 				name="kind"
 				render={({ field, fieldState }) => (
-					<Group error={fieldState.error?.message} label="Boy or girl">
+					<Group
+						error={errorText(fieldState.error?.message)}
+						label={t("boyOrGirl")}
+					>
 						<View style={styles.row}>
 							<ChoiceTile
-								label="Girl"
+								label={t("girl")}
 								onPress={() => field.onChange("girl")}
 								selected={field.value === "girl"}
 								style={styles.flex}
 							/>
 							<ChoiceTile
-								label="Boy"
+								label={t("boy")}
 								onPress={() => field.onChange("boy")}
 								selected={field.value === "boy"}
 								style={styles.flex}
@@ -111,8 +119,8 @@ export function ChildFields({ control }: { control: Control<ChildValues> }) {
 				name="age"
 				render={({ field, fieldState }) => (
 					<Group
-						error={fieldState.error?.message}
-						label="Age"
+						error={errorText(fieldState.error?.message)}
+						label={t("age")}
 						style={styles.age}
 					>
 						<View style={styles.chips}>

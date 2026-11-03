@@ -29,6 +29,7 @@ import {
 import { startRoute } from "@/src/data/adventure-client";
 import { useT } from "@/src/i18n";
 import { accountStrings } from "@/src/i18n/strings/account";
+import { useErrorText } from "@/src/i18n/strings/form-errors";
 
 type Step = "choose" | "email" | "code";
 
@@ -54,6 +55,7 @@ async function goNext(router: Router) {
 export default function Account() {
 	const router = useRouter();
 	const t = useT(accountStrings);
+	const errorText = useErrorText();
 	const params = useLocalSearchParams();
 	const [step, setStep] = useState<Step>("choose");
 	const [address, setAddress] = useState("");
@@ -170,7 +172,7 @@ export default function Account() {
 							autoComplete="email"
 							autoCorrect={false}
 							autoFocus
-							error={fieldState.error?.message ?? note ?? undefined}
+							error={errorText(fieldState.error?.message) ?? note ?? undefined}
 							key="email"
 							keyboardType="email-address"
 							label={t("email")}
@@ -205,7 +207,7 @@ export default function Account() {
 						<TextField
 							autoComplete="one-time-code"
 							autoCorrect={false}
-							error={fieldState.error?.message ?? note ?? undefined}
+							error={errorText(fieldState.error?.message) ?? note ?? undefined}
 							inputStyle={CODE_STYLE}
 							key="code"
 							keyboardType="number-pad"
