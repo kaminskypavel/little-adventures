@@ -18,9 +18,14 @@ import { useSafeAreaFrame } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { MapCastButton } from "@/src/cast/map-cast-button";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
-import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
+import {
+	dottedRoads,
+	frontier,
+	litRoads,
+	pathBetween,
+} from "@/src/data/fork-roads";
 import { useMapReveals } from "@/src/data/map-reveals";
-import { isOutroLocked, neighbours, newlyOpened } from "@/src/data/map-rules";
+import { isOutroLocked, newlyOpened } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
 import { mapLabel } from "@/src/data/question-rules";
 import { useReplay } from "@/src/data/replay-store";
@@ -64,9 +69,12 @@ function routeOf({
 	return fresh ? [] : [here];
 }
 
-/** The places the child can go to next: none before anything is walked (the intro is tapped first). */
+/**
+ * The places the child can go to next: none before anything is walked (the intro is tapped first),
+ * then every place a road joins to walked ground, wherever the star stands.
+ */
 const nextFrom = (progress: Progress): NodeId[] =>
-	progress.visited.length === 0 ? [] : neighbours(progress.here);
+	progress.visited.length === 0 ? [] : frontier(progress.visited);
 
 /** How a place shows: nothing walked leaves only the intro open; then here, walked, drawing, next, locked. */
 function placeState({

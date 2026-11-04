@@ -28,6 +28,16 @@ const BY_NODE = (node: NodeId) =>
 		return b === node ? [a] : [];
 	});
 
+/**
+ * The nodes not walked yet that a road joins to walked ground: the places the child can go next
+ * from anywhere on the map, as the star walks there along the roads. Unlike the choice rules
+ * from one place, a place left last is never cut off, whichever place the star stands on.
+ */
+export const frontier = (visited: readonly NodeId[]): NodeId[] =>
+	[...new Set(visited.flatMap(BY_NODE))].filter(
+		(node) => !visited.includes(node)
+	);
+
 // One step costs 10; a stop on a place not yet walked costs 1 more, so a route prefers walked ground.
 const STEP = 10;
 
