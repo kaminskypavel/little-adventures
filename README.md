@@ -87,6 +87,12 @@ More: [Child safety and privacy](documents/child-safety.md).
 
 ## Run it
 
+### Judges: sign in as a guest
+
+**On the Welcome screen, tap Try as a guest. Don't create an account.** You land on my own profile (Pavel's), with real adventures the app made from questions my kids asked. Play them, and ask your own question out loud.
+
+**Why a guest?** Every new adventure costs real money to make: its story, pictures, clips and voice are made fresh for each question. This page is public, and opening that to anyone on the internet could run up costs I can't control. So making new adventures sits behind an invite code. If you'd like to make your own, email **pavel@kodio.company** and I'll send you a personal invite.
+
 No keys, no accounts and no `.env`. You need a Mac with Xcode, an iOS Simulator and CocoaPods, plus Bun 1.4 and Node 24 (`.nvmrc`).
 
 ```bash
