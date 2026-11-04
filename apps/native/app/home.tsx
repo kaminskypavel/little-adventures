@@ -1,4 +1,5 @@
 import { BackButton } from "@little-adventures/native-ui/back-button";
+import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { MorphPill } from "@little-adventures/native-ui/morph-pill";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -52,6 +53,8 @@ const PILL_WIDTH = 300;
 const MIC = 176;
 const PLATE_BOX = 88;
 const HINT = { fontSize: 21, lineHeight: 26, opacity: 0.92 } as const;
+/** The small grown-up button under the mic when it is off (a small button's height). */
+const MIC_OFF = 44;
 const FADE_MS = 200;
 const overshoot = Easing.bezier(...motion.overshoot);
 /** "Hi {name}!" pops in: a little smaller, with the app's overshoot. */
@@ -164,11 +167,14 @@ function HomeStar({
 function ListenWords({
 	ask,
 	listening,
+	off,
 	progress,
 	stage,
 }: {
 	ask: AskState;
 	listening: boolean;
+	/** The mic is off for good: the headline says so, and the grown-up's button takes the hint's place. */
+	off: boolean;
 	progress: SharedValue<number>;
 	stage: Stage;
 }) {
@@ -191,7 +197,7 @@ function ListenWords({
 				style={[styles.at, { top: stage.listen.headlineTop }]}
 				variant="headline"
 			>
-				{titleFor(t, ask.state, ask.hint)}
+				{off ? t("micOff") : titleFor(t, ask.state, ask.hint)}
 			</ClayText>
 			<ClayText
 				align="center"
@@ -199,8 +205,45 @@ function ListenWords({
 				style={[styles.at, HINT, { top: stage.listen.hintTop }]}
 				variant="body"
 			>
-				{lineFor(t, ask.state, ask.hint)}
+				{off ? "" : lineFor(t, ask.state, ask.hint)}
 			</ClayText>
+		</Animated.View>
+	);
+}
+
+/**
+ * With the mic off for good, a button for the grown-up sits where the hint was: through the
+ * Grown-ups gate to the phone's Settings, where the mic is turned on.
+ */
+function MicOffButton({
+	onPress,
+	shown,
+	stage,
+}: {
+	onPress: () => void;
+	shown: boolean;
+	stage: Stage;
+}) {
+	const t = useT(askStrings);
+	const style = useAnimatedStyle(() => ({ opacity: stage.progress.get() }));
+	if (!shown) {
+		return null;
+	}
+	return (
+		<Animated.View
+			style={[
+				styles.at,
+				styles.micOff,
+				{ top: stage.listen.hintTop + HINT.lineHeight / 2 - MIC_OFF / 2 },
+				style,
+			]}
+		>
+			<SecondaryButton
+				icon="settings"
+				label={t("turnOnMic")}
+				onPress={onPress}
+				size="sm"
+			/>
 		</Animated.View>
 	);
 }
@@ -209,11 +252,14 @@ function ListenWords({
 function HaloSpot({
 	ask,
 	landed,
+	off,
 	progress,
 	stage,
 }: {
 	ask: AskState;
 	landed: boolean;
+	/** The mic is off for good: the halo stays, faded, and takes no holds. */
+	off: boolean;
 	progress: SharedValue<number>;
 	stage: Stage;
 }) {
@@ -224,21 +270,23 @@ function HaloSpot({
 	});
 	return (
 		<Animated.View
-			aria-hidden={!landed}
-			pointerEvents={landed ? "auto" : "none"}
+			aria-hidden={!landed || off}
+			pointerEvents={landed && !off ? "auto" : "none"}
 			style={[
 				styles.halo,
 				{ left: width / 2 - MIC / 2, top: listen.micCy - MIC / 2 },
 				style,
 			]}
 		>
-			<VoiceHalo
-				landed={landed}
-				level={ask.level}
-				onHoldEnd={ask.onHoldEnd}
-				onHoldStart={ask.onHoldStart}
-				state={ask.state}
-			/>
+			<View style={off ? styles.haloOff : undefined}>
+				<VoiceHalo
+					landed={landed}
+					level={ask.level}
+					onHoldEnd={ask.onHoldEnd}
+					onHoldStart={ask.onHoldStart}
+					state={ask.state}
+				/>
+			</View>
 		</Animated.View>
 	);
 }
@@ -427,8 +475,6 @@ export default function Home() {
 			}
 		}, [childId])
 	);
-	const { deny } = mic;
-
 	const close = useCallback(() => {
 		releaseFocus();
 		disarm();
@@ -439,10 +485,8 @@ export default function Home() {
 	const open = () => {
 		releaseFocus();
 		setListening(true);
-		arm(() => {
-			close();
-			deny();
-		});
+		// A refusal keeps the child here: the ideas still start an adventure, and the mic shows off.
+		arm(mic.recheck);
 	};
 
 	const stage: Stage = {
@@ -483,7 +527,7 @@ export default function Home() {
 						label={t("newAdventure")}
 						listening={listening}
 						mic={{ cx: width / 2, cy: stage.listen.micCy }}
-						off={mic.off || !ready}
+						off={!ready}
 						onPress={open}
 						progress={progress}
 						rest={{ cx: width / 2, cy: stage.rest.buttonCy }}
@@ -493,13 +537,20 @@ export default function Home() {
 					<HaloSpot
 						ask={ask}
 						landed={landed}
+						off={mic.off}
 						progress={progress}
 						stage={stage}
 					/>
 					<ListenWords
 						ask={ask}
 						listening={listening}
+						off={mic.off}
 						progress={progress}
+						stage={stage}
+					/>
+					<MicOffButton
+						onPress={() => router.push("/gate?then=settings")}
+						shown={listening && mic.off}
 						stage={stage}
 					/>
 					<ListenIdeas
@@ -552,7 +603,9 @@ const styles = StyleSheet.create({
 	},
 	back: { left: layout.sideMargin, position: "absolute" },
 	halo: { height: MIC, position: "absolute", width: MIC },
+	haloOff: { opacity: 0.35 },
 	layer: StyleSheet.absoluteFill,
+	micOff: { alignItems: "center" },
 	plate: {
 		height: PLATE_BOX,
 		justifyContent: "flex-end",

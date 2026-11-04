@@ -7,7 +7,7 @@ import {
 	homeOptions,
 	ideasOptions,
 } from "@/src/data/adventure-client";
-import { micPermission } from "@/src/data/mic-permission";
+import { micBlocked } from "@/src/data/mic-permission";
 import { useChild, useChildren } from "@/src/data/profile-queries";
 import { prefetchAdventure } from "@/src/data/use-adventure";
 import { dev } from "@/src/dev-param";
@@ -62,18 +62,24 @@ export function useHomeData(first: string | undefined) {
 }
 
 /**
- * True when the mic is off: denied in the phone's settings (read on every focus and whenever the
- * app comes back to the foreground, so a grown-up who turns it on in Settings finds it on when
- * they return), or `?mic=off` in development. `deny` marks it denied when the system says no.
+ * True when the mic is off: refused for good, so only the phone's Settings can turn it on (read
+ * on every focus and whenever the app comes back to the foreground, so a grown-up who turns it on
+ * in Settings finds it on when they return), or `?mic=off` in development. `recheck` reads it
+ * again after the system asked and the answer was no.
  */
 export function useMicOff(mic: string | undefined) {
-	const [denied, setDenied] = useState(false);
+	const [blocked, setBlocked] = useState(false);
+	const recheck = useCallback(() => {
+		micBlocked()
+			.then(setBlocked)
+			.catch(() => undefined);
+	}, []);
 	useFocusEffect(
 		useCallback(() => {
 			let live = true;
 			const read = () =>
-				micPermission()
-					.then((status) => live && setDenied(status === "denied"))
+				micBlocked()
+					.then((now) => live && setBlocked(now))
 					.catch(() => undefined);
 			read();
 			const sub = AppState.addEventListener("change", (state) => {
@@ -87,8 +93,8 @@ export function useMicOff(mic: string | undefined) {
 			};
 		}, [])
 	);
-	const off = dev(mic) === "off" || denied;
-	return { deny: () => setDenied(true), off };
+	const off = dev(mic) === "off" || blocked;
+	return { off, recheck };
 }
 
 /**
