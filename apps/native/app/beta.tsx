@@ -19,11 +19,11 @@ import { useT } from "@/src/i18n";
 import { betaStrings } from "@/src/i18n/strings/beta";
 
 // The same calm layout as the error screen: the star, a headline, one line, then the code.
-const STAR_SIZE = 150;
-const STAR_TOP = 70;
+const STAR_SIZE = 104;
+const STAR_TOP = 44;
 const TITLE_GAP = 24;
 const LINE_GAP = 14;
-const FIELD_GAP = 28;
+const FIELD_GAP = 20;
 const LINE = { fontSize: 21, lineHeight: 27 } as const;
 
 /**
@@ -58,7 +58,8 @@ export default function Beta() {
 		}
 		setGuesting(true);
 		setError(undefined);
-		await signOut();
+		// No sign-out first: that would unmount this screen and land on Welcome. The guest
+		// sign-in replaces the session in place.
 		const route = await guestRoute();
 		if (route) {
 			router.replace(route);

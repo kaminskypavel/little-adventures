@@ -150,11 +150,19 @@ export async function signInAsGuest() {
 		}
 		// The server sends the JWT along; minting from the cookie is the fallback.
 		const { token: jwt } = (await res.json()) as { token?: unknown };
+		let signedIn = false;
 		if (typeof jwt === "string" && jwt) {
 			await adopt(jwt);
-			return true;
+			signedIn = true;
+		} else {
+			signedIn = (await mint()) !== null;
 		}
-		return (await mint()) !== null;
+		if (signedIn) {
+			// Switching from another account (the beta screen) must not show the guest its data.
+			queryClient.clear();
+			clearSpokenQuestion();
+		}
+		return signedIn;
 	} catch {
 		return false;
 	}
