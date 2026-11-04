@@ -856,16 +856,16 @@ function MediaPlayer({
 		if (now.at !== index) {
 			return;
 		}
-		const voice = now.own ? voiceOf(now) : audioPlayer;
+		const speaker = now.own ? voiceOf(now) : audioPlayer;
 		// Only while it speaks; expo-audio keeps a rate set on a paused player for its next play.
-		if (!voice.playing) {
+		if (!speaker.playing) {
 			return;
 		}
-		const voiceSec = now.own ? voice.currentTime : 0;
+		const voiceSec = now.own ? speaker.currentTime : 0;
 		const wanted = voiceRate(videoLeft, tailWordsLeft(now, voiceSec));
-		const next = stepRate(voice.playbackRate, wanted);
-		if (next !== voice.playbackRate) {
-			voice.setPlaybackRate(next, "high");
+		const next = stepRate(speaker.playbackRate, wanted);
+		if (next !== speaker.playbackRate) {
+			speaker.setPlaybackRate(next, "high");
 		}
 	};
 

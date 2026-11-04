@@ -121,7 +121,7 @@ export function LandscapeChrome({
 									]}
 								>
 									{/* A right-to-left mark after a Hebrew word puts its full stop or comma on its left. */}
-									{rtl ? `${word}${RLM}` : word}
+									{`${word}${rtl ? RLM : ""}`}
 								</Text>
 							</View>
 						))}

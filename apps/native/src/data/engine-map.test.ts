@@ -632,7 +632,7 @@ describe("watchIntro", () => {
 });
 
 describe("partsOf", () => {
-	const node = (voice: string, sig: string) =>
+	const nodeOf = (voice: string, sig: string) =>
 		({
 			parts: [
 				{
@@ -651,8 +651,8 @@ describe("partsOf", () => {
 
 	test("a part keeps its narration url while the same file is signed again", () => {
 		const urls = new Map<string, string>();
-		partsOf(node("narration-1-he.mp3", "a"), urls);
-		const again = partsOf(node("narration-1-he.mp3", "b"), urls);
+		partsOf(nodeOf("narration-1-he.mp3", "a"), urls);
+		const again = partsOf(nodeOf("narration-1-he.mp3", "b"), urls);
 		expect(again[0].narration?.url).toBe(
 			"https://files.test/narration-1-he.mp3?sig=a"
 		);
@@ -660,8 +660,8 @@ describe("partsOf", () => {
 
 	test("another language's narration file replaces it", () => {
 		const urls = new Map<string, string>();
-		partsOf(node("narration-1-he.mp3", "a"), urls);
-		const spanish = partsOf(node("narration-1-es.mp3", "b"), urls);
+		partsOf(nodeOf("narration-1-he.mp3", "a"), urls);
+		const spanish = partsOf(nodeOf("narration-1-es.mp3", "b"), urls);
 		expect(spanish[0].narration?.url).toBe(
 			"https://files.test/narration-1-es.mp3?sig=b"
 		);

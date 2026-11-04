@@ -49,6 +49,7 @@ export function useMapOnTv({
 		latest.current = { loadImage, title };
 	});
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `version` is the trigger, it changes when the map looks different and must photograph it again
 	useEffect(() => {
 		if (!(connected && ready && tvReady)) {
 			return;

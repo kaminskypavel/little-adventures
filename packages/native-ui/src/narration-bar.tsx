@@ -81,7 +81,7 @@ export function NarrationBar({
 						>
 							{/* Each word is its own text, laid out left to right: a right-to-left mark after it puts
 							    its full stop or comma on its left, where Hebrew reads it. */}
-							{rtl ? `${word}${RLM}` : word}
+							{`${word}${rtl ? RLM : ""}`}
 						</Text>
 					</View>
 				))}

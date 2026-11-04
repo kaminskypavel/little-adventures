@@ -77,7 +77,7 @@ export function pathBetween(
  * from its neighbour. At the goodnight the whole road shines.
  */
 export function litRoads(visited: readonly NodeId[]): Set<string> {
-	const first = visited[1];
+	const [, first] = visited;
 	const finished = visited.includes("outro");
 	const lit = new Set<string>();
 	for (const [a, b] of ROADS) {
