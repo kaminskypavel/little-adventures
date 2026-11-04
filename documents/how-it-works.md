@@ -8,23 +8,21 @@ The Kodio engine is our startup's private story technology (Kodio Ltd). It exist
 
 One adventure, step by step:
 
-1. **Screen the question.** Muse Spark 1.3 (`decision`) checks that the child's question is safe and suits a bedtime story. It also shortens the question for the screen and writes the small facts the child sees while waiting (`llm`).
+1. **Hear the question.** Muse Spark 1.3 checks that the child asked a real question. It also shortens the question for the screen and writes the small facts the child sees while waiting (`llm`).
 2. **Write the map.** Muse Spark 1.3 (`llm`, structured output) writes the adventure as a themed map: an end goal, four places with one true fact each that answers the question, and a goodnight that recaps them.
-3. **Check and rewrite.** The checker answers yes or no to the story checks (calm for the child's age, names stay the same, one fact per place, the goodnight recaps, nothing scary, the facts are true and answer the question). It is our LoRA on Muse Glimmer 30B, served on Modal; while its GPU wakes, Muse Spark Open on Baseten answers instead. A failed check comes back with one sentence of reason, the writer rewrites with those reasons, and after two failed rounds the engine stops rather than give the child a weak story.
-4. **Draw the cast.** Muse Image draws the story's cast and the end-goal picture, starting from the looks the app server drew from the child's photo. SAM 3.1 finds the end-goal object so it can be cut out cleanly.
-5. **Clips and voice.** The short clips and the narration are made inside the engine by our proprietary technology and the models it runs. Muse Spark 1.3 looks at frames of every clip and sends back any clip with a visible fault before the child sees it.
-6. **Play.** The app polls the player API and plays each place as soon as it is ready.
+3. **Check.** Every story is checked before a child hears it. The checker is our LoRA on Muse Glimmer 30B, served on Modal; while its GPU wakes, Muse Spark Open on Baseten answers instead. A failed check goes back with a reason.
+4. **Draw the cast.** Muse Image draws the cast and the end-goal picture; SAM 3.1 cuts the end-goal object out.
+5. **Clips and voice.** The short clips and the narration are made inside the engine by our proprietary technology.
+6. **Play.** The app polls the player API and plays each place as soon as it is ready. A place ends with a lesson card, its one true fact. Then the child picks the next place from photos. After the goodnight scene, "What we learned" sums up the four places. A place can also play on a TV.
 
-Every model call, Meta or not, is recorded with its model, operation, time and cost.
+Every model call is recorded with its model, operation, time and cost.
 
 ## How it fits together
 
-This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe, and the Glimmer checker through `decision`). Its commit history is the real record of the week's work. The production prompts, the short clips and the narration live in the Kodio engine at engine.littleadventures.app, which runs on Kodio Ltd's proprietary technology from before the hackathon. It reaches Meta's models through the public packages in this repo, in the steps shown in [How Meta's models run inside the Kodio engine](#how-metas-models-run-inside-the-kodio-engine). [ARCHITECTURE.md](../ARCHITECTURE.md) shows the split and why.
+This repo holds the app, the app server and the public packages that make every Meta model call (Muse Spark, Muse Image, SAM 3.1, Muse Voice Transcribe, and the Glimmer checker through `decision`). Its commit history is the real record of the week's work. The production prompts, the short clips and the narration live in the Kodio engine, which runs on Kodio Ltd's proprietary technology from before the hackathon. It reaches Meta's models through the public packages in this repo, in the steps shown in [How Meta's models run inside the Kodio engine](#how-metas-models-run-inside-the-kodio-engine). See [Architecture](architecture.md) for the split and why.
 
-The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, when `EXPO_PUBLIC_ENGINE_URL` is set, to the Kodio engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`).
+The child holds the button and asks. The phone records a 16 kHz mono WAV (on Android through a small local module, `apps/native/modules/wav-recorder`), and the app server turns it into text with `voice.transcribe`.
 
-```
-apps/native (child + parent app) ─► apps/web API (tRPC) ─► packages/* ─► Meta models
-        │                              └─ Postgres (waitlist)
-        └─ player API, same token ─► Kodio engine (engine.littleadventures.app)
-```
+The Next.js app serves the landing page and a small tRPC API (waitlist, sign-in, child and grown-up profiles, photos, `voice.transcribe`). The Expo app talks to that API and, unless `EXPO_PUBLIC_ENGINE_URL` is set to empty, to the Kodio engine through its player API with the same sign-in token (every call is in `apps/native/src/data/engine-client.ts`). The app speaks English, Spanish and Hebrew. Every engine call that makes or shortens a story carries the language the grown-up picked, and reads of an adventure ask for it.
+
+<p align="center"><img src="../.github/readme/system-split.webp" alt="The app on iPhone and Android talks to the app server, which keeps the waitlist, profiles and call costs in Postgres and calls Meta models through the public client packages. For each adventure the app talks to the private Kodio engine through its player API with the same sign-in, and the engine calls Meta models through the same packages." width="100%"></p>
