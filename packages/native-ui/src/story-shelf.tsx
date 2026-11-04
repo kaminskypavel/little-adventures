@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { ScrollView, type StyleProp, type ViewStyle } from "react-native";
+import type { StyleProp, ViewStyle } from "react-native";
+// The gesture-handler ScrollView, not React Native's: the items are gesture-handler taps
+// (ClayPressable), and on Android a plain ScrollView took only the first swipe after the taps.
+import { ScrollView } from "react-native-gesture-handler";
 import { layout, storyCover } from "./tokens";
 
 const { shadowRoom } = storyCover.shelf;
