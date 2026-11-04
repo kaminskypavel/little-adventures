@@ -142,9 +142,13 @@ export function SecondaryButton({
 			{...rest}
 		>
 			{icon ? <Icon color={ink(tone)} name={icon} size={dims.icon} /> : null}
+			{/* One line that shrinks a little rather than wraps: Android can measure a heavy label a
+			    hair short and push its last word onto a hidden second line ("Try as a"). */}
 			<ClayText
+				adjustsFontSizeToFit
 				color={ink(tone)}
-				numberOfLines={size === "lg" ? undefined : 1}
+				minimumFontScale={0.85}
+				numberOfLines={1}
 				variant={labelVariant(size, "buttonSecondary")}
 			>
 				{label}
