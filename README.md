@@ -122,7 +122,6 @@ Your own app server, keys and configuration: [Development](documents/development
 | [Design](documents/design.md) | From the wireframe to the clay world |
 | [Performance](documents/performance.md) | What we measured and what changed |
 | [Impact, limits and what's next](documents/impact.md) | Who it is for, what it does not do yet, and the road ahead |
-| [Engineering notes](documents/engineering-notes.md) | Seven hard bugs: what the child saw, the cause, the fix |
 | [Development](documents/development.md) | Apps, setup, configuration, prompts, scripts, structure |
 | [PRODUCT.md](PRODUCT.md) | Who it is for and what it must do |
 
