@@ -12,8 +12,7 @@ import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { signInAsGuest } from "@/src/auth/auth-client";
-import { startRoute } from "@/src/data/adventure-client";
+import { guestRoute } from "@/src/auth/try-as-guest";
 import { useT } from "@/src/i18n";
 import { welcomeStrings } from "@/src/i18n/strings/welcome";
 
@@ -44,8 +43,9 @@ export default function Welcome() {
 		busy.current = true;
 		setNote(null);
 		try {
-			if (await signInAsGuest()) {
-				router.replace(await startRoute());
+			const route = await guestRoute();
+			if (route) {
+				router.replace(route);
 			} else {
 				setNote(t("guestFailed"));
 			}

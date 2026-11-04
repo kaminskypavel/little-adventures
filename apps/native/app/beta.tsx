@@ -1,4 +1,7 @@
-import { PrimaryButton } from "@little-adventures/native-ui/button";
+import {
+	PrimaryButton,
+	SecondaryButton,
+} from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
@@ -9,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { signOut } from "@/src/auth/auth-client";
+import { guestRoute } from "@/src/auth/try-as-guest";
 import { startRoute } from "@/src/data/adventure-client";
 import { trpcClient } from "@/src/data/trpc";
 import { useT } from "@/src/i18n";
@@ -31,10 +35,11 @@ export default function Beta() {
 	const t = useT(betaStrings);
 	const [code, setCode] = useState("");
 	const [joining, setJoining] = useState(false);
+	const [guesting, setGuesting] = useState(false);
 	const [error, setError] = useState<string | undefined>();
 
 	const join = async () => {
-		if (!code.trim() || joining) {
+		if (!code.trim() || joining || guesting) {
 			return;
 		}
 		setJoining(true);
@@ -47,6 +52,21 @@ export default function Beta() {
 			setJoining(false);
 		}
 	};
+	const tryAsGuest = async () => {
+		if (joining || guesting) {
+			return;
+		}
+		setGuesting(true);
+		setError(undefined);
+		await signOut();
+		const route = await guestRoute();
+		if (route) {
+			router.replace(route);
+		} else {
+			setError(t("guestFailed"));
+			setGuesting(false);
+		}
+	};
 	const leave = async () => {
 		await signOut();
 		router.replace("/welcome");
@@ -57,9 +77,14 @@ export default function Beta() {
 			dock={
 				<>
 					<PrimaryButton
-						disabled={!code.trim() || joining}
+						disabled={!code.trim() || joining || guesting}
 						label={joining ? t("joining") : t("join")}
 						onPress={join}
+					/>
+					<SecondaryButton
+						disabled={joining || guesting}
+						label={t("guest")}
+						onPress={tryAsGuest}
 					/>
 					<QuietLink label={t("signOut")} onPress={leave} />
 				</>
