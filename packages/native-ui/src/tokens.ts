@@ -5,8 +5,8 @@ export const colors = {
 	caret: "#E8A400",
 	cream: "#F4ECD8",
 	// The one destructive action (deleting a child profile): a warm clay red, cream ink on it.
-	dangerHi: "#E86A5C",
-	dangerLo: "#C9473B",
+	dangerHi: "#D9574A",
+	dangerLo: "#B83A2F",
 	deepNavy: "#1B3560",
 	drawingHi: "#A5BCA5",
 	drawingLo: "#88A288",
