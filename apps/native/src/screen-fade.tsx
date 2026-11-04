@@ -1,6 +1,6 @@
 // The soft hand-over between the screens of an adventure: the night sky closes over the old
-// screen (1 s), holds for a breath on the full sky (450 ms), and opens on the new one
-// (1 s); a quick dip (0.3 s out, straight back in over 0.35 s) when a place hands over to Pick a way. The music bed fades with it (music-store `setFaded`: down with the closing, silent in
+// screen (0.4 s), holds for a breath on the full sky (120 ms), and opens on the new one
+// (0.45 s); a quick dip (0.3 s out, straight back in over 0.35 s) when a place hands over to Pick a way. The music bed fades with it (music-store `setFaded`: down with the closing, silent in
 // the hold, back up with the opening) and the narration is let down too. Navigation never waits
 // on the animation: timers, not its callbacks, decide when to go and when the hold ends.
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
@@ -24,13 +24,13 @@ import Animated, {
 import { rampVolume } from "@/src/data/music-rules";
 import { useMusic } from "@/src/data/music-store";
 
-/** The sky closes over a screen: `--ease-in-out`, 1 s (the user asked for a longer fade). */
-export const PAGE_OUT_MS = 1000;
+/** The sky closes over a screen: `--ease-in-out`, 0.4 s (2.5 s in all was too long, 2026-11-04). */
+export const PAGE_OUT_MS = 400;
 const PAGE_OUT_EASING = Easing.inOut(Easing.ease);
 /** A breath on the full sky before the next screen opens. */
-export const PAGE_HOLD_MS = 450;
-/** The sky opens on a screen: `--ease-smooth-out`, 1 s. */
-export const PAGE_IN_MS = 1000;
+export const PAGE_HOLD_MS = 120;
+/** The sky opens on a screen: `--ease-smooth-out`, 0.45 s. */
+export const PAGE_IN_MS = 450;
 const PAGE_IN_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
 /** The narration comes up from silence over this long when it first speaks (ease-out). */
