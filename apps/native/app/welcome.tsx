@@ -1,7 +1,4 @@
-import {
-	PrimaryButton,
-	SecondaryButton,
-} from "@little-adventures/native-ui/button";
+import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { Logo } from "@little-adventures/native-ui/logo";
 import { QuietLink } from "@little-adventures/native-ui/quiet-link";
@@ -11,7 +8,6 @@ import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDemo } from "@/src/data/demo-store";
 import { useT } from "@/src/i18n";
 import { welcomeStrings } from "@/src/i18n/strings/welcome";
 
@@ -28,24 +24,11 @@ export default function Welcome() {
 	const t = useT(welcomeStrings);
 	const insets = useSafeAreaInsets();
 	const next = () => router.push("/account");
-	const watchDemo = () => {
-		useDemo.getState().enter();
-		router.push("/demo");
-	};
 
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={
-				<>
-					<PrimaryButton label={t("getStarted")} onPress={next} />
-					<SecondaryButton
-						accessibilityLabel={t("watchDemoLabel")}
-						label={t("watchDemo")}
-						onPress={watchDemo}
-					/>
-				</>
-			}
+			dock={<PrimaryButton label={t("getStarted")} onPress={next} />}
 		>
 			<View style={[styles.account, { top: insets.top + layout.topBarOffset }]}>
 				<QuietLink label={t("haveAccount")} onPress={next} />

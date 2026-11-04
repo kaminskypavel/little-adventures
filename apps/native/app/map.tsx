@@ -18,7 +18,6 @@ import { useSafeAreaFrame } from "react-native-safe-area-context";
 import { AdventureMenu } from "@/src/adventure-menu";
 import { MapCastButton } from "@/src/cast/map-cast-button";
 import { useMapOnTv } from "@/src/cast/use-map-on-tv";
-import { useIsDemo } from "@/src/data/demo-store";
 import { dottedRoads, litRoads, pathBetween } from "@/src/data/fork-roads";
 import { useMapReveals } from "@/src/data/map-reveals";
 import { isOutroLocked, neighbours, newlyOpened } from "@/src/data/map-rules";
@@ -193,29 +192,6 @@ function SidewaysMenu() {
 	return <AdventureMenu right={right} top={top} />;
 }
 
-/** The lock to Grown-ups; the recorded demo has no grown-ups' area. */
-function useGrownUpsAction() {
-	const router = useRouter();
-	const demo = useIsDemo();
-	const t = useT(mapStrings);
-	return demo
-		? undefined
-		: {
-				accessibilityLabel: t("grownUps"),
-				icon: "lock" as const,
-				onPress: () => router.push("/gate"),
-			};
-}
-
-/** Sideways the menu, upright the Cast button (not in the demo: there is no TV to send to). */
-function MapMenus({ sideways }: { sideways: boolean }) {
-	const demo = useIsDemo();
-	if (sideways) {
-		return <SidewaysMenu />;
-	}
-	return demo ? null : <MapCastButton />;
-}
-
 /** 11 Story map: the hub. `?walkTo=<node>` walks the star there, then opens the place. */
 export default function StoryMapScreen() {
 	const t = useT(mapStrings);
@@ -236,7 +212,6 @@ export default function StoryMapScreen() {
 	const revealsKnown = useMapReveals((s) => s.hydrated);
 	// From the shared cache, so the title is there on the first frame.
 	const childName = useChildName() ?? "";
-	const grownUps = useGrownUpsAction();
 	// The last drawing count marked, so a screen is marked once per count (not on every render).
 	const marked = useRef<number | null>(null);
 
@@ -376,7 +351,11 @@ export default function StoryMapScreen() {
 				}
 				topBar={
 					<TopBar
-						action={grownUps}
+						action={{
+							accessibilityLabel: t("grownUps"),
+							icon: "lock",
+							onPress: () => router.push("/gate"),
+						}}
 						title={childName ? t("title", { name: childName }) : ""}
 					/>
 				}
@@ -395,7 +374,7 @@ export default function StoryMapScreen() {
 			<View collapsable={false} ref={mapOnTv} style={styles.capture}>
 				{shown}
 			</View>
-			<MapMenus sideways={sideways} />
+			{sideways ? <SidewaysMenu /> : <MapCastButton />}
 			{veil}
 		</View>
 	);

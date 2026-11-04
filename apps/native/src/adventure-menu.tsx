@@ -20,7 +20,6 @@ import Animated, {
 import { CastIcon } from "@/src/cast/cast-icon";
 import { TvHit } from "@/src/cast/tv-hit";
 import { useCastAvailable, useCastConnected } from "@/src/cast/use-cast";
-import { useIsDemo } from "@/src/data/demo-store";
 import { useMusic } from "@/src/data/music-store";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { useReplay } from "@/src/data/replay-store";
@@ -214,7 +213,6 @@ function Dropdown({
 	const { id = "box" } = useLocalSearchParams<{ id?: string }>();
 	const captions = usePlayerPrefs((s) => s.captions);
 	const muted = useMusic((s) => s.muted);
-	const demo = useIsDemo();
 	return (
 		<Animated.View
 			accessibilityRole="menu"
@@ -256,21 +254,19 @@ function Dropdown({
 					<Icon color={colors.cream} name="play" size={LOCK_ICON} />
 				</View>
 			</Row>
-			{demo ? null : (
-				<Row
-					label={t("grownups")}
-					onPress={() => {
-						closeMenu();
-						onLeave?.();
-						router.push("/gate");
-					}}
-					role="button"
-				>
-					<View pointerEvents="none" style={styles.lock}>
-						<Icon color={colors.cream} name="lock" size={LOCK_ICON} />
-					</View>
-				</Row>
-			)}
+			<Row
+				label={t("grownups")}
+				onPress={() => {
+					closeMenu();
+					onLeave?.();
+					router.push("/gate");
+				}}
+				role="button"
+			>
+				<View pointerEvents="none" style={styles.lock}>
+					<Icon color={colors.cream} name="lock" size={LOCK_ICON} />
+				</View>
+			</Row>
 		</Animated.View>
 	);
 }
@@ -294,8 +290,6 @@ export function AdventureMenu({
 	// Read here, not in the TV row, so the TVs are already looked for when the menu opens.
 	const tv = useCastAvailable();
 	const connected = useCastConnected();
-	// The demo has no TV to send to.
-	const demo = useIsDemo();
 	return (
 		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
 			{menuOpen ? (
@@ -323,7 +317,7 @@ export function AdventureMenu({
 					onLeave={onLeave}
 					right={right}
 					top={top + MENU_BUTTON + MENU_GAP}
-					tv={!demo && (tv || connected)}
+					tv={tv || connected}
 				/>
 			) : null}
 		</View>

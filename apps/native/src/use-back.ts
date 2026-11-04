@@ -1,6 +1,5 @@
 import { useNavigation, useRoute, useRouter } from "expo-router";
 import { backTarget } from "@/src/back-rules";
-import { isDemo } from "@/src/data/demo-store";
 import { leaveActive } from "@/src/screen-fade";
 
 // The adventure screens close through the night sky like every other way out of them.
@@ -19,7 +18,7 @@ export function useBack(): (() => void) | null {
 		return () => through(() => navigation.goBack());
 	}
 	if (target === "home") {
-		return () => through(() => router.replace(isDemo() ? "/demo" : "/home"));
+		return () => through(() => router.replace("/home"));
 	}
 	return null;
 }

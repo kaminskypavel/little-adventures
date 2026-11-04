@@ -6,7 +6,6 @@ import { authedFetchTo } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
 import { type Language, languageNow } from "@/src/i18n";
 import { currentChildReady, getCurrentChildId } from "./current-child";
-import { demoProgress, isDemo, useDemo } from "./demo-store";
 import { withDevQuestions } from "./dev-questions";
 import { createDraftStore } from "./draft-store";
 import {
@@ -163,13 +162,11 @@ async function visitEngine(client: Engine, id: string, node: NodeId) {
  * a place that is not ready yet.
  */
 export const castPlace = (id: string, node: NodeId) =>
-	engine && !isDemo() ? engine.cast(id, node) : Promise.resolve(null);
+	engine ? engine.cast(id, node) : Promise.resolve(null);
 
 /** Where to upload the map picture for the TV. Null in the bundled adventure: nothing to send. */
 export const castMap = (id: string, contentLength?: number) =>
-	engine && !isDemo()
-		? engine.castMap(id, contentLength)
-		: Promise.resolve(null);
+	engine ? engine.castMap(id, contentLength) : Promise.resolve(null);
 
 export const getHome = async (
 	language: Language = languageNow()
@@ -367,10 +364,6 @@ export const getAdventure = async (
 	id: string,
 	language: Language = languageNow()
 ): Promise<Adventure> => {
-	// The demo reads the recorded adventure's file; no engine, no account.
-	if (isDemo()) {
-		return toAdventure(await useDemo.getState().read(id), knownUrls);
-	}
 	if (!engine) {
 		return wait(mockAdventure);
 	}
@@ -388,9 +381,6 @@ export const reloadAdventure = (
 };
 
 export const getProgress = async (id: string): Promise<Progress> => {
-	if (isDemo()) {
-		return demoProgress(id);
-	}
 	if (engine) {
 		const p = await progressFor(engine, id);
 		return { ...p, visited: [...p.visited] };
@@ -400,10 +390,6 @@ export const getProgress = async (id: string): Promise<Progress> => {
 };
 
 export const visit = (id: string, node: NodeId): Promise<Progress> => {
-	// A demo visit stays on the phone: the goodnight opens by the four-places rule.
-	if (isDemo()) {
-		return Promise.resolve(useDemo.getState().visit(id, node));
-	}
 	if (engine) {
 		return visitEngine(engine, id, node);
 	}

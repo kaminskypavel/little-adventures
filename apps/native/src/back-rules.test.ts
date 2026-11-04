@@ -9,7 +9,7 @@ describe("backTarget", () => {
 		expect(backTarget("map", false)).toBe("home");
 	});
 	test("is off on the first screens even with a stack under them", () => {
-		for (const name of ["index", "welcome", "hello", "home", "demo"]) {
+		for (const name of ["index", "welcome", "hello", "home"]) {
 			expect(backTarget(name, true)).toBe(null);
 			expect(backTarget(name, false)).toBe(null);
 		}
