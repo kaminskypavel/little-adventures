@@ -522,6 +522,9 @@ function PartLayer({
 				playsInline
 				pointerEvents="none"
 				style={VIDEO_FILL}
+				// Android: a SurfaceView ignores the layer's opacity, so the hidden next part drew over
+				// the part playing and the first part showed as a still. A TextureView fades with it.
+				surfaceType="textureView"
 			/>
 		</Animated.View>
 	);
