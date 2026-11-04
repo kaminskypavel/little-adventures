@@ -1459,7 +1459,8 @@ function PlaceScreen({
 		visited.current = visit(node).catch(() => undefined);
 		const here = adventure?.places[node];
 		const fact = here?.question?.trim() ? here.fact.trim() : "";
-		if (fact && !goodnight) {
+		// The intro asks the child's own question; its lesson comes at the places, not here.
+		if (fact && !goodnight && node !== "intro") {
 			setLesson(fact);
 			return;
 		}
