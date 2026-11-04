@@ -154,6 +154,9 @@ export function SecondaryButton({
 				// A full-width button without an icon gives its label the whole width, so Android has
 				// room to spare and never drops the last word ("Try as a" for "Try as a guest").
 				style={icon || size !== "lg" ? undefined : FULL_WIDTH_LABEL}
+				// Beside an icon the label hugs its words, so Android's default high-quality breaking,
+				// which measures this heavy font a hair short, dropped the last one ("Turn on the").
+				textBreakStrategy="simple"
 				variant={labelVariant(size, "buttonSecondary")}
 			>
 				{label}
