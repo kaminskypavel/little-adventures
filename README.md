@@ -14,7 +14,7 @@ Meta Global AI Hackathon 2026. Track: **Startup** (Kodio Ltd). Problem statement
 - **Best Build on Meta Open Weight Models:** our LoRA on Muse Glimmer 30B decides the story checks. Weights: [Hugging Face card](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures). Results: [benchmarks/checker](benchmarks/checker).
 - **Best Creative Build:** Muse Image, with SAM 3.1, turns the child's photo into the hero's looks and draws the cast ([packages/image-editing](packages/image-editing), [packages/api/src/art.ts](packages/api/src/art.ts)).
 - **Best Agentic Use-Case:** the engine writes the adventure, a second model checks it with yes/no questions, the writer rewrites with the checker's reasons, and the engine refuses after two failed rounds. The loop runs in the private engine; the public part is [packages/decision](packages/decision).
-- Demo video (3 min): added on submission day
+- Demo video (3 min): [youtu.be/vYWiJjDLM6M](https://youtu.be/vYWiJjDLM6M)
 - **Try it:** the live app at [littleadventures.app/web](https://www.littleadventures.app/web) is a private beta; judges find the invite code in our submission form. Or run it locally with no keys: `bun install`, `bun run dev:native`, press `w`. It plays one bundled sample adventure.
 
 ## For judges
