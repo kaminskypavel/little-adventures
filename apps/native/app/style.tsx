@@ -17,6 +17,8 @@ import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { VideoConfirm } from "@/src/admin/live-confirm";
 import { isAdminMe } from "@/src/admin/use-is-admin";
 import { useMe } from "@/src/admin/use-me";
+import { showNeedsAccount } from "@/src/auth/needs-account";
+import { useIsGuest } from "@/src/auth/use-session";
 import type { Style } from "@/src/data/engine-client";
 import { setStepsOptions } from "@/src/data/engine-queries";
 import { type GrownUpPhoto, grownUpPicture } from "@/src/data/profile-map";
@@ -249,7 +251,13 @@ export default function StylePicker() {
 	// Video is the costly step: an admin with video clips on chooses first.
 	const { data: child } = useChild();
 	const asksFirst = isAdminMe(me) && me?.steps.video === true;
+	const guest = useIsGuest();
 	const go = () => {
+		// A guest cannot make an adventure: no engine call, the popup instead.
+		if (guest) {
+			showNeedsAccount();
+			return;
+		}
 		mark("start-tap");
 		router.replace({
 			params: question ? { question, style: picked } : { style: picked },

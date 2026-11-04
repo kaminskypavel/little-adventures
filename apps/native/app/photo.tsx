@@ -9,6 +9,7 @@ import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
+import { useBlockGuest } from "@/src/auth/needs-account";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
 import { useChild, useSaveProfile } from "@/src/data/profile-queries";
 import type { Profile } from "@/src/data/types";
@@ -108,6 +109,7 @@ function PhotoStep({ profile }: { profile: Profile }) {
 }
 
 export default function Photo() {
+	useBlockGuest();
 	const { data } = useChild();
 	return data ? <PhotoStep profile={data.profile} /> : null;
 }

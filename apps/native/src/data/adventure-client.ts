@@ -2,7 +2,7 @@
 // adventure bodies call the engine; unset, they play the bundled adventure. The profile, photo
 // and looks always stay on the app's own server (screens read those through profile-queries.ts).
 import { queryOptions } from "@tanstack/react-query";
-import { authedFetchTo } from "@/src/auth/auth-client";
+import { authedFetchTo, isGuestNow } from "@/src/auth/auth-client";
 import { ENV } from "@/src/env";
 import { type Language, languageNow } from "@/src/i18n";
 import { currentChildReady, getCurrentChildId } from "./current-child";
@@ -312,17 +312,22 @@ const drafts = engine
 		})
 	: null;
 
+// The guest never makes an adventure, so nothing is prepared for it: no draft rows pile up on the
+// shared account.
 /** Starts preparing an adventure for the confirmed question. Returns at once. */
-export const beginDraft = (question: string) => drafts?.beginDraft(question);
+export const beginDraft = (question: string) =>
+	isGuestNow() ? undefined : drafts?.beginDraft(question);
 
 /** Gets the child's next adventure ready: once per child per app session, errors ignored. */
-export const prepareChild = (childId?: string) => drafts?.prepareOnce(childId);
+export const prepareChild = (childId?: string) =>
+	isGuestNow() ? undefined : drafts?.prepareOnce(childId);
 
 /**
  * The language changed: drops the prepared next adventure and prepares it again in the new
  * language for this child.
  */
-export const reprepareChild = (childId?: string) => drafts?.reprepare(childId);
+export const reprepareChild = (childId?: string) =>
+	isGuestNow() ? undefined : drafts?.reprepare(childId);
 
 /** Starts the adventure (the prepared one when there is one) and gives its id. */
 export const startDrafted = async (input: {

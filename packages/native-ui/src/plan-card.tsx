@@ -1,14 +1,24 @@
-import { type StyleProp, Text, View, type ViewStyle } from "react-native";
+import { useState } from "react";
+import {
+	Pressable,
+	type StyleProp,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import { ClayText } from "./clay-text";
+import { Icon } from "./icons";
 import { colors, flat, fonts } from "./tokens";
 
 const { plan } = flat;
 const ROW_LINE = 24;
+const CHEVRON = 20;
+const CHEVRON_GAP = 6;
 
 /**
  * Grown-ups "Your plan": a flat sand panel (information, not a button) with a small tag at the top
  * right, a few dotted rows and a quiet note. `rtl` mirrors it for Hebrew: tag at the top left,
- * text right-aligned, the dots on the right.
+ * text right-aligned, the dots on the right. It starts collapsed to its title; a tap opens it.
  */
 export function PlanCard({
 	items,
@@ -26,8 +36,12 @@ export function PlanCard({
 	title: string;
 }) {
 	const align = rtl ? "right" : undefined;
+	const [open, setOpen] = useState(false);
 	return (
-		<View
+		<Pressable
+			accessibilityRole="button"
+			accessibilityState={{ expanded: open }}
+			onPress={() => setOpen(!open)}
 			style={[
 				{
 					alignSelf: "stretch",
@@ -63,53 +77,69 @@ export function PlanCard({
 					{tag}
 				</Text>
 			</View>
-			<ClayText
-				accessibilityRole="header"
-				align={align}
-				style={{ fontSize: 24, lineHeight: 28 }}
-				variant="title"
-			>
-				{title}
-			</ClayText>
-			{items.map((item) => (
-				<View
-					key={item}
-					style={{
-						alignItems: "center",
-						flexDirection: rtl ? "row-reverse" : "row",
-						gap: plan.rowGap,
-						marginTop: plan.rowGap,
-					}}
-				>
-					<View
-						style={{
-							backgroundColor: colors.sun,
-							borderRadius: plan.dot / 2,
-							height: plan.dot,
-							width: plan.dot,
-						}}
-					/>
-					<ClayText
-						align={align}
-						style={{ flex: 1, lineHeight: ROW_LINE }}
-						variant="label"
-					>
-						{item}
-					</ClayText>
-				</View>
-			))}
-			<ClayText
-				align={align}
+			<View
 				style={{
-					fontSize: 17,
-					lineHeight: 22,
-					marginTop: plan.noteGap,
-					opacity: 0.7,
+					alignItems: "center",
+					flexDirection: rtl ? "row-reverse" : "row",
+					gap: CHEVRON_GAP,
 				}}
-				variant="body"
 			>
-				{note}
-			</ClayText>
-		</View>
+				<ClayText
+					accessibilityRole="header"
+					align={align}
+					style={{ fontSize: 24, lineHeight: 28 }}
+					variant="title"
+				>
+					{title}
+				</ClayText>
+				{/* The back chevron turned down (closed) or up (open): it opens and closes. */}
+				<View style={{ transform: [{ rotate: open ? "90deg" : "-90deg" }] }}>
+					<Icon color={colors.inkNavy} name="back" size={CHEVRON} />
+				</View>
+			</View>
+			{open
+				? items.map((item) => (
+						<View
+							key={item}
+							style={{
+								alignItems: "center",
+								flexDirection: rtl ? "row-reverse" : "row",
+								gap: plan.rowGap,
+								marginTop: plan.rowGap,
+							}}
+						>
+							<View
+								style={{
+									backgroundColor: colors.sun,
+									borderRadius: plan.dot / 2,
+									height: plan.dot,
+									width: plan.dot,
+								}}
+							/>
+							<ClayText
+								align={align}
+								style={{ flex: 1, lineHeight: ROW_LINE }}
+								variant="label"
+							>
+								{item}
+							</ClayText>
+						</View>
+					))
+				: null}
+			{open ? (
+				<ClayText
+					align={align}
+					style={{
+						fontSize: 17,
+						lineHeight: 22,
+						marginTop: plan.noteGap,
+						opacity: 0.7,
+					}}
+					variant="body"
+				>
+					{note}
+				</ClayText>
+			) : null}
+		</Pressable>
 	);
 }

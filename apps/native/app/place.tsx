@@ -522,6 +522,9 @@ function PartLayer({
 				playsInline
 				pointerEvents="none"
 				style={VIDEO_FILL}
+				// Android: a SurfaceView ignores the layer's opacity, so the hidden next part drew over
+				// the part playing and the first part showed as a still. A TextureView fades with it.
+				surfaceType="textureView"
 			/>
 		</Animated.View>
 	);
@@ -1450,7 +1453,8 @@ function PlaceScreen({
 		visited.current = visit(node).catch(() => undefined);
 		const here = adventure?.places[node];
 		const fact = here?.question?.trim() ? here.fact.trim() : "";
-		if (fact && !goodnight) {
+		// The intro asks the child's own question; its lesson comes at the places, not here.
+		if (fact && !goodnight && node !== "intro") {
 			setLesson(fact);
 			return;
 		}

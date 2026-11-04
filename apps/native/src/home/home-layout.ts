@@ -17,11 +17,11 @@ const LABEL = 23;
 const LABEL_GAP = 9;
 const DOOR = 96;
 const CHIP = 10;
-const IDEA = 88;
 // With Yours as the only shelf the star has Round 1's room again (190 at most).
 const STAR = { max: 190, min: 96 };
-// Gaps: bar to plate, tail to star, star to button, button to Yours, Yours shelf to the bottom.
-const REST_GAPS = [5, 2, 34, 40, 10] as const;
+// Gaps: bar to plate, tail to star, star to button, button to the replay shelf, shelf to the bottom
+// (24: the shelf sits clear of the bottom edge).
+const REST_GAPS = [5, 2, 34, 40, 24] as const;
 
 const MIC = 176;
 const HEADLINE = 42;
@@ -29,8 +29,8 @@ const HINT_GAP = 10;
 const HINT = 26;
 const LISTEN_STAR = { max: 150, min: 110 };
 const LISTEN_TOP = 37;
-// Star to mic, mic to headline, hint to the ideas' label, ideas to the bottom edge.
-const LISTEN_GAPS = [96, 44, 34, 12] as const;
+// Star to mic, mic to headline, hint to the ideas' label (the ideas take the replay shelf's place).
+const LISTEN_GAPS = [96, 44, 34] as const;
 
 // The gaps never shrink below this share of the design before the star starts to shrink.
 const GAP_FLOOR = 0.5;
@@ -95,19 +95,20 @@ export interface ListenLayout {
 
 /** Home after New adventure: the star on top, the round mic, the words, then the ideas. */
 export function listenLayout(height: number, insets: Insets): ListenLayout {
+	// The ideas sit where the replay shelf sits at rest, so the row does not jump between the two.
+	const rest = restLayout(height, insets);
 	const starTop = insets.top + LISTEN_TOP;
-	const fixed = MIC + HEADLINE + HINT_GAP + HINT + LABEL + LABEL_GAP + IDEA;
-	const free = height - insets.bottom - starTop - LISTEN_STAR.max - fixed;
+	const fixed = MIC + HEADLINE + HINT_GAP + HINT;
+	const free = rest.yoursLabelTop - starTop - LISTEN_STAR.max - fixed;
 	const { gaps, size } = fit(free, LISTEN_STAR, LISTEN_GAPS);
 	const micTop = starTop + size + (gaps[0] ?? 0);
 	const headlineTop = micTop + MIC + (gaps[1] ?? 0);
 	const hintTop = headlineTop + HEADLINE + HINT_GAP;
-	const ideasLabelTop = hintTop + HINT + (gaps[2] ?? 0);
 	return {
 		headlineTop,
 		hintTop,
-		ideasLabelTop,
-		ideasTop: ideasLabelTop + LABEL + LABEL_GAP,
+		ideasLabelTop: rest.yoursLabelTop,
+		ideasTop: rest.yoursTop,
 		micCy: micTop + MIC / 2,
 		starSize: size,
 		starTop,

@@ -54,6 +54,8 @@ interface ClayPressableProps {
 	tone?: ClayTone;
 }
 
+// Points a finger may move before a press stops being a tap.
+const TAP_MAX_DISTANCE = 10;
 const easeOut = Easing.bezier(...motion.easeOut);
 // A damping ratio of 0.5 swings back past rest by about this much of the press travel.
 const SPRING_UNDERSHOOT = 0.16;
@@ -109,6 +111,9 @@ export function ClayPressable({
 	const tap = useTapGesture({
 		enabled: !disabled,
 		hitSlop: slop,
+		// A finger that travels is a scroll, not a tap: without this a slow drag on a shelf door
+		// stayed a pending tap and the shelf (on Android) never scrolled.
+		maxDistance: TAP_MAX_DISTANCE,
 		onActivate: () => {
 			scheduleOnRN(fire);
 		},

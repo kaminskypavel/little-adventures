@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { EaseView } from "react-native-ease";
 import { iosTextNudge } from "./clay-text";
 import { useCalm } from "./motion-provider";
@@ -10,6 +11,8 @@ const SPACING = -0.64;
 const BOB = 4.2;
 const BOB_MS = 3600;
 const STEP_S = 0.09;
+// Room kept on each side of the mark; the tilted letters reach a few points past their boxes.
+const SIDE = 32;
 // Two shadows per letter: a hard navy lip (0 3 px) and a soft drop (0 6 px, 14 px blur).
 const LIP = { color: "rgba(4,10,24,0.55)", y: 4.2 };
 const DROP = { blur: 19.4, color: "rgba(0,0,0,0.35)", y: 8.3 };
@@ -133,25 +136,41 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 	);
 }
 
-/** The Welcome wordmark: "Little" over "Adventures", each letter its own colour, tilt and bob. */
+/**
+ * The Welcome wordmark: "Little" over "Adventures", each letter its own colour, tilt and bob. On a
+ * phone where "Adventures" would run past the side margins (Android draws the font wider), the
+ * whole mark scales down to fit.
+ */
 export function Logo() {
 	const calm = useCalm();
+	const { width } = useWindowDimensions();
+	const [natural, setNatural] = useState(0);
+	const room = width - 2 * SIDE;
+	const scale = natural > room ? room / natural : 1;
 	return (
 		<View
 			accessibilityLabel="Little Adventures"
 			accessibilityRole="header"
 			accessible
+			style={{ flexDirection: "row", justifyContent: "center" }}
 		>
-			{lines.map((line) => (
-				<View
-					key={line.map((letter) => letter.ch).join("")}
-					style={{ flexDirection: "row", justifyContent: "center" }}
-				>
-					{line.map((letter) => (
-						<Glyph calm={calm} key={letter.delay} letter={letter} />
-					))}
-				</View>
-			))}
+			{/* A child of a row keeps its full width (it does not shrink), so this measures the
+			    mark as drawn, not as clamped to the screen. */}
+			<View
+				onLayout={(event) => setNatural(event.nativeEvent.layout.width)}
+				style={{ transform: [{ scale }] }}
+			>
+				{lines.map((line) => (
+					<View
+						key={line.map((letter) => letter.ch).join("")}
+						style={{ flexDirection: "row", justifyContent: "center" }}
+					>
+						{line.map((letter) => (
+							<Glyph calm={calm} key={letter.delay} letter={letter} />
+						))}
+					</View>
+				))}
+			</View>
 		</View>
 	);
 }

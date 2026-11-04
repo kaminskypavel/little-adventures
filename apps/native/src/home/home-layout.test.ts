@@ -11,13 +11,13 @@ describe("home layout", () => {
 	test("the 390 x 844 design phone: Yours at the bottom at rest, the ideas under the mic", () => {
 		const rest = restLayout(844, { bottom: 34, top: 47 });
 		expect(rest.starSize).toBe(190);
-		expect(Math.round(rest.buttonCy)).toBe(533);
-		expect(Math.round(rest.yoursTop)).toBe(685);
+		expect(Math.round(rest.buttonCy)).toBe(523);
+		expect(Math.round(rest.yoursTop)).toBe(664);
 		const listen = listenLayout(844, { bottom: 34, top: 47 });
 		expect(listen.starTop).toBe(84);
-		expect(Math.round(listen.micCy)).toBe(426);
-		expect(Math.round(listen.hintTop)).toBe(614);
-		expect(Math.round(listen.ideasTop)).toBe(709);
+		expect(Math.round(listen.micCy)).toBe(402);
+		expect(Math.round(listen.hintTop)).toBe(578);
+		expect(listen.ideasTop).toBe(rest.yoursTop);
 	});
 
 	test("every phone keeps the stack inside the screen, in order", () => {

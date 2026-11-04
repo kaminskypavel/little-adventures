@@ -4,7 +4,7 @@ import { colors, flat } from "./tokens";
 
 const badge = flat.editBadge;
 
-/** A soft pencil mark for the bottom right of a face in edit mode. Not a button: the face is. */
+/** A soft pencil mark for the bottom right of a face; the screen wraps it in its own button. */
 export function EditBadge() {
 	return (
 		<View

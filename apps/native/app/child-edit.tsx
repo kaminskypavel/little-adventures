@@ -2,14 +2,18 @@ import {
 	BODY_SCROLL_END,
 	BODY_SCROLL_START,
 } from "@little-adventures/native-ui/body-fade";
-import { PrimaryButton } from "@little-adventures/native-ui/button";
+import {
+	PrimaryButton,
+	SecondaryButton,
+} from "@little-adventures/native-ui/button";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
-import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { portrait, spacing } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { useBlockGuest } from "@/src/auth/needs-account";
 import { ChildFields, useChildForm } from "@/src/child/child-form";
 import type { Child } from "@/src/data/profile-map";
 import {
@@ -93,10 +97,13 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 					</Portrait>
 				</View>
 				<ChildFields control={control} />
+				{/* At the end of the page, a small red button: behind the grown-up hold and a confirm. */}
 				<View style={styles.delete}>
-					<QuietLink
+					<SecondaryButton
 						label={t("delete", { name: child.profile.childName })}
 						onPress={confirmDelete}
+						size="sm"
+						tone="danger"
 					/>
 				</View>
 			</ScrollView>
@@ -106,12 +113,13 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 
 /** One child's full edit screen. The child is `?id=`; the current child is never touched. */
 export default function ChildEdit() {
+	useBlockGuest();
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const child = useChildById(id).data;
 	return child ? <EditChild child={child} id={id} /> : null;
 }
 
 const styles = StyleSheet.create({
-	delete: { marginTop: spacing.lg },
+	delete: { alignItems: "center", marginTop: spacing.xl },
 	portrait: { alignItems: "center", marginBottom: spacing.lg },
 });

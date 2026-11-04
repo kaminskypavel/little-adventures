@@ -2,12 +2,9 @@ import {
 	BODY_SCROLL_END,
 	BODY_SCROLL_START,
 } from "@little-adventures/native-ui/body-fade";
-import {
-	PrimaryButton,
-	SecondaryButton,
-} from "@little-adventures/native-ui/button";
 import { ForkMap } from "@little-adventures/native-ui/fork-map";
 import { FoundPanel } from "@little-adventures/native-ui/found-panel";
+import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { useCalm } from "@little-adventures/native-ui/motion-provider";
 import { Screen } from "@little-adventures/native-ui/screen";
 import {
@@ -18,7 +15,8 @@ import {
 import { layout, motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { litRoads } from "@/src/data/fork-roads";
 import { END_FADE_AFTER_MS } from "@/src/data/music-rules";
@@ -82,18 +80,16 @@ export default function End() {
 				<ForkMap
 					button={
 						<View style={styles.buttons}>
-							<SecondaryButton
-								label={t("playAgain")}
+							<IconButton
+								accessibilityLabel={t("playAgain")}
+								icon="replay"
 								onPress={playAgain}
-								size="md"
-								style={styles.sidewaysButton}
 							/>
-							<PrimaryButton
-								label={t("home")}
-								labelSize={21}
+							<IconButton
+								accessibilityLabel={t("home")}
+								icon="home"
 								onPress={goHome}
-								size="md"
-								style={styles.sidewaysButton}
+								tone="sun"
 							/>
 						</View>
 					}
@@ -120,17 +116,16 @@ export default function End() {
 				compactTitle
 				dock={
 					<View style={styles.buttons}>
-						<SecondaryButton
-							label={t("playAgain")}
+						<IconButton
+							accessibilityLabel={t("playAgain")}
+							icon="replay"
 							onPress={playAgain}
-							size="md"
-							style={styles.dockButton}
 						/>
-						<PrimaryButton
-							label={t("home")}
+						<IconButton
+							accessibilityLabel={t("home")}
+							icon="home"
 							onPress={goHome}
-							size="md"
-							style={styles.dockButton}
+							tone="sun"
 						/>
 					</View>
 				}
@@ -171,7 +166,10 @@ export default function End() {
 }
 
 const styles = StyleSheet.create({
-	buttons: { alignItems: "center", flexDirection: "row", gap: layout.gap },
-	dockButton: { flex: 1 },
-	sidewaysButton: { height: 60, paddingHorizontal: 24 },
+	buttons: {
+		alignItems: "center",
+		flexDirection: "row",
+		gap: layout.gap,
+		justifyContent: "center",
+	},
 });

@@ -45,8 +45,10 @@ function Title({
 		<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
 			<ClayText
 				accessibilityRole="header"
+				adjustsFontSizeToFit
 				align="center"
 				color={colors.cream}
+				minimumFontScale={0.8}
 				numberOfLines={1}
 				variant="title"
 			>
@@ -66,6 +68,7 @@ function Title({
 export function TopBar({
 	action,
 	avatar = false,
+	end,
 	avatarImage,
 	compact = false,
 	onAvatarPress,
@@ -80,6 +83,8 @@ export function TopBar({
 		onPress: () => void;
 	};
 	avatar?: boolean;
+	/** A control of the screen's own at the right, in place of the icon button (Grown-ups: Sign out). */
+	end?: ReactNode;
 	/** The child's drawn picture. Shown instead of the star; the star stays when it is missing or fails to load. */
 	/** The child's drawing. Its cacheKey (the storage key) keeps it from reloading as the signed url changes. */
 	avatarImage?: { cacheKey?: string; uri: string } | null;
@@ -137,13 +142,15 @@ export function TopBar({
 				onTitleLongPress={onTitleLongPress}
 				title={title}
 			/>
-			{action ? (
+			{end ?? null}
+			{!end && action ? (
 				<IconButton
 					accessibilityLabel={action.accessibilityLabel}
 					icon={action.icon}
 					onPress={action.onPress}
 				/>
-			) : (
+			) : null}
+			{end || action ? null : (
 				// Balances the back button, so the title stays centred on the screen.
 				<View style={styles.spacer} />
 			)}

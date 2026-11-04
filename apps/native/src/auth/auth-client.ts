@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { queryClient } from "@/src/data/query-client";
 import { clearSpokenQuestion } from "@/src/data/spoken-question";
 import { ENV } from "@/src/env";
+import { isGuestEmail } from "./guest";
 import { withRetryOn401 } from "./retry-on-401";
 import { clearToken, readToken, writeToken } from "./token-store";
 
@@ -139,6 +140,28 @@ export async function verifyCode(email: string, otp: string) {
 		return false;
 	}
 }
+
+/** Sign in as the shared guest: the server signs in on its behalf, then the JWT is minted as usual. */
+export async function signInAsGuest() {
+	try {
+		const res = await post("/api/guest", {});
+		if (!res.ok) {
+			return false;
+		}
+		// The server sends the JWT along; minting from the cookie is the fallback.
+		const { token: jwt } = (await res.json()) as { token?: unknown };
+		if (typeof jwt === "string" && jwt) {
+			await adopt(jwt);
+			return true;
+		}
+		return (await mint()) !== null;
+	} catch {
+		return false;
+	}
+}
+
+/** Whether the signed-in account is the shared guest, outside React. */
+export const isGuestNow = () => isGuestEmail(session.user?.email);
 
 /** Redeem the session verifier a social sign-in returns in the query string. */
 export async function redeemVerifier(query: string) {

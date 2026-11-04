@@ -1,7 +1,9 @@
 import { PrimaryButton } from "@little-adventures/native-ui/button";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { useBlockGuest } from "@/src/auth/needs-account";
 import { ChildFields, useChildForm } from "@/src/child/child-form";
 import { emptyProfile } from "@/src/data/profile-map";
 import { useChild, useSaveProfile } from "@/src/data/profile-queries";
@@ -45,6 +47,7 @@ function ChildForm({ isNew, profile }: { isNew: boolean; profile: Profile }) {
 }
 
 export default function Child() {
+	useBlockGuest();
 	const { data } = useChild();
 	// `?new=1` (Grown-ups, "Add a child"): an empty form that adds a child instead of editing.
 	const { new: add } = useLocalSearchParams<{ new?: string }>();

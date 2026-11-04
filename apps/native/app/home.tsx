@@ -26,6 +26,7 @@ import {
 } from "react-native-safe-area-context";
 import { useScreenAdminTools } from "@/src/admin/admin-panel-store";
 import { PresetQuestions } from "@/src/admin/preset-questions";
+import { useIsGuest } from "@/src/auth/use-session";
 import { beginDraft, prepareChild } from "@/src/data/adventure-client";
 import type { AdventureSummary, Idea } from "@/src/data/types";
 import { dev } from "@/src/dev-param";
@@ -266,6 +267,7 @@ function RestLayer({
 	stage: Stage;
 }) {
 	const t = useT(homeStrings);
+	const guest = useIsGuest();
 	const { adventures, avatar, name } = data;
 	const spots = stage.rest;
 	const insets = useSafeAreaInsets();
@@ -273,11 +275,13 @@ function RestLayer({
 	// After another child is picked the star greets first (phase 1), then asks (phase 2).
 	const greeting = useGreeting(data.childId);
 	const hi = greeting === 1 && !micOff;
-	let text = t("greet", { name: name ?? "" });
+	// The shared guest account is greeted as the guest, not by the copied child's name.
+	const who = guest ? t("guest") : (name ?? "");
+	let text = t("greet", { name: who });
 	if (micOff) {
 		text = t("micOff");
 	} else if (hi) {
-		text = t("hi", { name: name ?? "" });
+		text = t("hi", { name: who });
 	}
 	const { calm } = stage;
 	let entering: typeof popIn | undefined;
@@ -299,7 +303,7 @@ function RestLayer({
 				<TopBar
 					action={{
 						accessibilityLabel: t("grownUps"),
-						icon: "lock",
+						icon: "settings",
 						onPress: onGate,
 					}}
 					avatar={name !== null}
@@ -331,7 +335,7 @@ function RestLayer({
 			)}
 			<YoursShelf
 				adventures={adventures}
-				label={t("yours")}
+				label={t("replay")}
 				labelTop={spots.yoursLabelTop}
 				onOpen={onOpen}
 				top={spots.yoursTop}

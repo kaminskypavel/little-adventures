@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { drawGrownUpFace, grownUpArtFolder } from "../art";
-import { protectedProcedure, router } from "../index";
+import { ownerWriteProcedure, protectedProcedure, router } from "../index";
 import { ownsKey } from "../photo-key";
 
 const called = z.object({
@@ -35,7 +35,7 @@ const dropPhoto = async (
 };
 
 export const grownUpRouter = router({
-	delete: protectedProcedure.mutation(async ({ ctx }) => {
+	delete: ownerWriteProcedure.mutation(async ({ ctx }) => {
 		const ownerId = ctx.principal.user.id;
 		const row = await rowOf(ctx.db, ownerId);
 		if (row) {
@@ -60,7 +60,7 @@ export const grownUpRouter = router({
 		return { ...row, cutUrl, faceUrl, lookUrl, photoUrl };
 	}),
 
-	save: protectedProcedure
+	save: ownerWriteProcedure
 		.input(z.object({ photoKey: z.string().min(1).max(512) }))
 		.mutation(async ({ ctx, input }) => {
 			const ownerId = ctx.principal.user.id;
@@ -93,7 +93,7 @@ export const grownUpRouter = router({
 		}),
 
 	/** What the child calls this grown-up; the photo row must exist. */
-	setCalled: protectedProcedure
+	setCalled: ownerWriteProcedure
 		.input(called)
 		.mutation(async ({ ctx, input }) => {
 			const [row] = await ctx.db

@@ -4,6 +4,9 @@ export const colors = {
 	black: "#000000",
 	caret: "#E8A400",
 	cream: "#F4ECD8",
+	// The one destructive action (deleting a child profile): a warm clay red, cream ink on it.
+	dangerHi: "#D9574A",
+	dangerLo: "#B83A2F",
 	deepNavy: "#1B3560",
 	drawingHi: "#A5BCA5",
 	drawingLo: "#88A288",
@@ -50,6 +53,7 @@ export const colors = {
 
 /** Clay face gradients, top to bottom. */
 export const clayFaces = {
+	danger: [colors.dangerHi, colors.dangerLo],
 	drawing: [colors.drawingHi, colors.drawingLo],
 	field: [colors.fieldHi, colors.fieldLo],
 	locked: [colors.lockedHi, colors.lockedLo],

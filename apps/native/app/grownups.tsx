@@ -7,15 +7,16 @@ import {
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { PlanCard } from "@little-adventures/native-ui/plan-card";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
-import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
 import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
-import { useSession } from "@/src/auth/use-session";
+import { showNeedsAccount } from "@/src/auth/needs-account";
+import { useIsGuest } from "@/src/auth/use-session";
 import { reprepareChild } from "@/src/data/adventure-client";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { grownUpImage } from "@/src/data/profile-map";
@@ -39,7 +40,6 @@ const NAME_GAP = 16;
 const PILL_GAP = 14;
 const PILL_HEIGHT = 44;
 const PLAN_GAP = 36;
-const FOOT_GAP = 30;
 const MAX_WORD = 30;
 const LANGUAGE_GAP = 28;
 // The presets are saved under their English names; the words on screen follow the language.
@@ -52,9 +52,8 @@ const PRESET_KEYS = {
 
 export default function Grownups() {
 	const router = useRouter();
-	const insets = useSafeAreaInsets();
-	const { user } = useSession();
-	const who = user?.name?.trim() || user?.email;
+	// A guest looks, but the photo and what the child calls you need an account.
+	const guest = useIsGuest();
 	// The cache asks again after every save (see profile-queries.ts).
 	const { data: child } = useChild();
 	const name = child?.profile.childName ?? "";
@@ -62,6 +61,7 @@ export default function Grownups() {
 	const deleteOwnPhoto = useDeleteGrownUpPhoto();
 	const setCalled = useSetCalled();
 	const t = useT(grownupsStrings);
+	const insets = useSafeAreaInsets();
 	const language = useLanguage();
 	// Hebrew reads right to left on this screen; the layout stays left to right elsewhere.
 	const rtl = isRtl(language);
@@ -118,7 +118,23 @@ export default function Grownups() {
 		]);
 
 	return (
-		<Screen scrolls topBar={<TopBar title={t("title")} />}>
+		<Screen
+			scrolls
+			topBar={
+				<TopBar
+					end={
+						<SecondaryButton
+							label={t("signOut")}
+							onPress={signOut}
+							size="sm"
+							style={styles.pill}
+							tone="danger"
+						/>
+					}
+					title={t("title")}
+				/>
+			}
+		>
 			<ScrollView
 				contentContainerStyle={{
 					paddingBottom: insets.bottom + layout.dockBottom,
@@ -132,11 +148,13 @@ export default function Grownups() {
 							<Portrait
 								cameraLabel={t("changePhoto")}
 								onCamera={() =>
-									photoMenu(
-										t("yourPhoto"),
-										setOwnPhoto,
-										grownUpPhoto ? deleteOwnPhoto : null
-									)
+									guest
+										? showNeedsAccount()
+										: photoMenu(
+												t("yourPhoto"),
+												setOwnPhoto,
+												grownUpPhoto ? deleteOwnPhoto : null
+											)
 								}
 							>
 								<PortraitArt
@@ -171,7 +189,7 @@ export default function Grownups() {
 												? calledName(grownUpPhoto.called)
 												: t("pick")
 										}
-										onPress={calledMenu}
+										onPress={guest ? showNeedsAccount : calledMenu}
 										size="sm"
 										style={styles.pill}
 									/>
@@ -196,20 +214,6 @@ export default function Grownups() {
 							rtl={rtl}
 							style={styles.language}
 						/>
-						<View style={styles.foot}>
-							<ClayText
-								align={rtl ? "right" : undefined}
-								color={colors.cream}
-								numberOfLines={1}
-								style={styles.signed}
-								variant="body"
-							>
-								{who ? t("signedInAs", { who }) : t("signedIn")}
-							</ClayText>
-							<View style={[styles.link, rtl ? styles.linkRtl : null]}>
-								<QuietLink label={t("signOut")} onPress={signOut} />
-							</View>
-						</View>
 					</>
 				) : null}
 			</ScrollView>
@@ -218,15 +222,11 @@ export default function Grownups() {
 }
 
 const styles = StyleSheet.create({
-	foot: { marginTop: FOOT_GAP, paddingHorizontal: 30 },
 	language: { marginTop: LANGUAGE_GAP },
-	link: { alignItems: "flex-start", marginTop: -2 },
-	linkRtl: { alignItems: "flex-end" },
 	name: { fontSize: 26, lineHeight: 30, marginTop: NAME_GAP },
 	pill: { alignSelf: "center", paddingHorizontal: 20 },
 	pillSlot: { height: PILL_HEIGHT, marginTop: PILL_GAP },
 	plan: { marginTop: PLAN_GAP },
-	signed: { fontSize: 17, lineHeight: 22, opacity: 0.6 },
 	sub: { fontSize: 17, lineHeight: 22, opacity: 0.7 },
 	you: { alignItems: "center" },
 });

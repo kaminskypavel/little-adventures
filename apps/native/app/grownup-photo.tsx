@@ -10,7 +10,9 @@ import { colors, spacing } from "@little-adventures/native-ui/tokens";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { useBlockGuest } from "@/src/auth/needs-account";
 import { uploadChildPhoto } from "@/src/data/photo-upload";
 import { grownUpPicture } from "@/src/data/profile-map";
 import {
@@ -29,6 +31,7 @@ import { LINE, PhotoRing, pick, type Source } from "@/src/photo/photo-step";
 const SMALL_RING = 150;
 
 export default function GrownUpPhoto() {
+	useBlockGuest();
 	const router = useRouter();
 	const t = useT(grownUpPhotoStrings);
 	const calledLabels = useCalledLabels();
