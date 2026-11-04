@@ -10,7 +10,7 @@ import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInAsGuest } from "@/src/auth/auth-client";
 import { startRoute } from "@/src/data/adventure-client";
@@ -20,6 +20,9 @@ import { welcomeStrings } from "@/src/i18n/strings/welcome";
 // Round 7 01 at 0.72 scale: star 200 px wide at top 92 px, logo at 296 px, tagline at 396 px.
 // Smaller than before so the tagline keeps its room above the two-button dock.
 const STAR = 222;
+// A shorter phone (the Pixel, about 785 pt tall) takes a smaller star, so the tagline clears the dock.
+const SHORT_PHONE = 820;
+const SHORT_STAR = 196;
 const LOGO_GAP = 5;
 const TAGLINE_GAP = 11;
 const TAGLINE_INSET = 25;
@@ -29,6 +32,7 @@ export default function Welcome() {
 	const router = useRouter();
 	const t = useT(welcomeStrings);
 	const insets = useSafeAreaInsets();
+	const star = useWindowDimensions().height < SHORT_PHONE ? SHORT_STAR : STAR;
 	const next = () => router.push("/account");
 	const [note, setNote] = useState<string | null>(null);
 	// One request at a time: a second tap while it runs does nothing.
@@ -52,6 +56,8 @@ export default function Welcome() {
 
 	return (
 		<Screen
+			// Nothing here scrolls, so the tagline is never faded out above the dock.
+			bodyFade={false}
 			bodyStyle={styles.body}
 			dock={
 				<>
@@ -67,8 +73,8 @@ export default function Welcome() {
 			<View style={[styles.account, { top: insets.top + layout.topBarOffset }]}>
 				<QuietLink label={t("haveAccount")} onPress={next} />
 			</View>
-			<View style={styles.star}>
-				<StarTake size={STAR} take="wave" />
+			<View style={{ height: star, width: star }}>
+				<StarTake size={star} take="wave" />
 			</View>
 			<View style={styles.logo}>
 				<Logo />
@@ -101,6 +107,5 @@ const styles = StyleSheet.create({
 	body: { alignItems: "center", paddingTop: 128 },
 	logo: { marginTop: LOGO_GAP },
 	note: { marginTop: TAGLINE_GAP, paddingHorizontal: TAGLINE_INSET },
-	star: { height: STAR, width: STAR },
 	tagline: { marginTop: TAGLINE_GAP, paddingHorizontal: TAGLINE_INSET },
 });
