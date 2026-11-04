@@ -20,8 +20,9 @@ const CHIP = 10;
 const IDEA = 88;
 // With Yours as the only shelf the star has Round 1's room again (190 at most).
 const STAR = { max: 190, min: 96 };
-// Gaps: bar to plate, tail to star, star to button, button to Yours, Yours shelf to the bottom.
-const REST_GAPS = [5, 2, 34, 40, 10] as const;
+// Gaps: bar to plate, tail to star, star to button, button to the replay shelf, shelf to the bottom
+// (24: the shelf sits clear of the bottom edge).
+const REST_GAPS = [5, 2, 34, 40, 24] as const;
 
 const MIC = 176;
 const HEADLINE = 42;
