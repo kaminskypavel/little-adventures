@@ -4,21 +4,21 @@
 
 ## Platform
 
-ios
+ios, android
 
 ## Stack
 
 Better-T-Stack monorepo (Turborepo, bun). Two apps:
 
-- Expo app for the child and parent. It is built and run on the web first (react-native-web), then shipped to iOS from the same code.
-- Next.js web app for the public landing page (littleadventures.app) and the parent dashboard.
+- Expo app for the child and parent, on iPhone and Android.
+- Next.js app for the public landing page (littleadventures.app) and the app server (tRPC API).
 
-This repo holds the app, the app server and the public packages that call the Meta models. Video and voice production, with the production prompts, lives in a private engine, and the app reaches it through the engine's player API (REST with a bearer token). See ARCHITECTURE.md.
+This repo holds the app, the app server and the public packages that call the Meta models. Video and voice production, with the production prompts, lives in a private engine, and the app reaches it through the engine's player API (REST with a bearer token). See [the architecture page](documents/architecture.md).
 
 ## Users
 
 - **Children aged 2 to 16**, with a parent beside them guiding. They listen on the parent's phone in the evening.
-- **Parents**: they sign in, set up the child's character (name, age, photo), sit with the child during the story, and check past stories in the dashboard.
+- **Parents**: they sign in, set up the child's character (name, age, photo), sit with the child during the story, and find past stories in the app's library.
 
 ## Product Purpose
 
@@ -41,23 +41,24 @@ The story is generated from the child's own question and stars the child's own c
 From the app server (`apps/web`) and the engine's player API:
 
 - Grown-up sign-in. The same token works on the app server and the engine.
-- Child profile on the app server: name, age, boy or girl, and a photo uploaded through a presigned link. SAM 3.1 and Muse Image turn the photo into look avatars to pick from.
+- Child profile on the app server: name, age, boy or girl, and a photo uploaded through a presigned link. SAM 3.1 and Muse Image turn the photo into the child's clay look.
 - The child's spoken question becomes text on the app server (`voice.transcribe`, Muse Voice Transcribe).
 - Start an adventure from the question (`POST /adventures`), list adventures, and read one while its places are made (`GET /adventures/{id}`, polled every `pollAfterSec`).
 - Mark a place visited (`POST /adventures/{id}/nodes/{node}/visit`). The goodnight opens after all 4 places.
+- Cast a place, or the map, to a TV (`POST /adventures/{id}/nodes/{node}/cast`, `POST /adventures/{id}/cast-map`). The app shows the TV button on iPhone and Android when a TV is on the network.
+- Language: the grown-up picks English, Spanish or Hebrew in the app, and the calls to the engine carry it.
 
 Binding constraints:
 
 - Only Meta models. Every Meta model call goes through a public package in this repo; the production prompts and the video and voice production live in the private engine.
-- Nothing in this repo may describe how the backend works inside. The client sees only the player API.
+- Nothing in this repo may describe how the engine makes clips, narration or video, or how characters stay consistent.
 - The repo is public and holds only work from the hackathon week.
-- Undecided: the companion character's name.
 
 ## Brand Commitments
 
 - Name: Little Adventures. Domain: littleadventures.app.
 - Never use "muse" in the product name or domain. Avoid the phrases "bed adventure" and "night adventure".
-- A small companion character (the user approved "a simple Muse") listens to the question, waits with the child while the chapter renders, and says goodnight. Its name is open.
+- Two small companions, the star and the puppy, listen to the question, wait with the child while the chapter renders, and say goodnight.
 - For children, but stylized and minimal. It must never look bloated, loud or sloppy.
 
 ## Evidence on Hand
@@ -78,3 +79,4 @@ Binding constraints:
 - Tap targets sized for small fingers (at least 64 pt for child-facing actions).
 - Low-light use: no pure white fields, no flashing, honor reduced motion.
 - Every choice is shown as a picture with a spoken line, so non-readers can choose.
+- The app is in English, Spanish and Hebrew. Hebrew text reads right to left.
