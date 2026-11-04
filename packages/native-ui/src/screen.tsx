@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import {
 	KeyboardStickyView,
+	useKeyboardState,
 	useReanimatedKeyboardAnimation,
 } from "react-native-keyboard-controller";
 import Animated, {
@@ -173,6 +174,9 @@ export function Screen({
 	const insets = useSafeAreaInsets();
 	const calm = useCalm();
 	const onBack = useBackAction();
+	// The tap-away catcher only listens while the keyboard is up: otherwise, on Android, it took
+	// slow drags from the scroll views inside the body (the replay shelf did not scroll).
+	const keyboardUp = useKeyboardState((state) => state.isVisible);
 	// Without a top bar the back button floats in the top left corner over the content, so the
 	// headline sits where it always did (titleTop below the top of the screen).
 	const floatBack = topBar ? null : onBack;
@@ -245,6 +249,7 @@ export function Screen({
 			<Animated.View style={[styles.bodyWrap, aboveKeyboard]}>
 				<Pressable
 					accessible={false}
+					disabled={!keyboardUp}
 					onPress={Keyboard.dismiss}
 					style={styles.bodyWrap}
 				>
