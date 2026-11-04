@@ -33,6 +33,7 @@ import { AdminPanel } from "@/src/admin/admin-switches";
 import { useAdminHold } from "@/src/admin/use-admin-hold";
 import { useSession } from "@/src/auth/use-session";
 import { FadeBottom } from "@/src/body-mask";
+import { useIsDemo } from "@/src/data/demo-store";
 import { fallbackArt } from "@/src/data/fallback-art";
 import { stopMusic } from "@/src/data/music-store";
 import { queryClient } from "@/src/data/query-client";
@@ -96,14 +97,12 @@ function MusicGate() {
 }
 
 // Every screen past sign-in needs a signed-in grown-up; signed out, the router falls back to the
-// start (index), which sends them to Welcome. Only index, welcome, account and +not-found are open.
+// start (index), which sends them to Welcome. Only index, welcome, account, demo and +not-found are open.
 const SIGNED_IN_SCREENS = [
 	"beta",
 	"child",
 	"child-edit",
-	"choice",
 	"coming",
-	"end",
 	"gate",
 	"grownup-photo",
 	"grownups",
@@ -118,14 +117,15 @@ const SIGNED_IN_SCREENS = [
 	"library",
 	"listening",
 	"making",
-	"map",
 	"oops",
 	"photo",
-	"place",
 	"style",
 	"verify",
 	"who",
 ] as const;
+
+// The adventure screens also open without an account, while the recorded demo is on.
+const ADVENTURE_SCREENS = ["choice", "end", "map", "place"] as const;
 
 // The navigation theme paints its own background; make it clear so the Sky shows.
 const clearTheme = {
@@ -146,6 +146,7 @@ export default function Layout() {
 	const ready = loaded || error !== null;
 	// Nothing renders until the session is known, so no screen shows for a moment to a visitor.
 	const { status } = useSession();
+	const demo = useIsDemo();
 
 	if (!ready || status === "loading") {
 		return null;
@@ -178,6 +179,13 @@ export default function Layout() {
 																<Stack.Screen key={name} name={name} />
 															))}
 														</Stack.Protected>
+														<Stack.Protected
+															guard={status === "signed-in" || demo}
+														>
+															{ADVENTURE_SCREENS.map((name) => (
+																<Stack.Screen key={name} name={name} />
+															))}
+														</Stack.Protected>
 														{/* Signed out only: once signed in they leave the history, so back from
 														    Home leaves the app instead of returning to Welcome. */}
 														<Stack.Protected guard={status !== "signed-in"}>
@@ -186,6 +194,7 @@ export default function Layout() {
 																name="account"
 																options={{ animation: "slide_from_right" }}
 															/>
+															<Stack.Screen name="demo" />
 														</Stack.Protected>
 													</Stack>
 												</ThemeProvider>

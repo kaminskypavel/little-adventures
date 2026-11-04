@@ -8,6 +8,7 @@ import {
 	setCurrentChildId,
 	useCurrentChild,
 } from "./current-child";
+import { useDemo, useDemoChildName } from "./demo-store";
 import { optimisticSet, rollback, type Snapshot } from "./optimistic";
 import {
 	applyChildSave,
@@ -52,8 +53,11 @@ export const grownUpOptions = () =>
 /** The child as the screens know it. Undefined data while loading. */
 export const useChild = () => {
 	const id = useCurrentChild((s) => s.id);
+	// The demo has no account to ask.
+	const demo = useDemo((s) => s.on);
 	return useQuery({
 		...childOptions(),
+		enabled: !demo,
 		select: (rows: ChildRows) => toChild(rows, id),
 	});
 };
@@ -66,7 +70,10 @@ export const useChildById = (id: string) =>
 	});
 
 /** The child's name from the same cache: undefined while loading, "" before setup. */
-export const useChildName = () => useChild().data?.profile.childName;
+export const useChildName = () => {
+	const name = useChild().data?.profile.childName;
+	return useDemoChildName() ?? name;
+};
 
 /** All the account's children (id, name, look art url), oldest first. Undefined while loading. */
 export const useChildren = () =>

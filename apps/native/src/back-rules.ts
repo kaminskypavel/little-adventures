@@ -1,6 +1,6 @@
 // Screens where back makes no sense: the app's first screens, whatever is under them in the stack
 // (Home is also reached by replacing the screens that came before it).
-const NO_BACK = new Set(["index", "welcome", "hello", "home"]);
+const NO_BACK = new Set(["index", "welcome", "hello", "home", "demo"]);
 
 /**
  * What the back button does: go back when there is a screen behind, go Home when there is none

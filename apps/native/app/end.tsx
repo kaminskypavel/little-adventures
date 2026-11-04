@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
+import { isDemo } from "@/src/data/demo-store";
 import { litRoads } from "@/src/data/fork-roads";
 import { END_FADE_AFTER_MS } from "@/src/data/music-rules";
 import { useFadeMusicOutAfter } from "@/src/data/music-store";
@@ -47,7 +48,8 @@ export default function End() {
 	const childName = useChildName() ?? "";
 	const sideways = useLandscape();
 	useFadeMusicOutAfter(END_FADE_AFTER_MS);
-	const goHome = () => leave(() => router.replace("/home"));
+	const goHome = () =>
+		leave(() => router.replace(isDemo() ? "/demo" : "/home"));
 	// Here the replay is over: the stored progress shows again.
 	useEffect(() => {
 		useReplay.getState().clear(id);

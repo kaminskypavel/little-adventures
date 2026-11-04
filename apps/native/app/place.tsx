@@ -42,6 +42,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { CastButton } from "@/src/cast/cast-button";
 import { useCastConnected, useTvRemote } from "@/src/cast/use-cast";
 import { castPlace } from "@/src/data/adventure-client";
+import { useIsDemo } from "@/src/data/demo-store";
 import { speakingAt } from "@/src/data/music-rules";
 import { usePlayerMusic } from "@/src/data/music-store";
 import {
@@ -146,6 +147,11 @@ function Scrim() {
 			style={StyleSheet.absoluteFill}
 		/>
 	);
+}
+
+/** The Cast button; the recorded demo has no TV to send to. */
+function PlaceCastButton() {
+	return useIsDemo() ? null : <CastButton />;
 }
 
 /**
@@ -1127,7 +1133,7 @@ function MediaPlayer({
 
 	return (
 		<PlayerChrome
-			cast={<CastButton />}
+			cast={<PlaceCastButton />}
 			current={current}
 			frame={frame}
 			name={name}
@@ -1259,7 +1265,7 @@ function TvPlayer({
 	);
 	return (
 		<PlayerChrome
-			cast={<CastButton />}
+			cast={<PlaceCastButton />}
 			current={
 				ready && audio ? wordIndexAt(audio.words, tv.position, length) : 0
 			}
