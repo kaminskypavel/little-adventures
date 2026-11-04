@@ -8,13 +8,12 @@ import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { PlanCard } from "@little-adventures/native-ui/plan-card";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { colors, flat, layout } from "@little-adventures/native-ui/tokens";
+import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
-import { useSession } from "@/src/auth/use-session";
 import { reprepareChild } from "@/src/data/adventure-client";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { grownUpImage } from "@/src/data/profile-map";
@@ -38,7 +37,6 @@ const NAME_GAP = 16;
 const PILL_GAP = 14;
 const PILL_HEIGHT = 44;
 const PLAN_GAP = 36;
-const ROW_GAP = 12;
 const MAX_WORD = 30;
 const LANGUAGE_GAP = 28;
 // The presets are saved under their English names; the words on screen follow the language.
@@ -51,8 +49,6 @@ const PRESET_KEYS = {
 
 export default function Grownups() {
 	const router = useRouter();
-	const { user } = useSession();
-	const who = user?.name?.trim() || user?.email;
 	// The cache asks again after every save (see profile-queries.ts).
 	const { data: child } = useChild();
 	const name = child?.profile.childName ?? "";
@@ -117,7 +113,23 @@ export default function Grownups() {
 		]);
 
 	return (
-		<Screen scrolls topBar={<TopBar title={t("title")} />}>
+		<Screen
+			scrolls
+			topBar={
+				<TopBar
+					end={
+						<SecondaryButton
+							label={t("signOut")}
+							onPress={signOut}
+							size="sm"
+							style={styles.pill}
+							tone="danger"
+						/>
+					}
+					title={t("title")}
+				/>
+			}
+		>
 			<ScrollView
 				contentContainerStyle={{
 					paddingBottom: insets.bottom + layout.dockBottom,
@@ -195,41 +207,6 @@ export default function Grownups() {
 							rtl={rtl}
 							style={styles.language}
 						/>
-						{/* The account sits with the other settings rows: who is signed in, and the way out. */}
-						<View
-							style={[
-								styles.account,
-								{ flexDirection: rtl ? "row-reverse" : "row" },
-							]}
-						>
-							<View style={styles.who}>
-								<ClayText
-									align={rtl ? "right" : undefined}
-									numberOfLines={1}
-									style={styles.whoLabel}
-									variant="body"
-								>
-									{t("signedIn")}
-								</ClayText>
-								{who ? (
-									<ClayText
-										align={rtl ? "right" : undefined}
-										numberOfLines={1}
-										style={styles.whoName}
-										variant="label"
-									>
-										{who}
-									</ClayText>
-								) : null}
-							</View>
-							<SecondaryButton
-								label={t("signOut")}
-								onPress={signOut}
-								size="sm"
-								style={styles.pill}
-								tone="danger"
-							/>
-						</View>
 					</>
 				) : null}
 			</ScrollView>
@@ -238,25 +215,11 @@ export default function Grownups() {
 }
 
 const styles = StyleSheet.create({
-	// The Language row's plate, so the two read as one group of settings.
-	account: {
-		alignItems: "center",
-		backgroundColor: colors.sand,
-		borderRadius: flat.plan.radius,
-		gap: 12,
-		marginTop: ROW_GAP,
-		minHeight: layout.minTarget,
-		paddingHorizontal: flat.plan.padX,
-		paddingVertical: 12,
-	},
 	language: { marginTop: LANGUAGE_GAP },
 	name: { fontSize: 26, lineHeight: 30, marginTop: NAME_GAP },
 	pill: { alignSelf: "center", paddingHorizontal: 20 },
 	pillSlot: { height: PILL_HEIGHT, marginTop: PILL_GAP },
 	plan: { marginTop: PLAN_GAP },
 	sub: { fontSize: 17, lineHeight: 22, opacity: 0.7 },
-	who: { flex: 1 },
-	whoLabel: { fontSize: 15, lineHeight: 20, opacity: 0.7 },
-	whoName: { fontSize: 18, lineHeight: 24 },
 	you: { alignItems: "center" },
 });
