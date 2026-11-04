@@ -7,12 +7,12 @@ import {
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { PlanCard } from "@little-adventures/native-ui/plan-card";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
-import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { colors } from "@little-adventures/native-ui/tokens";
+import { colors, flat, layout } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import { useSession } from "@/src/auth/use-session";
 import { reprepareChild } from "@/src/data/adventure-client";
@@ -38,7 +38,7 @@ const NAME_GAP = 16;
 const PILL_GAP = 14;
 const PILL_HEIGHT = 44;
 const PLAN_GAP = 36;
-const FOOT_GAP = 30;
+const ROW_GAP = 12;
 const MAX_WORD = 30;
 const LANGUAGE_GAP = 28;
 // The presets are saved under their English names; the words on screen follow the language.
@@ -60,6 +60,7 @@ export default function Grownups() {
 	const deleteOwnPhoto = useDeleteGrownUpPhoto();
 	const setCalled = useSetCalled();
 	const t = useT(grownupsStrings);
+	const insets = useSafeAreaInsets();
 	const language = useLanguage();
 	// Hebrew reads right to left on this screen; the layout stays left to right elsewhere.
 	const rtl = isRtl(language);
@@ -115,29 +116,11 @@ export default function Grownups() {
 			...(askText ? [{ label: t("other"), onPress: askOther }] : []),
 		]);
 
-	// Pinned under the page, so sign out is in sight on any phone without scrolling.
-	const foot = child ? (
-		<View style={styles.foot}>
-			<ClayText
-				align={rtl ? "right" : undefined}
-				color={colors.cream}
-				numberOfLines={1}
-				style={styles.signed}
-				variant="body"
-			>
-				{who ? t("signedInAs", { who }) : t("signedIn")}
-			</ClayText>
-			<View style={[styles.link, rtl ? styles.linkRtl : null]}>
-				<QuietLink label={t("signOut")} onPress={signOut} />
-			</View>
-		</View>
-	) : null;
-
 	return (
-		<Screen dock={foot} scrolls topBar={<TopBar title={t("title")} />}>
+		<Screen scrolls topBar={<TopBar title={t("title")} />}>
 			<ScrollView
 				contentContainerStyle={{
-					paddingBottom: FOOT_GAP,
+					paddingBottom: insets.bottom + layout.dockBottom,
 					paddingTop: BODY_SCROLL_START,
 				}}
 				showsVerticalScrollIndicator={false}
@@ -212,6 +195,28 @@ export default function Grownups() {
 							rtl={rtl}
 							style={styles.language}
 						/>
+						{/* The account sits with the other settings rows: who is signed in, and the way out. */}
+						<View
+							style={[
+								styles.account,
+								{ flexDirection: rtl ? "row-reverse" : "row" },
+							]}
+						>
+							<ClayText
+								align={rtl ? "right" : undefined}
+								numberOfLines={2}
+								style={styles.who}
+								variant="body"
+							>
+								{who ? t("signedInAs", { who }) : t("signedIn")}
+							</ClayText>
+							<SecondaryButton
+								label={t("signOut")}
+								onPress={signOut}
+								size="sm"
+								tone="danger"
+							/>
+						</View>
 					</>
 				) : null}
 			</ScrollView>
@@ -220,15 +225,23 @@ export default function Grownups() {
 }
 
 const styles = StyleSheet.create({
-	foot: { paddingHorizontal: 30 },
+	// The Language row's plate, so the two read as one group of settings.
+	account: {
+		alignItems: "center",
+		backgroundColor: colors.sand,
+		borderRadius: flat.plan.radius,
+		gap: 12,
+		marginTop: ROW_GAP,
+		minHeight: layout.minTarget,
+		paddingHorizontal: flat.plan.padX,
+		paddingVertical: 12,
+	},
 	language: { marginTop: LANGUAGE_GAP },
-	link: { alignItems: "flex-start", marginTop: -2 },
-	linkRtl: { alignItems: "flex-end" },
 	name: { fontSize: 26, lineHeight: 30, marginTop: NAME_GAP },
 	pill: { alignSelf: "center", paddingHorizontal: 20 },
 	pillSlot: { height: PILL_HEIGHT, marginTop: PILL_GAP },
 	plan: { marginTop: PLAN_GAP },
-	signed: { fontSize: 17, lineHeight: 22, opacity: 0.6 },
 	sub: { fontSize: 17, lineHeight: 22, opacity: 0.7 },
+	who: { flex: 1, fontSize: 18, lineHeight: 24 },
 	you: { alignItems: "center" },
 });
