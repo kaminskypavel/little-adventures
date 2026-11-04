@@ -4,7 +4,7 @@
 
 | Path | What it is | Stack |
 | --- | --- | --- |
-| `apps/native` | The iPhone and Android app the child and parent use. English, Spanish and Hebrew in `src/i18n`, casting to a TV in `src/cast`. | Expo, React Native, Uniwind |
+| `apps/native` | The iPhone and Android app the child and parent use. multilingual (`src/i18n`), casting to a TV in `src/cast`. | Expo, React Native, Uniwind |
 | `apps/web` | Public landing page and the tRPC API the app talks to. | Next.js, GSAP, tRPC |
 | `packages/api` | tRPC routers: child and grown-up profiles, photo upload, voice transcription, the private beta check, waitlist. | tRPC, Zod |
 | `packages/auth` | Sign-in, the app's bearer token and the private beta allowlist. | Neon Auth |

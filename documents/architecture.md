@@ -32,7 +32,7 @@ The app talks to the app server and to the Kodio engine through its player API (
 <p align="center"><img src="../.github/readme/adventure-sequence.webp" alt="The app sends the spoken question to the app server, which asks Muse Voice Transcribe and returns the text. The app asks the Kodio engine to make an adventure in the chosen language; the engine writes, checks and draws it with Meta models. The app reads the map in a loop until every place is ready, then tells the engine when a place was visited." width="100%"></p>
 
 - Each ready place carries its clip and narration.
-- The app speaks English, Spanish and Hebrew. The language the grown-up picked goes with every engine call that shortens the question, writes the waiting facts or makes the adventure, and reads of an adventure ask for it. Hebrew text reads right to left.
+- The app is multilingual. The language the grown-up picked goes with every engine call that shortens the question, writes the waiting facts or makes the adventure, and reads of an adventure ask for it. Hebrew text reads right to left.
 - Once the question is confirmed the app can start a draft (`POST /adventures/drafts`), and the style screen's Start commits it (`.../start`). If that fails, the plain create call above takes over (`apps/native/src/data/draft-store.ts`).
 - A place can play on a TV: the app asks the engine for the place as one video with read-along words (`POST .../nodes/{node}/cast`).
 - The goodnight scene stays locked until all 4 places are visited.

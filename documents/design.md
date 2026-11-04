@@ -21,7 +21,7 @@ Every adventure is one map: an intro, four places and a goodnight. The wireframe
 - **The sky.** An animated night sky sits behind every screen ([sky.tsx](../packages/native-ui/src/sky.tsx)).
 - **The star and the puppy.** Two companions that bob in place ([hop.tsx](../packages/native-ui/src/hop.tsx), [kit-star.tsx](../packages/native-ui/src/kit-star.tsx)).
 - **The child as the hero.** The child is drawn in the same clay style as everything else, so the hero looks like it belongs in the world. See [Child safety and privacy](child-safety.md) for what happens to the photo.
-- **Three languages.** Every screen's words sit in [src/i18n](../apps/native/src/i18n) in English, Spanish and Hebrew, picked in Grown-ups. Hebrew text reads right to left, and [plan-card.tsx](../packages/native-ui/src/plan-card.tsx) mirrors for it.
+- **Multilingual.** Every screen's words sit in [src/i18n](../apps/native/src/i18n) in every language, picked in Grown-ups. Hebrew text reads right to left, and [plan-card.tsx](../packages/native-ui/src/plan-card.tsx) mirrors for it.
 - **Two passes on every screen.** One for motion (timings, easing, what moves and what stays still) and one for colour.
 
 ## Rules for a child, and where they are in the code

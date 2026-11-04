@@ -1,6 +1,6 @@
-# Languages: English, Spanish and Hebrew
+# Languages: multilingual
 
-The app speaks three languages. A grown-up picks one in Grown-ups, and every screen, the star's spoken question, the captions and the adventure itself follow it.
+The app is multilingual. A grown-up picks one in Grown-ups, and every screen, the star's spoken question, the captions and the adventure itself follow it.
 
 ## Choosing a language
 
@@ -11,7 +11,7 @@ The app speaks three languages. A grown-up picks one in Grown-ups, and every scr
 
 ## Words on every screen
 
-Each screen has its own strings file in [src/i18n/strings](../apps/native/src/i18n/strings), with English, Spanish and Hebrew side by side. The type checker rejects a key that is missing in any of the three. A line can hold slots such as `{name}`, filled in at run time. The core is [src/i18n/index.ts](../apps/native/src/i18n/index.ts) and its test is [i18n.test.ts](../apps/native/src/i18n/i18n.test.ts).
+Each screen has its own strings file in [src/i18n/strings](../apps/native/src/i18n/strings), with every language side by side. The type checker rejects a key that is missing in any of them. A line can hold slots such as `{name}`, filled in at run time. The core is [src/i18n/index.ts](../apps/native/src/i18n/index.ts) and its test is [i18n.test.ts](../apps/native/src/i18n/i18n.test.ts).
 
 The files cover Welcome, sign-in, the child and photo steps, Home, the ask screens, the map, the place player and its cards, Pick a way, the end, Your stories, the adventure menu and Grown-ups. Shared pieces such as the "called" chips and the "Who's coming" track take their words as props, so [packages/native-ui](../packages/native-ui) stays free of any language.
 

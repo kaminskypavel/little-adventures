@@ -29,7 +29,7 @@ The bundle is 4.4 MB of minified JavaScript, and most of it is the stack itself.
 
 ## English-only validation messages
 
-- **Slow.** The form validation library, zod, ships the error messages of about 60 languages. The app only uses zod's English ones (every screen carries its own words in English, Spanish and Hebrew), and Metro cannot drop the unused ones: about 300 KB.
+- **Slow.** The form validation library, zod, ships the error messages of about 60 languages. The app only uses zod's English ones (every screen carries its own words in each language), and Metro cannot drop the unused ones: about 300 KB.
 - **Changed.** A Metro resolver redirect points zod's locale index at a file that exports English only ([metro.config.cjs](../apps/native/metro.config.cjs), [zod-locales.js](../apps/native/src/zod-locales.js)).
 - **Result.** The iOS bundle went from 4.40 MB to 4.11 MB. zod in the bundle went from 538 KB in 95 modules to 243 KB in 32.
 

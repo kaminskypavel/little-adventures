@@ -1,6 +1,6 @@
 # Impact, limits and what's next
 
-<p align="center"><img src="../.github/readme/roadmap.webp" alt="Now, next, later. Now: iPhone and Android development builds, English, Spanish and Hebrew, casting a story to a TV, a private beta that anyone can try as a guest. Next: iOS and Android store builds, erasing all of a child's data on request. Later: more languages." width="100%"></p>
+<p align="center"><img src="../.github/readme/roadmap.webp" alt="Now, next, later. Now: iPhone and Android development builds, multilingual, casting a story to a TV, a private beta that anyone can try as a guest. Next: iOS and Android store builds, erasing all of a child's data on request. Later: more languages." width="100%"></p>
 
 Little Adventures turns a child's own bedtime question into a calm, true story that stars the child. It is in a private beta, built by Kodio Ltd. Below: who it is for, its limits and what comes next.
 
@@ -14,7 +14,7 @@ What a parent gets:
 - **Calm.** No streaks, badges or timers. Every story is checked before the child hears it ([Child safety and privacy](child-safety.md)).
 - **True facts.** Each place teaches one fact that answers the question, and ends with a lesson card. After the goodnight, "What we learned" sums the places up.
 - **The child as the hero.** The story stars the child's own look, drawn from their photo.
-- **Three languages.** The grown-up picks English, Spanish or Hebrew in Grown-ups. The words on screen and the star's spoken question follow it, and Hebrew text reads right to left.
+- **Multilingual.** The grown-up picks the language in Grown-ups. The words on screen and the star's spoken question follow it, and Hebrew text reads right to left.
 - **The big screen.** On iPhone and Android, a place can be cast to a TV that supports casting, with the story's words as subtitles. It needs the engine: the bundled sample adventure cannot be cast.
 - **A parent in control.** The parent sets up the child, the likeness and the history, and can delete the photos.
 
@@ -39,7 +39,7 @@ Kodio Ltd is a startup, and Little Adventures is its product. It was built by Pa
 ## Limits
 
 - The short clips and narration are made in the Kodio engine by our proprietary technology, not by Meta models. With no engine (`EXPO_PUBLIC_ENGINE_URL=""` (quoted)), the app plays one bundled sample adventure.
-- The app is in English, Spanish and Hebrew. A story comes in the chosen language when the engine has a version of it.
+- The app is multilingual. A story comes in the chosen language when the engine has a version of it.
 - The iOS and Android builds are not in the stores yet; they run as development builds.
 - The Glimmer LoRA numbers are the team's own, on synthetic data. The 96.8% hybrid is optimistic (see [training.md](training.md)).
 - Deleting a child's profile hides it and its past adventures, and keeps the data. Erasing a child's data on request, or the account with its model-call rows, is not built yet.
@@ -49,7 +49,7 @@ Kodio Ltd is a startup, and Little Adventures is its product. It was built by Pa
 
 | When | What |
 | --- | --- |
-| Now | iPhone and Android development builds, English, Spanish and Hebrew, casting a story to a TV, a private beta |
+| Now | iPhone and Android development builds, multilingual, casting a story to a TV, a private beta |
 | Next | iOS and Android store builds, erasing a child's data on request |
 | Later | More languages |
 

@@ -46,7 +46,7 @@ From the app server (`apps/web`) and the engine's player API:
 - Start an adventure from the question (`POST /adventures`), list adventures, and read one while its places are made (`GET /adventures/{id}`, polled every `pollAfterSec`).
 - Mark a place visited (`POST /adventures/{id}/nodes/{node}/visit`). The goodnight opens after all 4 places.
 - Cast a place, or the map, to a TV (`POST /adventures/{id}/nodes/{node}/cast`, `POST /adventures/{id}/cast-map`). The app shows the TV button on iPhone and Android when a TV is on the network.
-- Language: the grown-up picks English, Spanish or Hebrew in the app, and the calls to the engine carry it.
+- Language: the grown-up picks the language in the app, and the calls to the engine carry it.
 
 Binding constraints:
 
@@ -79,4 +79,4 @@ Binding constraints:
 - Tap targets sized for small fingers (at least 64 pt for child-facing actions).
 - Low-light use: no pure white fields, no flashing, honor reduced motion.
 - Every choice is shown as a picture with a spoken line, so non-readers can choose.
-- The app is in English, Spanish and Hebrew. Hebrew text reads right to left.
+- The app is multilingual. Hebrew text reads right to left.
