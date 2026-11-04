@@ -1,7 +1,6 @@
 import { SecondaryButton } from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { EditBadge } from "@little-adventures/native-ui/edit-badge";
-import { HoldGate } from "@little-adventures/native-ui/hold-gate";
 import { IconButton } from "@little-adventures/native-ui/icon-button";
 import { Placeholder } from "@little-adventures/native-ui/placeholder";
 import { Swoosh } from "@little-adventures/native-ui/swoosh";
@@ -34,8 +33,12 @@ const TITLE_TOP = 236;
 const TITLE_TO_FACES = 94;
 const TITLE_LINE = 34;
 const RING = "0px 0px 0px 5px rgba(255,200,61,0.3)";
-// The lock's ring starts 250 pt under the faces' top on the design frame: 70 pt under their names.
-const FACES_TO_LOCK = 70;
+// "Add a child" sits 70 pt under the faces' names.
+const FACES_TO_ADD = 70;
+const BADGE = flat.editBadge;
+// The pencil's own box (with its inset) at the face's bottom right; the slop makes it a 64 pt target.
+const BADGE_BOX = BADGE.size + BADGE.inset;
+const BADGE_SLOP = (layout.minTarget - BADGE_BOX) / 2;
 
 /**
  * Leaving the screen plays the swoosh out first. Every way out (the X, a face, the back gesture
@@ -57,15 +60,13 @@ function useSwooshLeave() {
 }
 
 /**
- * "Who's listening?": a full screen over the app's sky. Tap a face to switch the current child.
- * Holding the lock for 3 s turns the same screen into "Your children": a tap on a face opens that
- * child's edit screen, "Add a child" takes the lock's place, and the check goes back to picking.
+ * "Who's listening?": a full screen over the app's sky. Tap a face to switch the current child; the
+ * pencil on a face opens that child's edit screen, and "Add a child" sits under the faces.
  */
 export default function Who() {
 	const router = useRouter();
 	const t = useT(whoStrings);
 	const { leaving, onLeft } = useSwooshLeave();
-	const [editing, setEditing] = useState(false);
 	const insets = useSafeAreaInsets();
 	const { height, width } = useSafeAreaFrame();
 	const children = useChildren();
@@ -84,10 +85,6 @@ export default function Who() {
 
 	const onFace = (id: string) => {
 		selectionAsync();
-		if (editing) {
-			router.push(`/child-edit?id=${id}`);
-			return;
-		}
 		if (id !== currentId) {
 			setCurrentChildId(id);
 		}
@@ -103,19 +100,11 @@ export default function Who() {
 					{ right: layout.sideMargin, top: insets.top + layout.topBarOffset },
 				]}
 			>
-				{editing ? (
-					<IconButton
-						accessibilityLabel={t("doneEditing")}
-						icon="check"
-						onPress={() => setEditing(false)}
-					/>
-				) : (
-					<IconButton
-						accessibilityLabel={t("close")}
-						icon="x"
-						onPress={() => router.back()}
-					/>
-				)}
+				<IconButton
+					accessibilityLabel={t("close")}
+					icon="x"
+					onPress={() => router.back()}
+				/>
 			</View>
 			<Swoosh leaving={leaving} onLeft={onLeft} style={{ marginTop: titleTop }}>
 				<ClayText
@@ -125,19 +114,15 @@ export default function Who() {
 					style={styles.title}
 					variant="headline"
 				>
-					{editing ? t("yourChildren") : t("listening")}
+					{t("listening")}
 				</ClayText>
 			</Swoosh>
 			<Swoosh index={1} leaving={leaving} style={styles.faces}>
 				{children?.map((child) => (
 					<Pressable
-						accessibilityLabel={
-							editing ? t("edit", { name: child.name }) : child.name
-						}
+						accessibilityLabel={child.name}
 						accessibilityRole="button"
-						accessibilityState={{
-							selected: !editing && child.id === currentId,
-						}}
+						accessibilityState={{ selected: child.id === currentId }}
 						key={child.id}
 						onPress={() => onFace(child.id)}
 						style={({ pressed }) => [
@@ -152,7 +137,7 @@ export default function Who() {
 								style={[
 									styles.circle,
 									{ borderRadius: face / 2, height: face, width: face },
-									!editing && child.id === currentId && styles.on,
+									child.id === currentId && styles.on,
 								]}
 							>
 								{child.avatar ? (
@@ -167,7 +152,18 @@ export default function Who() {
 									<Placeholder icon="user" style={StyleSheet.absoluteFill} />
 								)}
 							</View>
-							{editing ? <EditBadge /> : null}
+							<Pressable
+								accessibilityLabel={t("edit", { name: child.name })}
+								accessibilityRole="button"
+								hitSlop={BADGE_SLOP}
+								onPress={() => {
+									selectionAsync();
+									router.push(`/child-edit?id=${child.id}`);
+								}}
+								style={styles.badge}
+							>
+								<EditBadge />
+							</Pressable>
 						</View>
 						<ClayText
 							adjustsFontSizeToFit
@@ -184,21 +180,13 @@ export default function Who() {
 				))}
 			</Swoosh>
 			<Swoosh index={2} leaving={leaving} style={styles.slot}>
-				{editing ? (
-					<SecondaryButton
-						icon="plus"
-						label={t("addChild")}
-						onPress={() => router.push("/child?new=1")}
-						size="sm"
-						style={styles.add}
-					/>
-				) : (
-					<HoldGate
-						accessibilityLabel={t("holdToEdit")}
-						onOpen={() => setEditing(true)}
-						variant="lock"
-					/>
-				)}
+				<SecondaryButton
+					icon="plus"
+					label={t("addChild")}
+					onPress={() => router.push("/child?new=1")}
+					size="sm"
+					style={styles.add}
+				/>
 			</Swoosh>
 		</View>
 	);
@@ -206,6 +194,13 @@ export default function Who() {
 
 const styles = StyleSheet.create({
 	add: { alignSelf: "center", paddingLeft: 14, paddingRight: 18 },
+	badge: {
+		bottom: 0,
+		height: BADGE_BOX,
+		position: "absolute",
+		right: 0,
+		width: BADGE_BOX,
+	},
 	circle: { borderColor: colors.sand, borderWidth: 4, overflow: "hidden" },
 	close: { position: "absolute", zIndex: 1 },
 	face: { alignItems: "center", gap: 12, minWidth: layout.minTarget },
@@ -222,11 +217,6 @@ const styles = StyleSheet.create({
 	name: { fontSize: 24, lineHeight: 28 },
 	on: { borderColor: colors.sun, boxShadow: RING },
 	root: { flex: 1 },
-	// Where the lock is, and "Add a child" in its place: both centred in the 84 pt ring's box.
-	slot: {
-		height: flat.holdLock.box,
-		justifyContent: "center",
-		marginTop: FACES_TO_LOCK,
-	},
+	slot: { marginTop: FACES_TO_ADD },
 	title: { fontSize: 31, lineHeight: TITLE_LINE },
 });
