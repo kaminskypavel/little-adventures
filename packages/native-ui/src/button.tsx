@@ -112,6 +112,8 @@ export function PrimaryButton({
 	);
 }
 
+const FULL_WIDTH_LABEL = { flex: 1, textAlign: "center" } as const;
+
 /** 80 high, pill, sage clay. Full width inside the margins. */
 export function SecondaryButton({
 	accessibilityLabel,
@@ -149,6 +151,9 @@ export function SecondaryButton({
 				color={ink(tone)}
 				minimumFontScale={0.85}
 				numberOfLines={1}
+				// A full-width button without an icon gives its label the whole width, so Android has
+				// room to spare and never drops the last word ("Try as a" for "Try as a guest").
+				style={icon || size !== "lg" ? undefined : FULL_WIDTH_LABEL}
 				variant={labelVariant(size, "buttonSecondary")}
 			>
 				{label}
