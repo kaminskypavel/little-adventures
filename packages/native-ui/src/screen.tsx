@@ -249,8 +249,9 @@ export function Screen({
 			<Animated.View style={[styles.bodyWrap, aboveKeyboard]}>
 				<Pressable
 					accessible={false}
-					disabled={!keyboardUp}
 					onPress={Keyboard.dismiss}
+					// box-none while the keyboard is down: no touch grab, and unlike `disabled` no aria-disabled on the subtree.
+					pointerEvents={keyboardUp === true ? "auto" : "box-none"}
 					style={styles.bodyWrap}
 				>
 					<FadedBody bottom={fadeBottom} top={fadeTop}>
