@@ -2,7 +2,7 @@
 
 <p align="center"><img src="../.github/readme/design-journey.webp" alt="A strip, left to right: a greyscale wireframe screen; three material directions tried in one day, felt, wood and clay, with clay outlined in gold; and three finished app screens in clay: the question confirmed, the adventure being made, and the adventure map." width="100%"></p>
 
-We drew the structure first, tried three looks in one day, and picked clay. Then one clay world went onto every screen.
+We drew the structure first, tried three looks in one day, and picked clay. Then one clay world went onto every screen, and the last day went on polish.
 
 ## The steps
 
@@ -11,6 +11,7 @@ We drew the structure first, tried three looks in one day, and picked clay. Then
 | Wireframe | Oct 30 | 27 upright screens, approved. Structure only, greyscale on purpose, so nobody judged colours before the flow worked. |
 | Design rounds | Oct 30 | The same screens in three material directions: felt, wood and clay. We compared them side by side and chose clay. |
 | One clay world | Oct 30 to Nov 2 | The chosen look on every screen, built as our own design system. |
+| Last polish | Nov 4 | A gear opens Grown-ups from Home and the map, Sign out is a red pill in the top corner, a deeper red so labels on red buttons stay readable, a restart icon and a home icon at the end, Who's listening shows a pencil on each face, Your plan opens on a tap, and Welcome offers Try as a guest. |
 
 Every adventure is one map: an intro, four places and a goodnight. The wireframe fixed that shape before any look existed.
 
