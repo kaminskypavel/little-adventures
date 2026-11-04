@@ -7,10 +7,13 @@ import {
 	type ViewStyle,
 } from "react-native";
 import { ClayText } from "./clay-text";
+import { Icon } from "./icons";
 import { colors, flat, fonts } from "./tokens";
 
 const { plan } = flat;
 const ROW_LINE = 24;
+const CHEVRON = 20;
+const CHEVRON_GAP = 6;
 
 /**
  * Grown-ups "Your plan": a flat sand panel (information, not a button) with a small tag at the top
@@ -74,14 +77,26 @@ export function PlanCard({
 					{tag}
 				</Text>
 			</View>
-			<ClayText
-				accessibilityRole="header"
-				align={align}
-				style={{ fontSize: 24, lineHeight: 28 }}
-				variant="title"
+			<View
+				style={{
+					alignItems: "center",
+					flexDirection: rtl ? "row-reverse" : "row",
+					gap: CHEVRON_GAP,
+				}}
 			>
-				{title}
-			</ClayText>
+				<ClayText
+					accessibilityRole="header"
+					align={align}
+					style={{ fontSize: 24, lineHeight: 28 }}
+					variant="title"
+				>
+					{title}
+				</ClayText>
+				{/* The back chevron turned down (closed) or up (open): it opens and closes. */}
+				<View style={{ transform: [{ rotate: open ? "90deg" : "-90deg" }] }}>
+					<Icon color={colors.inkNavy} name="back" size={CHEVRON} />
+				</View>
+			</View>
 			{open
 				? items.map((item) => (
 						<View
