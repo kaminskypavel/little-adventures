@@ -32,13 +32,34 @@ export const POST = async (request: Request) => {
 	const response = await handlers.POST(signIn, {
 		params: Promise.resolve({ path: ["sign-in", "email"] }),
 	});
-	if (response.ok) {
-		const body: unknown = await response.clone().json();
-		const userId = (body as { user?: { id?: unknown } }).user?.id;
-		if (typeof userId === "string") {
-			// Best effort: a failed reset must not lock a judge out.
-			await resetGuestProgress(db, userId).catch(() => undefined);
-		}
+	if (!response.ok) {
+		return withCors(request, response);
 	}
-	return withCors(request, response);
+	const body = (await response.json()) as { user?: { id?: unknown } };
+	const userId = body.user?.id;
+	if (typeof userId === "string") {
+		// Best effort: a failed reset must not lock a judge out.
+		await resetGuestProgress(db, userId).catch(() => undefined);
+	}
+	// The JWT rides in the body too, so the app needs no cookie jar to start (a phone drops
+	// Secure cookies on a plain http dev server); the cookies still let it mint a fresh one later.
+	const cookie = response.headers
+		.getSetCookie()
+		.map((line) => line.split(";")[0])
+		.join("; ");
+	const minted = await handlers.GET(
+		new Request(new URL("/api/auth/token", request.url), {
+			headers: { cookie },
+		}),
+		{ params: Promise.resolve({ path: ["token"] }) }
+	);
+	const token = minted.ok
+		? ((await minted.json()) as { token?: unknown }).token
+		: undefined;
+	const headers = new Headers(response.headers);
+	headers.delete("content-length");
+	return withCors(
+		request,
+		new Response(JSON.stringify({ ...body, token }), { headers, status: 200 })
+	);
 };

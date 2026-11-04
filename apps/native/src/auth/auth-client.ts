@@ -145,7 +145,16 @@ export async function verifyCode(email: string, otp: string) {
 export async function signInAsGuest() {
 	try {
 		const res = await post("/api/guest", {});
-		return res.ok && (await mint()) !== null;
+		if (!res.ok) {
+			return false;
+		}
+		// The server sends the JWT along; minting from the cookie is the fallback.
+		const { token: jwt } = (await res.json()) as { token?: unknown };
+		if (typeof jwt === "string" && jwt) {
+			await adopt(jwt);
+			return true;
+		}
+		return (await mint()) !== null;
 	} catch {
 		return false;
 	}
