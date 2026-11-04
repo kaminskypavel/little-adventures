@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { EaseView } from "react-native-ease";
 import { iosTextNudge } from "./clay-text";
 import { useCalm } from "./motion-provider";
-import { fonts } from "./tokens";
+import { fonts, layout } from "./tokens";
 
 // Round 7 `.lgc`: 46 px at 0.72 scale = 64 pt. Letter spacing -0.01em. The bob is 3 px = 4.2 pt.
 const SIZE = 64;
@@ -133,14 +134,24 @@ function Glyph({ calm, letter }: { calm: boolean; letter: Letter }) {
 	);
 }
 
-/** The Welcome wordmark: "Little" over "Adventures", each letter its own colour, tilt and bob. */
+/**
+ * The Welcome wordmark: "Little" over "Adventures", each letter its own colour, tilt and bob. On a
+ * phone where "Adventures" would run past the side margins (Android draws the font wider), the
+ * whole mark scales down to fit.
+ */
 export function Logo() {
 	const calm = useCalm();
+	const { width } = useWindowDimensions();
+	const [natural, setNatural] = useState(0);
+	const room = width - 2 * layout.sideMargin;
+	const scale = natural > room ? room / natural : 1;
 	return (
 		<View
 			accessibilityLabel="Little Adventures"
 			accessibilityRole="header"
 			accessible
+			onLayout={(event) => setNatural(event.nativeEvent.layout.width)}
+			style={{ transform: [{ scale }] }}
 		>
 			{lines.map((line) => (
 				<View
