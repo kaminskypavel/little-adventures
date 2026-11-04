@@ -19,6 +19,8 @@ import {
 	useSafeAreaFrame,
 	useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { showNeedsAccount } from "@/src/auth/needs-account";
+import { useIsGuest } from "@/src/auth/use-session";
 import { setCurrentChildId } from "@/src/data/current-child";
 import { useChild, useChildren } from "@/src/data/profile-queries";
 import { useT } from "@/src/i18n";
@@ -66,6 +68,8 @@ function useSwooshLeave() {
 export default function Who() {
 	const router = useRouter();
 	const t = useT(whoStrings);
+	// A guest looks, but adding or editing a child needs an account.
+	const guest = useIsGuest();
 	const { leaving, onLeft } = useSwooshLeave();
 	const insets = useSafeAreaInsets();
 	const { height, width } = useSafeAreaFrame();
@@ -158,6 +162,10 @@ export default function Who() {
 								hitSlop={BADGE_SLOP}
 								onPress={() => {
 									selectionAsync();
+									if (guest) {
+										showNeedsAccount();
+										return;
+									}
 									router.push(`/child-edit?id=${child.id}`);
 								}}
 								style={styles.badge}
@@ -183,7 +191,9 @@ export default function Who() {
 				<SecondaryButton
 					icon="plus"
 					label={t("addChild")}
-					onPress={() => router.push("/child?new=1")}
+					onPress={() =>
+						guest ? showNeedsAccount() : router.push("/child?new=1")
+					}
 					size="sm"
 					style={styles.add}
 				/>

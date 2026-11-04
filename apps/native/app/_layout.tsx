@@ -31,6 +31,7 @@ import { TurnPrompt } from "@/components/turn-prompt";
 import { AdminHint } from "@/src/admin/admin-hint";
 import { AdminPanel } from "@/src/admin/admin-switches";
 import { useAdminHold } from "@/src/admin/use-admin-hold";
+import { watchGuestWrites } from "@/src/auth/needs-account";
 import { useSession } from "@/src/auth/use-session";
 import { FadeBottom } from "@/src/body-mask";
 import { fallbackArt } from "@/src/data/fallback-art";
@@ -41,6 +42,8 @@ import { lockTo } from "@/src/orientation-lock";
 import { useBack } from "@/src/use-back";
 
 preventAutoHideAsync();
+// A write the server refuses to the guest shows the "needs an account" popup, wherever it came from.
+watchGuestWrites();
 // The splash goes at once and the first screen's own enter (fade and rise) is the transition: a
 // cross-fade would show the splash star and the screen's star through each other.
 setOptions({ fade: false });

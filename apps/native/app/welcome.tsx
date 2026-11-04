@@ -1,4 +1,7 @@
-import { PrimaryButton } from "@little-adventures/native-ui/button";
+import {
+	PrimaryButton,
+	SecondaryButton,
+} from "@little-adventures/native-ui/button";
 import { ClayText } from "@little-adventures/native-ui/clay-text";
 import { Logo } from "@little-adventures/native-ui/logo";
 import { QuietLink } from "@little-adventures/native-ui/quiet-link";
@@ -6,8 +9,11 @@ import { Screen } from "@little-adventures/native-ui/screen";
 import { StarTake } from "@little-adventures/native-ui/star-take";
 import { colors, layout } from "@little-adventures/native-ui/tokens";
 import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { signInAsGuest } from "@/src/auth/auth-client";
+import { startRoute } from "@/src/data/adventure-client";
 import { useT } from "@/src/i18n";
 import { welcomeStrings } from "@/src/i18n/strings/welcome";
 
@@ -24,11 +30,39 @@ export default function Welcome() {
 	const t = useT(welcomeStrings);
 	const insets = useSafeAreaInsets();
 	const next = () => router.push("/account");
+	const [note, setNote] = useState<string | null>(null);
+	// One request at a time: a second tap while it runs does nothing.
+	const busy = useRef<boolean>(false);
+	const tryAsGuest = async () => {
+		if (busy.current) {
+			return;
+		}
+		busy.current = true;
+		setNote(null);
+		try {
+			if (await signInAsGuest()) {
+				router.replace(await startRoute());
+			} else {
+				setNote(t("guestFailed"));
+			}
+		} finally {
+			busy.current = false;
+		}
+	};
 
 	return (
 		<Screen
 			bodyStyle={styles.body}
-			dock={<PrimaryButton label={t("getStarted")} onPress={next} />}
+			dock={
+				<>
+					<PrimaryButton label={t("getStarted")} onPress={next} />
+					<SecondaryButton
+						accessibilityLabel={t("guestLabel")}
+						label={t("guest")}
+						onPress={tryAsGuest}
+					/>
+				</>
+			}
 		>
 			<View style={[styles.account, { top: insets.top + layout.topBarOffset }]}>
 				<QuietLink label={t("haveAccount")} onPress={next} />
@@ -47,6 +81,17 @@ export default function Welcome() {
 			>
 				{t("tagline")}
 			</ClayText>
+			{note ? (
+				<ClayText
+					accessibilityLiveRegion="polite"
+					align="center"
+					color={colors.cream}
+					style={styles.note}
+					variant="fieldError"
+				>
+					{note}
+				</ClayText>
+			) : null}
 		</Screen>
 	);
 }
@@ -55,6 +100,7 @@ const styles = StyleSheet.create({
 	account: { position: "absolute", right: layout.sideMargin },
 	body: { alignItems: "center", paddingTop: 128 },
 	logo: { marginTop: LOGO_GAP },
+	note: { marginTop: TAGLINE_GAP, paddingHorizontal: TAGLINE_INSET },
 	star: { height: STAR, width: STAR },
 	tagline: { marginTop: TAGLINE_GAP, paddingHorizontal: TAGLINE_INSET },
 });

@@ -12,6 +12,7 @@ import { portrait, spacing } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { useBlockGuest } from "@/src/auth/needs-account";
 import { ChildFields, useChildForm } from "@/src/child/child-form";
 import type { Child } from "@/src/data/profile-map";
 import {
@@ -111,6 +112,7 @@ function EditChild({ child, id }: { child: Child; id: string }) {
 
 /** One child's full edit screen. The child is `?id=`; the current child is never touched. */
 export default function ChildEdit() {
+	useBlockGuest();
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const child = useChildById(id).data;
 	return child ? <EditChild child={child} id={id} /> : null;

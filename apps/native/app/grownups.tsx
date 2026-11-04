@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
+import { showNeedsAccount } from "@/src/auth/needs-account";
+import { useIsGuest } from "@/src/auth/use-session";
 import { reprepareChild } from "@/src/data/adventure-client";
 import { usePlayerPrefs } from "@/src/data/player-prefs";
 import { grownUpImage } from "@/src/data/profile-map";
@@ -49,6 +51,8 @@ const PRESET_KEYS = {
 
 export default function Grownups() {
 	const router = useRouter();
+	// A guest looks, but the photo and what the child calls you need an account.
+	const guest = useIsGuest();
 	// The cache asks again after every save (see profile-queries.ts).
 	const { data: child } = useChild();
 	const name = child?.profile.childName ?? "";
@@ -143,11 +147,13 @@ export default function Grownups() {
 							<Portrait
 								cameraLabel={t("changePhoto")}
 								onCamera={() =>
-									photoMenu(
-										t("yourPhoto"),
-										setOwnPhoto,
-										grownUpPhoto ? deleteOwnPhoto : null
-									)
+									guest
+										? showNeedsAccount()
+										: photoMenu(
+												t("yourPhoto"),
+												setOwnPhoto,
+												grownUpPhoto ? deleteOwnPhoto : null
+											)
 								}
 							>
 								<PortraitArt
@@ -182,7 +188,7 @@ export default function Grownups() {
 												? calledName(grownUpPhoto.called)
 												: t("pick")
 										}
-										onPress={calledMenu}
+										onPress={guest ? showNeedsAccount : calledMenu}
 										size="sm"
 										style={styles.pill}
 									/>
