@@ -13,6 +13,7 @@ mock.module("@/src/auth/auth-client", () => ({
 	authedFetchTo: () => () => {
 		throw new Error("the engine must not be called without its url");
 	},
+	isGuestNow: () => false,
 }));
 // The child is read through the shared cache (React Query options over tRPC).
 const options = (key: string, value: unknown) => () => ({
