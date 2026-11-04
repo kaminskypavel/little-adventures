@@ -353,7 +353,7 @@ export default function StoryMapScreen() {
 					<TopBar
 						action={{
 							accessibilityLabel: t("grownUps"),
-							icon: "lock",
+							icon: "settings",
 							onPress: () => router.push("/gate"),
 						}}
 						title={childName ? t("title", { name: childName }) : ""}

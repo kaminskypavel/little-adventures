@@ -18,6 +18,7 @@ export type IconName =
 	| "play"
 	| "plus"
 	| "replay"
+	| "settings"
 	| "sliders"
 	| "user"
 	| "x";
@@ -37,6 +38,7 @@ export const iconNames: readonly IconName[] = [
 	"x",
 	"plus",
 	"back",
+	"settings",
 	"sliders",
 	"replay",
 	"home",
@@ -135,6 +137,18 @@ const shapes: Record<IconName, (color: string) => ReactNode> = {
 		<G stroke={c} strokeWidth={2.4} {...line}>
 			<Path d="M20.5 12a8.5 8.5 0 1 1-2.5-6" />
 			<Path d="M18.5 2.5V7h-4.5" />
+		</G>
+	),
+	settings: (c) => (
+		// A gear, drawn on a 24 grid and scaled to sit with the other icons.
+		<G
+			stroke={c}
+			strokeWidth={3}
+			transform="translate(2.4 2.4) scale(0.8)"
+			{...line}
+		>
+			<Circle cx={12} cy={12} r={3} />
+			<Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
 		</G>
 	),
 	sliders: (c) => (
