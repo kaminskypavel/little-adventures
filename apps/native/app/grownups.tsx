@@ -202,18 +202,31 @@ export default function Grownups() {
 								{ flexDirection: rtl ? "row-reverse" : "row" },
 							]}
 						>
-							<ClayText
-								align={rtl ? "right" : undefined}
-								numberOfLines={2}
-								style={styles.who}
-								variant="body"
-							>
-								{who ? t("signedInAs", { who }) : t("signedIn")}
-							</ClayText>
+							<View style={styles.who}>
+								<ClayText
+									align={rtl ? "right" : undefined}
+									numberOfLines={1}
+									style={styles.whoLabel}
+									variant="body"
+								>
+									{t("signedIn")}
+								</ClayText>
+								{who ? (
+									<ClayText
+										align={rtl ? "right" : undefined}
+										numberOfLines={1}
+										style={styles.whoName}
+										variant="label"
+									>
+										{who}
+									</ClayText>
+								) : null}
+							</View>
 							<SecondaryButton
 								label={t("signOut")}
 								onPress={signOut}
 								size="sm"
+								style={styles.pill}
 								tone="danger"
 							/>
 						</View>
@@ -242,6 +255,8 @@ const styles = StyleSheet.create({
 	pillSlot: { height: PILL_HEIGHT, marginTop: PILL_GAP },
 	plan: { marginTop: PLAN_GAP },
 	sub: { fontSize: 17, lineHeight: 22, opacity: 0.7 },
-	who: { flex: 1, fontSize: 18, lineHeight: 24 },
+	who: { flex: 1 },
+	whoLabel: { fontSize: 15, lineHeight: 20, opacity: 0.7 },
+	whoName: { fontSize: 18, lineHeight: 24 },
 	you: { alignItems: "center" },
 });
