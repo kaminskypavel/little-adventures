@@ -23,6 +23,7 @@ import { useMapReveals } from "@/src/data/map-reveals";
 import { isOutroLocked, neighbours, newlyOpened } from "@/src/data/map-rules";
 import { useChildName } from "@/src/data/profile-queries";
 import { mapLabel } from "@/src/data/question-rules";
+import { useReplay } from "@/src/data/replay-store";
 import { markScreen } from "@/src/data/timeline";
 import type { NodeId, Progress } from "@/src/data/types";
 import { useAdventure } from "@/src/data/use-adventure";
@@ -106,6 +107,7 @@ function SidewaysMap({
 	onWalked,
 	places,
 	progress,
+	starAtStart,
 	title,
 	walkTo,
 }: {
@@ -117,6 +119,8 @@ function SidewaysMap({
 	onWalked: () => void;
 	places: Record<MapPlaceNode, MapPlace>;
 	progress: Progress;
+	/** A replay: the star waits at the intro from the start, instead of coming out on the first tap. */
+	starAtStart: boolean;
 	title: string;
 	walkTo?: NodeId;
 }) {
@@ -168,7 +172,12 @@ function SidewaysMap({
 			lit={litRoads(visited)}
 			onWalked={onWalked}
 			places={shown}
-			route={routeOf({ fresh, here, visited, walkTo })}
+			route={routeOf({
+				fresh: fresh && !starAtStart,
+				here,
+				visited,
+				walkTo,
+			})}
 			title={title}
 			walkTo={walkTo}
 		/>
@@ -197,6 +206,8 @@ export default function StoryMapScreen() {
 	const id = params.id ?? "box";
 	const walkTo = isNode(params.walkTo) ? params.walkTo : undefined;
 	const { adventure, progress: stored } = useAdventure(id);
+	// Play again: the star stands at the intro, ready to walk the adventure again.
+	const replaying = useReplay((s) => Boolean(s.byId[id]));
 	// Which places the map showed open before is read back from the phone first (a moment).
 	const revealsKnown = useMapReveals((s) => s.hydrated);
 	// From the shared cache, so the title is there on the first frame.
@@ -298,6 +309,7 @@ export default function StoryMapScreen() {
 				}}
 				places={places}
 				progress={progress}
+				starAtStart={replaying}
 				title={childName ? t("title", { name: childName }) : ""}
 				walkTo={walkTo}
 			/>
@@ -308,7 +320,7 @@ export default function StoryMapScreen() {
 				glowFrom={at > 0 ? progress.visited[at - 1] : undefined}
 				goodnight={goodnight}
 				here={progress.here}
-				hideStar={fresh}
+				hideStar={fresh && !replaying}
 				next={next}
 				onWalked={() => {
 					if (walkTo) {
