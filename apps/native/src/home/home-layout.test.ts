@@ -15,9 +15,9 @@ describe("home layout", () => {
 		expect(Math.round(rest.yoursTop)).toBe(664);
 		const listen = listenLayout(844, { bottom: 34, top: 47 });
 		expect(listen.starTop).toBe(84);
-		expect(Math.round(listen.micCy)).toBe(426);
-		expect(Math.round(listen.hintTop)).toBe(614);
-		expect(Math.round(listen.ideasTop)).toBe(709);
+		expect(Math.round(listen.micCy)).toBe(402);
+		expect(Math.round(listen.hintTop)).toBe(578);
+		expect(listen.ideasTop).toBe(rest.yoursTop);
 	});
 
 	test("every phone keeps the stack inside the screen, in order", () => {
