@@ -7,6 +7,7 @@ export type IconName =
 	| "back"
 	| "camera"
 	| "check"
+	| "home"
 	| "image"
 	| "lock"
 	| "map"
@@ -38,6 +39,7 @@ export const iconNames: readonly IconName[] = [
 	"back",
 	"sliders",
 	"replay",
+	"home",
 ];
 
 // One family: 24 grid, round caps and joins. Stroke widths follow round 7.
@@ -66,6 +68,13 @@ const shapes: Record<IconName, (color: string) => ReactNode> = {
 	),
 	check: (c) => (
 		<Path d="M5.5 12.5l4 4 9-9" stroke={c} strokeWidth={3.4} {...line} />
+	),
+	home: (c) => (
+		<G stroke={c} strokeWidth={2.4} {...line}>
+			<Path d="M3.5 11.5L12 4l8.5 7.5" />
+			<Path d="M6 10v10h12V10" />
+			<Path d="M10 20v-5.5h4V20" />
+		</G>
 	),
 	image: (c) => (
 		<G stroke={c} strokeWidth={2.3} {...line}>
