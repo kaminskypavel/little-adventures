@@ -9,11 +9,10 @@ import { PlanCard } from "@little-adventures/native-ui/plan-card";
 import { Portrait, PortraitArt } from "@little-adventures/native-ui/portrait";
 import { QuietLink } from "@little-adventures/native-ui/quiet-link";
 import { Screen } from "@little-adventures/native-ui/screen";
-import { colors, layout } from "@little-adventures/native-ui/tokens";
+import { colors } from "@little-adventures/native-ui/tokens";
 import { TopBar } from "@little-adventures/native-ui/top-bar";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut as endSession } from "@/src/auth/auth-client";
 import { useSession } from "@/src/auth/use-session";
 import { reprepareChild } from "@/src/data/adventure-client";
@@ -52,7 +51,6 @@ const PRESET_KEYS = {
 
 export default function Grownups() {
 	const router = useRouter();
-	const insets = useSafeAreaInsets();
 	const { user } = useSession();
 	const who = user?.name?.trim() || user?.email;
 	// The cache asks again after every save (see profile-queries.ts).
@@ -117,11 +115,29 @@ export default function Grownups() {
 			...(askText ? [{ label: t("other"), onPress: askOther }] : []),
 		]);
 
+	// Pinned under the page, so sign out is in sight on any phone without scrolling.
+	const foot = child ? (
+		<View style={styles.foot}>
+			<ClayText
+				align={rtl ? "right" : undefined}
+				color={colors.cream}
+				numberOfLines={1}
+				style={styles.signed}
+				variant="body"
+			>
+				{who ? t("signedInAs", { who }) : t("signedIn")}
+			</ClayText>
+			<View style={[styles.link, rtl ? styles.linkRtl : null]}>
+				<QuietLink label={t("signOut")} onPress={signOut} />
+			</View>
+		</View>
+	) : null;
+
 	return (
-		<Screen scrolls topBar={<TopBar title={t("title")} />}>
+		<Screen dock={foot} scrolls topBar={<TopBar title={t("title")} />}>
 			<ScrollView
 				contentContainerStyle={{
-					paddingBottom: insets.bottom + layout.dockBottom,
+					paddingBottom: FOOT_GAP,
 					paddingTop: BODY_SCROLL_START,
 				}}
 				showsVerticalScrollIndicator={false}
@@ -196,20 +212,6 @@ export default function Grownups() {
 							rtl={rtl}
 							style={styles.language}
 						/>
-						<View style={styles.foot}>
-							<ClayText
-								align={rtl ? "right" : undefined}
-								color={colors.cream}
-								numberOfLines={1}
-								style={styles.signed}
-								variant="body"
-							>
-								{who ? t("signedInAs", { who }) : t("signedIn")}
-							</ClayText>
-							<View style={[styles.link, rtl ? styles.linkRtl : null]}>
-								<QuietLink label={t("signOut")} onPress={signOut} />
-							</View>
-						</View>
 					</>
 				) : null}
 			</ScrollView>
@@ -218,7 +220,7 @@ export default function Grownups() {
 }
 
 const styles = StyleSheet.create({
-	foot: { marginTop: FOOT_GAP, paddingHorizontal: 30 },
+	foot: { paddingHorizontal: 30 },
 	language: { marginTop: LANGUAGE_GAP },
 	link: { alignItems: "flex-start", marginTop: -2 },
 	linkRtl: { alignItems: "flex-end" },
