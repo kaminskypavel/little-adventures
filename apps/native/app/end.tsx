@@ -15,7 +15,8 @@ import {
 import { layout, motion, spacing } from "@little-adventures/native-ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { litRoads } from "@/src/data/fork-roads";
 import { END_FADE_AFTER_MS } from "@/src/data/music-rules";

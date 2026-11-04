@@ -9,7 +9,8 @@ import {
 } from "@little-adventures/native-ui/tokens";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getHome } from "@/src/data/adventure-client";
 import type { AdventureSummary } from "@/src/data/types";
