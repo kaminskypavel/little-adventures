@@ -249,9 +249,11 @@ export function Screen({
 			<Animated.View style={[styles.bodyWrap, aboveKeyboard]}>
 				<Pressable
 					accessible={false}
+					// Off while the keyboard is down, or on Android it takes slow drags from the scroll
+					// views inside (box-none does not stop that: the responder still bubbles up to it).
+					// Never off on the web, where `disabled` marks the whole body aria-disabled.
+					disabled={Platform.OS !== "web" && keyboardUp !== true}
 					onPress={Keyboard.dismiss}
-					// box-none while the keyboard is down: no touch grab, and unlike `disabled` no aria-disabled on the subtree.
-					pointerEvents={keyboardUp === true ? "auto" : "box-none"}
 					style={styles.bodyWrap}
 				>
 					<FadedBody bottom={fadeBottom} top={fadeTop}>
