@@ -8,7 +8,7 @@ A story app for children aged 2 to 16 that doubles as a learning platform. The c
 - **The child is the hero.** One photo becomes the child's own drawn look, and that look stars in every story (SAM 3.1 and Muse Image).
 - **The wait is part of the story.** The star and the puppy make the adventure on screen while the child watches.
 - **The child picks the next place.** A map of four places, each with one true fact that answers the question.
-- **English, Spanish and Hebrew, and on the TV.** The grown-up picks the language, and a story can be cast to the TV from iPhone or Android.
+- **Multilingual, and on the TV.** The grown-up picks the language, and a story can be cast to the TV from iPhone or Android.
 - **Every plan is checked before a child hears it.** Our tuned Muse Glimmer answers yes or no, and a failed check goes back with a reason.
 
 [![Launch film on YouTube](https://img.shields.io/badge/Launch%20film-YouTube-c4302b)](https://www.youtube.com/watch?v=ofxkeGxQeOU) [![Launch film on X](https://img.shields.io/badge/Launch%20film-on%20X-000000)](https://x.com/KaminskyPavel/status/2117210112993755191) [![Open weights on Hugging Face](https://img.shields.io/badge/Hugging%20Face-glimmer--decision--little--adventures-FFD21E)](https://huggingface.co/kaminskypavel/glimmer-decision-little-adventures)
@@ -117,7 +117,7 @@ Your own app server, keys and configuration: [Development](documents/development
 | [Training](documents/training.md) | How we trained and use the Muse Glimmer checker, with the full results |
 | [Architecture](documents/architecture.md) | The public and private split, every Meta call's path, the tuned checker |
 | [Child safety and privacy](documents/child-safety.md) | The checks before a child hears a story, and the child's data |
-| [Languages](documents/languages.md) | English, Spanish and Hebrew: the words, right to left, the star's voice, what is not translated yet |
+| [Languages](documents/languages.md) | Multilingual: the words, right to left, the star's voice, what is not translated yet |
 | [TV and phones](documents/tv-and-phones.md) | What iPhone and Android support, and casting a story to a TV |
 | [Design](documents/design.md) | From the wireframe to the clay world |
 | [Performance](documents/performance.md) | What we measured and what changed |
