@@ -182,7 +182,10 @@ export default function Layout() {
 														    Home leaves the app instead of returning to Welcome. */}
 														<Stack.Protected guard={status !== "signed-in"}>
 															<Stack.Screen name="welcome" />
-															<Stack.Screen name="account" />
+															<Stack.Screen
+																name="account"
+																options={{ animation: "slide_from_right" }}
+															/>
 														</Stack.Protected>
 													</Stack>
 												</ThemeProvider>
