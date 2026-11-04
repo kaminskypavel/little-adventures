@@ -5,7 +5,7 @@ import { FallbackImage } from "./fallback-image";
 import { Placeholder } from "./placeholder";
 import { colors, homeShelf, radii } from "./tokens";
 
-const { pad, size: SIZE } = homeShelf.idea;
+const { pad, size } = homeShelf.idea;
 
 /**
  * An idea on Home's Ideas shelf: a round picture in a clay rim. Picture only; the question is its
@@ -15,15 +15,12 @@ export function IdeaPicture({
 	onPress,
 	picture,
 	question,
-	size = SIZE,
 	testID,
 }: {
 	onPress: () => void;
 	/** A required module or an image source, or null for the stand-in picture. */
 	picture: ImageSource | number | null;
 	question: string;
-	/** Diameter; smaller when the whole row must fit the screen. */
-	size?: number;
 	testID?: string;
 }) {
 	return (
@@ -31,7 +28,7 @@ export function IdeaPicture({
 			accessibilityLabel={question}
 			onPress={onPress}
 			radius={size / 2}
-			style={[styles.ring, { height: size, width: size }]}
+			style={styles.ring}
 			testID={testID}
 			tone="sage"
 		>
@@ -50,15 +47,8 @@ export function IdeaPicture({
 }
 
 /** A same-size stand-in while the shelf loads. */
-export function IdeaSkeleton({ size = SIZE }: { size?: number }) {
-	return (
-		<View
-			style={[
-				styles.skeleton,
-				{ borderRadius: size / 2, height: size, width: size },
-			]}
-		/>
-	);
+export function IdeaSkeleton() {
+	return <View style={styles.skeleton} />;
 }
 
 const styles = StyleSheet.create({
@@ -68,6 +58,12 @@ const styles = StyleSheet.create({
 		flex: 1,
 		overflow: "hidden",
 	},
-	ring: { padding: pad },
-	skeleton: { backgroundColor: colors.sand, opacity: 0.15 },
+	ring: { height: size, padding: pad, width: size },
+	skeleton: {
+		backgroundColor: colors.sand,
+		borderRadius: size / 2,
+		height: size,
+		opacity: 0.15,
+		width: size,
+	},
 });

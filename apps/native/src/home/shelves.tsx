@@ -10,7 +10,7 @@ import {
 } from "@little-adventures/native-ui/story-door";
 import { StoryShelf } from "@little-adventures/native-ui/story-shelf";
 import { colors, homeShelf, layout } from "@little-adventures/native-ui/tokens";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import { StyleSheet } from "react-native";
 import type { AdventureSummary, Idea } from "@/src/data/types";
 
 const SKELETONS = [0, 1, 2];
@@ -49,14 +49,12 @@ function Doors({
 function Pictures({
 	ideas,
 	onAsk,
-	size,
 }: {
 	ideas: Idea[] | null;
 	onAsk: (question: string) => void;
-	size: number;
 }) {
 	if (ideas === null) {
-		return SKELETONS.map((n) => <IdeaSkeleton key={n} size={size} />);
+		return SKELETONS.map((n) => <IdeaSkeleton key={n} />);
 	}
 	return ideas.map((idea, index) => (
 		<IdeaPicture
@@ -64,18 +62,10 @@ function Pictures({
 			onPress={() => onAsk(idea.question)}
 			picture={idea.picture}
 			question={idea.question}
-			size={size}
 			testID={`idea-${index}`}
 		/>
 	));
 }
-
-/** The idea diameter that fits every idea between the side margins, never above the design's. */
-export const ideaSizeFor = (screenWidth: number, count: number) => {
-	const { gap, size } = homeShelf.idea;
-	const room = screenWidth - 2 * layout.sideMargin - (count - 1) * gap;
-	return Math.min(size, Math.floor(room / Math.max(1, count)));
-};
 
 /** The label and shelf of the child's own adventures, at `labelTop` and `top`. */
 export function YoursShelf({
@@ -125,11 +115,6 @@ export function IdeasShelf({
 	onAsk: (question: string) => void;
 	top: number;
 }) {
-	// The whole row fits on the screen: no idea hides past the edge.
-	const size = ideaSizeFor(
-		useWindowDimensions().width,
-		ideas?.length ?? SKELETONS.length
-	);
 	return (
 		<>
 			<ClayText
@@ -141,10 +126,10 @@ export function IdeasShelf({
 			</ClayText>
 			<StoryShelf
 				gap={homeShelf.idea.gap}
-				itemWidth={size}
+				itemWidth={homeShelf.idea.size}
 				style={[styles.shelf, { top }]}
 			>
-				<Pictures ideas={ideas} onAsk={onAsk} size={size} />
+				<Pictures ideas={ideas} onAsk={onAsk} />
 			</StoryShelf>
 		</>
 	);
