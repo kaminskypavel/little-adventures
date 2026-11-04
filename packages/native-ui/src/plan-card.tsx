@@ -1,4 +1,11 @@
-import { type StyleProp, Text, View, type ViewStyle } from "react-native";
+import { useState } from "react";
+import {
+	Pressable,
+	type StyleProp,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import { ClayText } from "./clay-text";
 import { colors, flat, fonts } from "./tokens";
 
@@ -8,7 +15,7 @@ const ROW_LINE = 24;
 /**
  * Grown-ups "Your plan": a flat sand panel (information, not a button) with a small tag at the top
  * right, a few dotted rows and a quiet note. `rtl` mirrors it for Hebrew: tag at the top left,
- * text right-aligned, the dots on the right.
+ * text right-aligned, the dots on the right. It starts collapsed to its title; a tap opens it.
  */
 export function PlanCard({
 	items,
@@ -26,8 +33,12 @@ export function PlanCard({
 	title: string;
 }) {
 	const align = rtl ? "right" : undefined;
+	const [open, setOpen] = useState(false);
 	return (
-		<View
+		<Pressable
+			accessibilityRole="button"
+			accessibilityState={{ expanded: open }}
+			onPress={() => setOpen(!open)}
 			style={[
 				{
 					alignSelf: "stretch",
@@ -71,45 +82,49 @@ export function PlanCard({
 			>
 				{title}
 			</ClayText>
-			{items.map((item) => (
-				<View
-					key={item}
+			{open
+				? items.map((item) => (
+						<View
+							key={item}
+							style={{
+								alignItems: "center",
+								flexDirection: rtl ? "row-reverse" : "row",
+								gap: plan.rowGap,
+								marginTop: plan.rowGap,
+							}}
+						>
+							<View
+								style={{
+									backgroundColor: colors.sun,
+									borderRadius: plan.dot / 2,
+									height: plan.dot,
+									width: plan.dot,
+								}}
+							/>
+							<ClayText
+								align={align}
+								style={{ flex: 1, lineHeight: ROW_LINE }}
+								variant="label"
+							>
+								{item}
+							</ClayText>
+						</View>
+					))
+				: null}
+			{open ? (
+				<ClayText
+					align={align}
 					style={{
-						alignItems: "center",
-						flexDirection: rtl ? "row-reverse" : "row",
-						gap: plan.rowGap,
-						marginTop: plan.rowGap,
+						fontSize: 17,
+						lineHeight: 22,
+						marginTop: plan.noteGap,
+						opacity: 0.7,
 					}}
+					variant="body"
 				>
-					<View
-						style={{
-							backgroundColor: colors.sun,
-							borderRadius: plan.dot / 2,
-							height: plan.dot,
-							width: plan.dot,
-						}}
-					/>
-					<ClayText
-						align={align}
-						style={{ flex: 1, lineHeight: ROW_LINE }}
-						variant="label"
-					>
-						{item}
-					</ClayText>
-				</View>
-			))}
-			<ClayText
-				align={align}
-				style={{
-					fontSize: 17,
-					lineHeight: 22,
-					marginTop: plan.noteGap,
-					opacity: 0.7,
-				}}
-				variant="body"
-			>
-				{note}
-			</ClayText>
-		</View>
+					{note}
+				</ClayText>
+			) : null}
+		</Pressable>
 	);
 }
