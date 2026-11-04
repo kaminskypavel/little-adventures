@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
+import { type StyleProp, StyleSheet, type ViewStyle } from "react-native";
 import { ClayPressable } from "./clay-pressable";
 import { ClayText } from "./clay-text";
 import { Icon, type IconName } from "./icons";
@@ -125,6 +125,10 @@ export function SecondaryButton({
 	...rest
 }: IconButtonProps) {
 	const dims = buttonSizes[size];
+	// Stretched (the default, unless the caller sets its own alignSelf) and without an icon, the
+	// label can take the whole width; a button that hugs its label must not, or it collapses.
+	const stretched =
+		!icon && (StyleSheet.flatten(style)?.alignSelf ?? "stretch") === "stretch";
 	return (
 		<ClayPressable
 			accessibilityLabel={accessibilityLabel ?? label}
@@ -151,12 +155,10 @@ export function SecondaryButton({
 				color={ink(tone)}
 				minimumFontScale={0.85}
 				numberOfLines={1}
-				// A full-width button without an icon gives its label the whole width, so Android has
-				// room to spare and never drops the last word ("Try as a" for "Try as a guest").
-				style={icon || size !== "lg" ? undefined : FULL_WIDTH_LABEL}
-				// Beside an icon the label hugs its words, so Android's default high-quality breaking,
-				// which measures this heavy font a hair short, dropped the last one ("Turn on the").
-				textBreakStrategy="simple"
+				// The whole width gives Android room to spare, so it never drops the last word ("Try as
+				// a" for "Try as a guest", "Turn on the" for "Turn on the mic"). Simple line breaking
+				// did not stop it.
+				style={stretched ? FULL_WIDTH_LABEL : undefined}
 				variant={labelVariant(size, "buttonSecondary")}
 			>
 				{label}

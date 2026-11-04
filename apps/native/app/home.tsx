@@ -238,12 +238,8 @@ function MicOffButton({
 				style,
 			]}
 		>
-			<SecondaryButton
-				icon="settings"
-				label={t("turnOnMic")}
-				onPress={onPress}
-				size="sm"
-			/>
+			{/* No icon: an icon makes the label hug its words, and Android then drops the last one. */}
+			<SecondaryButton label={t("turnOnMic")} onPress={onPress} size="sm" />
 		</Animated.View>
 	);
 }
