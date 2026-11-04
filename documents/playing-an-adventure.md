@@ -1,5 +1,7 @@
 # Playing an adventure
 
+<p align="center"><img src="../.github/readme/screens.webp" alt="Four app screens: the child's question confirmed, the adventure being made with the child's clay look on the hill, a place being read aloud word by word, and the adventure map." width="100%"></p>
+
 This is the child's side, screen by screen, from the spoken question to goodnight. The screens are in [apps/native/app](../apps/native/app) and the pieces they use are in [apps/native/src](../apps/native/src). How the adventure is made is in [How an adventure is made](how-it-works.md).
 
 ## Before the map
