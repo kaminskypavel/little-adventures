@@ -16,7 +16,8 @@ import { useT } from "@/src/i18n";
 import { welcomeStrings } from "@/src/i18n/strings/welcome";
 
 // Round 7 01 at 0.72 scale: star 200 px wide at top 92 px, logo at 296 px, tagline at 396 px.
-const STAR = 278;
+// Smaller than before so the tagline keeps its room above the two-button dock.
+const STAR = 222;
 const LOGO_GAP = 5;
 const TAGLINE_GAP = 11;
 const TAGLINE_INSET = 25;
