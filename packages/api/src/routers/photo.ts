@@ -8,12 +8,12 @@ import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { artFolder, artKeys } from "../art";
-import { protectedProcedure, router } from "../index";
+import { ownerWriteProcedure, protectedProcedure, router } from "../index";
 import { ownsKey, photoKey } from "../photo-key";
 
 export const photoRouter = router({
 	/** Deletes the stored photo, face and looks of one of the caller's children and clears them. */
-	delete: protectedProcedure
+	delete: ownerWriteProcedure
 		.input(z.object({ childId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			const ownerId = ctx.principal.user.id;
@@ -61,7 +61,7 @@ export const photoRouter = router({
 		}),
 
 	/** A one-shot signed url to PUT one photo to. The server picks the key. */
-	uploadUrl: protectedProcedure
+	uploadUrl: ownerWriteProcedure
 		.input(photoUploadRequestSchema)
 		.mutation(({ ctx, input }) => {
 			if (input.size > PHOTO_MAX_BYTES) {

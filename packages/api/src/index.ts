@@ -1,4 +1,5 @@
 import { BETA_ONLY } from "@little-adventures/auth/beta";
+import { isGuest } from "@little-adventures/auth/guest";
 import { initTRPC, TRPCError } from "@trpc/server";
 
 import type { Context } from "./context";
@@ -24,3 +25,14 @@ export const protectedProcedure = signedInProcedure.use(
 		return next();
 	}
 );
+
+/** The message a refused guest write carries, so the app can show the "needs an account" popup. */
+export const GUEST_READ_ONLY = "GUEST_READ_ONLY";
+
+/** Writes to the owner's own data (children, photos, grown-up): the shared guest account may not. */
+export const ownerWriteProcedure = protectedProcedure.use(({ ctx, next }) => {
+	if (isGuest(ctx.principal)) {
+		throw new TRPCError({ code: "FORBIDDEN", message: GUEST_READ_ONLY });
+	}
+	return next();
+});
