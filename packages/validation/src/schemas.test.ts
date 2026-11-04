@@ -3,7 +3,7 @@ import { childSchema } from "./child";
 import { photoUploadRequestSchema } from "./photo";
 import { codeSchema, emailSchema } from "./sign-in";
 
-test("a child needs a name, a kind and an age from 2 to 11", () => {
+test("a child needs a name, a kind and an age from 2 to 16", () => {
 	expect(
 		childSchema.safeParse({ age: 5, kind: "boy", name: " Ari " }).data
 	).toEqual({
@@ -18,7 +18,10 @@ test("a child needs a name, a kind and an age from 2 to 11", () => {
 		childSchema.safeParse({ age: 1, kind: "girl", name: "Ari" }).success
 	).toBe(false);
 	expect(
-		childSchema.safeParse({ age: 12, kind: "girl", name: "Ari" }).success
+		childSchema.safeParse({ age: 16, kind: "girl", name: "Ari" }).success
+	).toBe(true);
+	expect(
+		childSchema.safeParse({ age: 17, kind: "girl", name: "Ari" }).success
 	).toBe(false);
 	expect(childSchema.safeParse({ kind: "girl", name: "Ari" }).success).toBe(
 		false
