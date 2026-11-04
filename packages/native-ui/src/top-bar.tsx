@@ -45,8 +45,10 @@ function Title({
 		<TitleHold onTitleLongPress={onTitleLongPress} style={styles.title}>
 			<ClayText
 				accessibilityRole="header"
+				adjustsFontSizeToFit
 				align="center"
 				color={colors.cream}
+				minimumFontScale={0.8}
 				numberOfLines={1}
 				variant="title"
 			>
